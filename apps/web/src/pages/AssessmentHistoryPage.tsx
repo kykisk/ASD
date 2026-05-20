@@ -110,7 +110,7 @@ function HistoryEntry({ assessment, index }: { assessment: Assessment; index: nu
   const formattedDate = `${date.getMonth() + 1}월 ${date.getDate()}일`;
 
   const scoreOption = (() => {
-    const s = assessment.overallScore;
+    const s = assessment.totalScore ?? 0;
     if (s >= 5) return { emoji: '😊', color: '#5B8A72', label: '매우 좋음' };
     if (s >= 4) return { emoji: '🙂', color: '#5BAA5B', label: '좋음' };
     if (s >= 3) return { emoji: '😐', color: '#D4A800', label: '보통' };

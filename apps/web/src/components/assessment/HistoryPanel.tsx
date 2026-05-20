@@ -63,7 +63,8 @@ interface AssessmentCardProps {
 
 function AssessmentCard({ assessment }: AssessmentCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const scoreInfo = getScoreEmoji(assessment.overallScore);
+  const displayScore = assessment.totalScore ?? 0;
+  const scoreInfo = getScoreEmoji(Math.round(displayScore));
 
   const domainScores: Record<string, number[]> = {};
   assessment.scores.forEach((s) => {
@@ -80,13 +81,13 @@ function AssessmentCard({ assessment }: AssessmentCardProps) {
     <div className="hp-assessment-card">
       <div className="hp-card-header" onClick={() => setExpanded(!expanded)}>
         <div className="hp-card-title-row">
-          <span className="hp-card-title">{assessment.questionnaireName}</span>
+          <span className="hp-card-title">일일 발달 평가</span>
           <span className="hp-card-time">{formatTime(assessment.createdAt)} 완료</span>
         </div>
         <div className="hp-card-score-row">
           <span className="hp-card-overall" style={{ color: scoreInfo.color }}>
-            {scoreInfo.emoji} {assessment.overallScore.toFixed(1)}점
-          </span>
+              {scoreInfo.emoji} {displayScore.toFixed(1)}점
+            </span>
           <button
             className="hp-expand-btn"
             aria-label={expanded ? '접기' : '펼치기'}

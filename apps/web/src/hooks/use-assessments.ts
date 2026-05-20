@@ -12,11 +12,11 @@ export interface Assessment {
   id: string;
   childId: string;
   questionnaireId: string;
-  questionnaireName: string;
   scores: AssessmentScore[];
-  overallScore: number;
-  overallNotes?: string;
+  totalScore: number | null;
+  notes?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface DomainScore {
