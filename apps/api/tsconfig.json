@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../../libs/shared/validators"
+    },
+    {
+      "path": "../../libs/shared/dto"
+    },
+    {
+      "path": "../../libs/encryption"
+    },
+    {
+      "path": "../../libs/prisma-client"
+    },
+    {
+      "path": "./tsconfig.app.json"
+    }
+  ]
+}

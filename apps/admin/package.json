@@ -1,0 +1,12 @@
+{
+  "name": "@auticare/admin",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "name": "admin",
+    "tags": [
+      "scope:app",
+      "type:web"
+    ]
+  }
+}
