@@ -12,7 +12,7 @@ PID_FILE="$ROOT/logs/api.pid"
 mkdir -p "$ROOT/logs"
 
 if [ ! -f "$ROOT/.env" ]; then
-  echo "❌ .env 파일이 없습니다. cp .env.example .env 후 값을 채워주세요."
+  echo "❌ .env 파일이 없습니다."
   exit 1
 fi
 
@@ -21,7 +21,6 @@ if ! command -v pnpm &>/dev/null; then
   exit 1
 fi
 
-# 기존 프로세스 종료
 if [ -f "$PID_FILE" ]; then
   OLD_PID=$(cat "$PID_FILE")
   kill "$OLD_PID" 2>/dev/null && echo "  이전 API 프로세스 종료 (PID: $OLD_PID)" || true
@@ -35,23 +34,30 @@ if [ -n "$EXISTING" ]; then
   sleep 1
 fi
 
-echo "🚀 API 서버 시작 중..."
+echo "🔨 API 빌드 중..."
 cd "$ROOT"
-nohup pnpm nx serve api > "$LOG" 2>&1 &
+pnpm nx run api:build --skip-nx-cache > /tmp/auticare-build.log 2>&1
+if [ $? -ne 0 ]; then
+  echo "❌ 빌드 실패. 로그 확인: cat /tmp/auticare-build.log"
+  exit 1
+fi
+echo "  ✅ 빌드 완료"
+
+echo "🚀 API 서버 시작 중..."
+nohup node "$ROOT/apps/api/dist/main.js" > "$LOG" 2>&1 &
 echo $! > "$PID_FILE"
 
 echo "  백그라운드 실행됨 (PID: $(cat $PID_FILE))"
 echo "  로그: tail -f $LOG"
 echo ""
 
-# 시작 확인 (최대 30초)
 echo "  시작 대기 중..."
 for i in $(seq 1 30); do
   if grep -q "successfully started" "$LOG" 2>/dev/null; then
     echo "  ✅ API 서버 준비됨 → http://localhost:3100/v1"
     exit 0
   fi
-  if grep -q "ERROR\|Error:" "$LOG" 2>/dev/null; then
+  if grep -q "EADDRINUSE\|Cannot find module" "$LOG" 2>/dev/null; then
     echo "  ❌ 시작 실패. 로그 확인:"
     tail -5 "$LOG"
     exit 1
