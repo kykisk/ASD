@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChildren, Child } from '../../hooks/use-children';
 import { useChildStore } from '../../stores/child.store';
-import { useAuthStore } from '../../stores/auth.store';
+import { useMyFamily } from '../../hooks/use-families';
 
 function calculateAge(birthDate: string): string {
   const birth = new Date(birthDate);
@@ -17,8 +17,8 @@ function calculateAge(birthDate: string): string {
 export function ChildSwitcher() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { user } = useAuthStore();
-  const { data: children } = useChildren(user?.familyId);
+  const { data: family } = useMyFamily();
+  const { data: children } = useChildren(family?.id);
   const { selectedChildId, setSelectedChild } = useChildStore();
 
   const selectedChild = children?.find((c: Child) => c.id === selectedChildId);
