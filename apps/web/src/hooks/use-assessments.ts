@@ -21,18 +21,19 @@ export interface Assessment {
 
 export interface DomainScore {
   domain: string;
-  domainName: string;
-  averageScore: number;
-  trend: 'UP' | 'DOWN' | 'STABLE';
-  trendPercentage: number;
-  recentScores: number[];
+  label: string;
+  currentScore: number;
+  maxScore: number;
+  percentage: number;
+  trend: { direction: 'UP' | 'DOWN' | 'STABLE'; changePercent: number; label: string };
+  itemCount: number;
 }
 
 export interface AggregatedAssessment {
-  childId: string;
-  domainScores: DomainScore[];
-  totalAssessments: number;
-  lastAssessmentDate: string | null;
+  overallScore: number;
+  domains: DomainScore[];
+  assessmentCount: number;
+  lastAssessedAt: string | null;
 }
 
 interface CreateAssessmentInput {

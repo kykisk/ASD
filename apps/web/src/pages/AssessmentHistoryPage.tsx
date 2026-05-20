@@ -75,7 +75,7 @@ function Sparkline({ scores, color }: { scores: number[]; color: string }) {
 
 function DomainCard({ domain, index }: { domain: DomainScore; index: number }) {
   const meta = domainMeta[domain.domain] || { icon: '📊', color: '#94A3B8' };
-  const name = domainNames[domain.domain] || domain.domainName;
+  const name = domainNames[domain.domain] || domain.label;
 
   return (
     <div
@@ -91,14 +91,14 @@ function DomainCard({ domain, index }: { domain: DomainScore; index: number }) {
 
       <div className="history-domain-score">
         <span className="history-score-value" style={{ color: meta.color }}>
-          {domain.averageScore.toFixed(1)}
+          {domain.currentScore.toFixed(1)}
         </span>
         <span className="history-score-max">/5</span>
       </div>
 
       <div className="history-domain-footer">
-        <Sparkline scores={domain.recentScores} color={meta.color} />
-        <TrendIndicator trend={domain.trend} percentage={domain.trendPercentage} />
+        <Sparkline scores={[domain.currentScore]} color={meta.color} />
+        <TrendIndicator trend={domain.trend.direction} percentage={Math.abs(domain.trend.changePercent)} />
       </div>
     </div>
   );
@@ -218,9 +218,9 @@ export function AssessmentHistoryPage() {
         />
       )}
 
-      {!isLoading && aggregated && aggregated.domainScores.length > 0 && (
+      {!isLoading && aggregated && aggregated.domains.length > 0 && (
         <div className="history-domain-grid">
-          {aggregated.domainScores.map((ds, i) => (
+          {aggregated.domains.map((ds, i) => (
             <DomainCard key={ds.domain} domain={ds} index={i} />
           ))}
         </div>
