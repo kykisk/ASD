@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useChildStore } from '../../stores/child.store';
-import { useCreateAssessment, usePresignedUpload } from '../../hooks/use-assessments';
+import { useCreateAssessment } from '../../hooks/use-assessments';
+import { useMyFamily } from '../../hooks/use-families';
+import { useQuestionnaires, useCreateQuestionnaire } from '../../hooks/use-questionnaires';
 
 const domains = [
   { id: 'communication', name: '의사소통', icon: '🗣️', color: '#7B9FD4' },
@@ -36,30 +38,87 @@ const questions: Record<string, { id: string; text: string }[]> = {
   ],
 };
 
+const DEFAULT_QUESTIONNAIRE_ITEMS = [
+  { domain: 'COMMUNICATION' as const, text: '오늘 아이의 의사소통 능력은 어떠했나요?', weight: 1 },
+  { domain: 'SOCIAL' as const, text: '오늘 아이의 사회적 상호작용은 어떠했나요?', weight: 1 },
+  { domain: 'MOTOR' as const, text: '오늘 아이의 운동 능력은 어떠했나요?', weight: 1 },
+  { domain: 'COGNITIVE' as const, text: '오늘 아이의 인지 발달은 어떠했나요?', weight: 1 },
+  { domain: 'EMOTIONAL' as const, text: '오늘 아이의 정서 상태는 어떠했나요?', weight: 1 },
+];
+
 interface DomainAnswer {
   score: number | null;
   notes: string;
-  mediaUrls: string[];
 }
 
 type Step = 'select' | 'assess' | 'summary' | 'done';
 
+interface QuestionnaireState {
+  id: string;
+  items: Record<string, string>; // domain (lowercase) → itemId
+}
+
 export function AssessmentForm() {
   const { selectedChildId } = useChildStore();
   const createAssessment = useCreateAssessment();
-  const presignedUpload = usePresignedUpload();
+
+  const { data: family } = useMyFamily();
+  const familyId = family?.id ?? null;
+  const { data: questionnaires, isLoading: questionnairesLoading } = useQuestionnaires(familyId);
+  const createQuestionnaire = useCreateQuestionnaire(familyId);
 
   const [step, setStep] = useState<Step>('select');
   const [currentDomainIndex, setCurrentDomainIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, DomainAnswer>>(() =>
-    Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '', mediaUrls: [] }]))
+    Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '' }]))
   );
   const [overallNotes, setOverallNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+  const [photoMessage, setPhotoMessage] = useState(false);
+  const [questionnaireState, setQuestionnaireState] = useState<QuestionnaireState | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const questionnaireCreatedRef = useRef(false);
 
   const currentDomain = domains[currentDomainIndex];
   const completedCount = domains.filter((d) => answers[d.id].score !== null).length;
+
+  useEffect(() => {
+    if (!familyId || questionnairesLoading || questionnaireCreatedRef.current) return;
+    if (questionnaires && questionnaires.length > 0) {
+      const q = questionnaires[0];
+      const itemsMap: Record<string, string> = {};
+      for (const item of q.items) {
+        const domainLower = item.domain.toLowerCase();
+        if (!itemsMap[domainLower] && item.id) {
+          itemsMap[domainLower] = item.id;
+        }
+      }
+      setQuestionnaireState({ id: q.id, items: itemsMap });
+      questionnaireCreatedRef.current = true;
+    } else if (questionnaires && questionnaires.length === 0) {
+      questionnaireCreatedRef.current = true;
+      createQuestionnaire.mutate(
+        {
+          name: '일일 발달 평가',
+          description: '5개 영역 일일 발달 평가',
+          domains: ['COMMUNICATION', 'SOCIAL', 'MOTOR', 'COGNITIVE', 'EMOTIONAL'],
+          items: DEFAULT_QUESTIONNAIRE_ITEMS,
+        },
+        {
+          onSuccess: (created) => {
+            const itemsMap: Record<string, string> = {};
+            for (const item of created.items) {
+              const domainLower = item.domain.toLowerCase();
+              if (!itemsMap[domainLower] && item.id) {
+                itemsMap[domainLower] = item.id;
+              }
+            }
+            setQuestionnaireState({ id: created.id, items: itemsMap });
+          },
+        }
+      );
+    }
+  }, [familyId, questionnaires, questionnairesLoading, createQuestionnaire]);
 
   const handleScoreSelect = (score: number) => {
     setAnswers((prev) => ({
@@ -75,33 +134,9 @@ export function AssessmentForm() {
     }));
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedChildId) return;
-
-    try {
-      const result = await presignedUpload.mutateAsync({
-        childId: selectedChildId,
-        fileName: file.name,
-        contentType: file.type,
-      });
-
-      await fetch(result.uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
-      });
-
-      setAnswers((prev) => ({
-        ...prev,
-        [currentDomain.id]: {
-          ...prev[currentDomain.id],
-          mediaUrls: [...prev[currentDomain.id].mediaUrls, result.fileUrl],
-        },
-      }));
-    } catch {
-      /* no-op */
-    }
+  const handlePhotoClick = () => {
+    setPhotoMessage(true);
+    setTimeout(() => setPhotoMessage(false), 3000);
   };
 
   const handleNext = () => {
@@ -121,29 +156,25 @@ export function AssessmentForm() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedChildId) return;
+    if (!selectedChildId || !questionnaireState) return;
 
-    const items = domains
+    const scores = domains
       .filter((d) => answers[d.id].score !== null)
       .map((d) => ({
-        questionId: questions[d.id][0].id,
+        itemId: questionnaireState.items[d.id] || d.id,
+        domain: d.id.toUpperCase(),
         score: answers[d.id].score!,
         notes: answers[d.id].notes || undefined,
-        mediaUrls: answers[d.id].mediaUrls.length > 0 ? answers[d.id].mediaUrls : undefined,
       }));
-
-    const overallScore = Math.round(
-      items.reduce((sum, item) => sum + item.score, 0) / items.length
-    );
 
     try {
       await createAssessment.mutateAsync({
         childId: selectedChildId,
         input: {
-          questionnaireId: 'daily-assessment',
-          items,
-          overallScore,
-          overallNotes: overallNotes || undefined,
+          questionnaireId: questionnaireState.id,
+          frequency: 'DAILY',
+          notes: overallNotes || undefined,
+          scores,
         },
       });
       setStep('done');
@@ -159,6 +190,20 @@ export function AssessmentForm() {
   })();
 
   if (step === 'select') {
+    if (!selectedChildId) {
+      return (
+        <div className="assessment-root">
+          <div className="assessment-animate-in" style={{ marginBottom: 32 }}>
+            <h1 className="assessment-title">오늘의 평가</h1>
+            <p className="assessment-subtitle">아이의 하루를 기록해주세요</p>
+          </div>
+          <div className="assessment-card assessment-animate-in" style={{ animationDelay: '120ms', textAlign: 'center', padding: '32px 24px' }}>
+            <p style={{ color: '#6B7B8D', fontSize: 15 }}>아이를 먼저 선택해주세요</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="assessment-root">
         <div className="assessment-animate-in" style={{ marginBottom: 32 }}>
@@ -240,7 +285,7 @@ export function AssessmentForm() {
               setStep('select');
               setCurrentDomainIndex(0);
               setAnswers(
-                Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '', mediaUrls: [] }]))
+                Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '' }]))
               );
               setOverallNotes('');
             }}
@@ -331,7 +376,7 @@ export function AssessmentForm() {
           <button
             className="assessment-btn-primary"
             onClick={handleSubmit}
-            disabled={createAssessment.isPending}
+            disabled={createAssessment.isPending || !questionnaireState}
           >
             {createAssessment.isPending ? '제출 중...' : '제출하기'}
           </button>
@@ -421,7 +466,7 @@ export function AssessmentForm() {
         <div className="assessment-media-row">
           <button
             className="assessment-media-btn"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handlePhotoClick}
             title="사진/영상 첨부"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B8A72" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -437,16 +482,12 @@ export function AssessmentForm() {
             accept="image/*,video/*"
             capture="environment"
             style={{ display: 'none' }}
-            onChange={handleFileSelect}
+            onChange={() => {/* disabled */}}
           />
-          {currentAnswer.mediaUrls.length > 0 && (
-            <div className="assessment-media-thumbs">
-              {currentAnswer.mediaUrls.map((url, i) => (
-                <div key={i} className="assessment-media-thumb">
-                  <img src={url} alt="" />
-                </div>
-              ))}
-            </div>
+          {photoMessage && (
+            <span className="assessment-animate-in" style={{ fontSize: 12, color: '#6B7B8D', marginLeft: 8 }}>
+              사진 첨부는 프로덕션 환경에서 사용 가능합니다
+            </span>
           )}
         </div>
 

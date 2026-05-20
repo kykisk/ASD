@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 
-export interface AssessmentItem {
-  questionId: string;
+export interface AssessmentScore {
+  itemId: string;
+  domain: string;
   score: number;
   notes?: string;
-  mediaUrls?: string[];
 }
 
 export interface Assessment {
@@ -13,7 +13,7 @@ export interface Assessment {
   childId: string;
   questionnaireId: string;
   questionnaireName: string;
-  items: AssessmentItem[];
+  scores: AssessmentScore[];
   overallScore: number;
   overallNotes?: string;
   createdAt: string;
@@ -37,9 +37,14 @@ export interface AggregatedAssessment {
 
 interface CreateAssessmentInput {
   questionnaireId: string;
-  items: AssessmentItem[];
-  overallScore: number;
-  overallNotes?: string;
+  frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
+  notes?: string;
+  scores: Array<{
+    itemId: string;
+    domain: string;
+    score: number;
+    notes?: string;
+  }>;
 }
 
 export function useAssessments(childId: string | null) {
