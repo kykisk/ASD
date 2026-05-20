@@ -128,6 +128,21 @@ enum ActivityResult {
   SKIPPED
 }
 
+enum CurriculumStatus {
+  PENDING
+  GENERATED
+  CONFIRMED
+  COMPLETED
+  FAILED
+}
+
+enum BatchJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 // ─── FAMILY ─────────────────────────────────────────────
 
 model Family {
@@ -141,6 +156,7 @@ model Family {
   schedules      Schedule[]
   questionnaires Questionnaire[]
   assessments    Assessment[]
+  curricula      Curriculum[]
 }
 
 model FamilyMember {
@@ -182,6 +198,8 @@ model Child {
   family         Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
   schedules      Schedule[]
   assessments    Assessment[]
+  curricula      Curriculum[]
+  activityLogs   ActivityLog[]
 
   @@index([familyId])
 }
@@ -366,4 +384,73 @@ model AiConfig {
   lastTestSuccess   Boolean?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
+}
+
+// ─── CURRICULUM ─────────────────────────────────────────
+
+model Curriculum {
+  id              String           @id @default(cuid())
+  childId         String
+  familyId        String
+  date            DateTime         // target date (date only)
+  status          CurriculumStatus @default(PENDING)
+  aiProvider      String?          // which provider generated this
+  promptVersion   String?          // for tracking prompt iterations
+  rawAiOutput     Json?            // full AI response (for debugging)
+  weeklyGoal      String?          // AI-generated weekly goal
+  activities      Json             // CurriculumActivity[] as JSON
+  notes           String?
+  generatedAt     DateTime?
+  confirmedAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  child           Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family          Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  activityLogs    ActivityLog[]
+
+  @@unique([childId, date])
+  @@index([childId])
+  @@index([familyId])
+  @@index([date])
+}
+
+model ActivityLog {
+  id             String         @id @default(cuid())
+  curriculumId   String
+  childId        String
+  activityIndex  Int
+  activityTitle  String
+  result         ActivityResult
+  durationMin    Int?
+  notes          String?
+  mediaUrls      Json?          // string[]
+  loggedAt       DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+
+  curriculum     Curriculum     @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  child          Child          @relation(fields: [childId], references: [id])
+
+  @@index([curriculumId])
+  @@index([childId])
+}
+
+model BatchJob {
+  id          String        @id @default(cuid())
+  type        String        // e.g., 'CURRICULUM_GENERATION'
+  status      BatchJobStatus @default(PENDING)
+  targetDate  DateTime?
+  totalItems  Int           @default(0)
+  processedItems Int        @default(0)
+  failedItems Int           @default(0)
+  errors      Json?         // array of error messages
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([targetDate])
 }

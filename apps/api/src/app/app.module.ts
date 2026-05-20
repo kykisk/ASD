@@ -22,6 +22,8 @@ import { AssessmentsModule } from '../assessments/assessments.module.js';
 import { UploadsModule } from '../uploads/uploads.module.js';
 import { DashboardModule } from '../dashboard/dashboard.module.js';
 import { AiConfigModule } from '../ai-config/ai-config.module.js';
+import { AiModule } from '../ai/ai.module.js';
+import { CurriculumModule } from '../curriculum/curriculum.module.js';
 import { CacheModule } from '../common/cache/cache.module.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
@@ -51,6 +53,8 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
     UploadsModule,
     DashboardModule,
     AiConfigModule,
+    AiModule,
+    CurriculumModule,
   ],
   controllers: [AppController],
   providers: [

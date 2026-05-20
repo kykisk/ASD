@@ -6,6 +6,7 @@
     "test:e2e": "vitest run --config=vitest.e2e.config.ts"
   },
   "dependencies": {
+    "@auticare/ai-provider": "workspace:*",
     "@auticare/prisma-client": "workspace:*",
     "@auticare/encryption": "workspace:*",
     "@auticare/dto": "workspace:*",

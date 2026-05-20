@@ -19,6 +19,7 @@
     "customConditions": ["development"],
     "baseUrl": ".",
     "paths": {
+      "@auticare/ai-provider": ["libs/ai-provider/src/index.ts"],
       "@auticare/api-client": ["libs/api-client/src/index.ts"],
       "@auticare/dto": ["libs/shared/dto/src/index.ts"],
       "@auticare/encryption": ["libs/encryption/src/index.ts"],

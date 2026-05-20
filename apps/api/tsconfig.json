@@ -4,6 +4,9 @@
   "include": [],
   "references": [
     {
+      "path": "../../libs/ai-provider"
+    },
+    {
       "path": "../../libs/shared/validators"
     },
     {

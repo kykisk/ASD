@@ -44,6 +44,9 @@
     },
     {
       "path": "./libs/api-client"
+    },
+    {
+      "path": "./libs/ai-provider"
     }
   ]
 }

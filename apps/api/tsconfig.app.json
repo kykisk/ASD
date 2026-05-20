@@ -13,6 +13,9 @@
   "exclude": ["src/**/*.spec.ts"],
   "references": [
     {
+      "path": "../../libs/ai-provider/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/shared/validators/tsconfig.lib.json"
     },
     {
