@@ -257,7 +257,6 @@ export class AuthService {
       sub: user.id,
       role: user.role,
       familyId: familyMember?.familyId ?? null,
-      iss: 'auticare',
     };
 
     const accessToken = await this.jwtService.signAsync(payload);

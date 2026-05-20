@@ -338,7 +338,6 @@ describe('AuthService', () => {
         sub: 'user-1',
         role: 'FAMILY_ADMIN',
         familyId: null,
-        iss: 'auticare',
       });
     });
 
