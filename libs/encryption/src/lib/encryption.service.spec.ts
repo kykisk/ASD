@@ -12,7 +12,9 @@ function createService(key = TEST_MASTER_KEY): EncryptionService {
       throw new Error(`Unknown key: ${k}`);
     },
   } as any;
-  return new EncryptionService(mockConfigService);
+  const svc = new EncryptionService(mockConfigService);
+  svc.onModuleInit();
+  return svc;
 }
 
 describe('EncryptionService', () => {

@@ -1,7 +1,8 @@
-import { Module, ValidationPipe } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { PrismaModule } from '@auticare/prisma-client';
 import { EncryptionModule } from '@auticare/encryption';
 import { AppController } from './app.controller.js';
@@ -27,7 +28,7 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../../.env'] }),
     ThrottlerModule.forRoot([
       { name: 'global', ttl: 60000, limit: 100 },
       { name: 'auth', ttl: 60000, limit: 5 },
@@ -52,11 +53,7 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
     AppService,
     {
       provide: APP_PIPE,
-      useValue: new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
+      useClass: ZodValidationPipe,
     },
     {
       provide: APP_FILTER,

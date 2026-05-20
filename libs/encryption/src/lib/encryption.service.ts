@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes, hkdf } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -24,10 +24,12 @@ const SALT_LENGTH = 16;
 const KEY_LENGTH = 32;
 
 @Injectable()
-export class EncryptionService {
-  private masterKey: Buffer;
+export class EncryptionService implements OnModuleInit {
+  private masterKey!: Buffer;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {}
+
+  onModuleInit() {
     const keyBase64 = this.configService.getOrThrow<string>('ENCRYPTION_MASTER_KEY');
     this.masterKey = Buffer.from(keyBase64, 'base64');
     if (this.masterKey.length !== KEY_LENGTH) {
