@@ -71,10 +71,18 @@ export function useUpdateSchedule() {
 
   return useMutation({
     mutationFn: async (input: CreateScheduleInput & { id: string }) => {
-      const { id, childId, ...rest } = input;
+      const { id, childId, recurrenceDays, recurrenceEndDate, ...rest } = input;
+      const realId = id.includes('_') ? id.split('_')[0] : id;
+      const body = {
+        ...rest,
+        recurrenceRule: recurrenceDays && recurrenceDays.length > 0
+          ? { daysOfWeek: recurrenceDays }
+          : undefined,
+        recurrenceEnd: recurrenceEndDate || undefined,
+      };
       const { data } = await api.patch<{ success: true; data: Schedule }>(
-        `/schedules/${id}`,
-        rest
+        `/schedules/${realId}`,
+        body
       );
       return data.data;
     },
@@ -89,7 +97,8 @@ export function useDeleteSchedule() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/schedules/${id}`);
+      const realId = id.includes('_') ? id.split('_')[0] : id;
+      await api.delete(`/schedules/${realId}`);
       return id;
     },
     onSuccess: () => {
