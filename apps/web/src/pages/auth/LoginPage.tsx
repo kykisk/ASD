@@ -7,7 +7,7 @@ import { AuthLayout } from '../../components/auth/AuthLayout';
 import { useLogin, getAuthErrorMessage } from '../../hooks/use-auth';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:3000/v1';
+  import.meta.env.VITE_API_URL || 'http://localhost:3100/v1';
 
 const loginSchema = z.object({
   email: z

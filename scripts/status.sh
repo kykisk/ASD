@@ -17,7 +17,7 @@ echo "  Redis      (6380): $RD_STATUS"
 
 echo ""
 echo "🌐 포트 사용 현황"
-for PORT in 3000 4200 4300; do
+for PORT in 3100 4200 4300; do
   PIDS=$(lsof -ti :$PORT 2>/dev/null || true)
   if [ -n "$PIDS" ]; then
     NAME=$(lsof -i :$PORT 2>/dev/null | grep LISTEN | awk '{print $1}' | head -1)
@@ -29,7 +29,7 @@ done
 
 echo ""
 echo "🔗 HTTP 응답"
-for URL in "http://localhost:3000/v1" "http://localhost:4200" "http://localhost:4300"; do
+for URL in "http://localhost:3100/v1" "http://localhost:4200" "http://localhost:4300"; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 "$URL" 2>/dev/null || echo "ERR")
   echo "  $URL → $CODE"
 done

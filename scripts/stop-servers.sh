@@ -10,7 +10,7 @@ pkill -f "nx.*serve.*admin" 2>/dev/null && echo "  ✅ Admin 서버 종료" || t
 pkill -f "nest.*start"      2>/dev/null || true
 pkill -f "vite"             2>/dev/null || true
 
-for PORT in 3000 4200 4300; do
+for PORT in 3100 4200 4300; do
   PIDS=$(lsof -ti :$PORT 2>/dev/null || true)
   if [ -n "$PIDS" ]; then
     kill -9 $PIDS 2>/dev/null && echo "  ✅ 포트 $PORT 해제" || true

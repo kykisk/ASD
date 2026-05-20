@@ -20,15 +20,15 @@ if ! command -v pnpm &>/dev/null; then
   exit 1
 fi
 
-EXISTING=$(lsof -ti :3000 2>/dev/null || true)
+EXISTING=$(lsof -ti :3100 2>/dev/null || true)
 if [ -n "$EXISTING" ]; then
-  echo "  ⚠️  포트 3000 사용 중인 프로세스 종료 중 (PID: $EXISTING)..."
+  echo "  ⚠️  포트 3100 사용 중인 프로세스 종료 중 (PID: $EXISTING)..."
   kill -9 $EXISTING 2>/dev/null || true
   sleep 1
 fi
 
 echo "🚀 AutiCare API 서버 시작..."
-echo "   URL: http://localhost:3000/v1"
+echo "   URL: http://localhost:3100/v1"
 echo "   종료: Ctrl+C"
 echo ""
 
