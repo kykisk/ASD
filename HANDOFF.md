@@ -40,7 +40,8 @@ CURRENT STATE
 - Phase 1: 완료 + 검증 완료
 - 빌드: api ✅ web ✅ admin ✅
 - 테스트: 145개 통과
-- Git: 42개 커밋, remote 미설정 (이번에 push 예정)
+- Git: 43개 커밋, remote: git@github.com:kykisk/ASD.git (master 브랜치 push 완료)
+- SSH: ~/.ssh/id_ed25519 (EC2 전용, GitHub에 auticare-ec2 등록됨)
 - Admin 페이지: 로그인만 테스트 완료. AI 설정 등 나머지 Phase 2에서 테스트
 
 PENDING TASKS

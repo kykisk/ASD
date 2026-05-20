@@ -299,6 +299,25 @@ export PATH="$HOME/.local/node_modules/.bin:$PATH"
 ### 8.11 Prisma 스키마 위치
 표준 위치(`prisma/`)가 아닌 `libs/prisma-client/prisma/`에 있으므로 모든 prisma 명령에 `--schema` 플래그 필수.
 
+### 8.12 Git 설정
+
+| 항목 | 값 |
+|------|-----|
+| Remote | `git@github.com:kykisk/ASD.git` |
+| 브랜치 | `master` |
+| SSH 키 위치 | `~/.ssh/id_ed25519` (EC2 전용) |
+| GitHub 등록 키 | `auticare-ec2` (Title) |
+
+```bash
+# 현재 EC2에서 push 방법
+cd /home/ec2-user/workspace/ASD/auticare
+git add .
+git commit -m "..."
+git push origin master
+```
+
+SSH 키는 이 EC2 인스턴스 전용으로 생성됨. 다른 시스템 영향 없음.
+
 ---
 
 ## 9. Phase 2 작업 계획 (AI Integration, 6주)
