@@ -210,24 +210,42 @@ const encrypted = await this.encryptionService.encryptPii({ name, birthDate });
 
 ## 8. 알려진 이슈 / 주의사항
 
-### 8.1 familyId JWT 이슈
-현재 JWT 토큰에 `familyId`가 포함되지 않습니다. 일부 컨트롤러(`SchedulesController`, `AssessmentsController`)가 `user.familyId`를 사용하므로 Phase 2 시작 전에 수정 필요:
-- `auth.service.ts`의 `generateTokens()` 메서드에 familyId 추가
-- 또는 서비스 레이어에서 childId → familyId를 DB 조회로 해결
+### 8.1 familyId JWT 이슈 (수정됨)
+`generateTokens()`에서 FamilyMember 테이블을 조회해 familyId를 JWT에 포함하도록 수정 완료.
 
-### 8.2 pnpm PATH 설정
-터미널 새로 열 때마다 필요:
+### 8.2 포트 맵 (충돌 금지 포트: 3000, 4173, 5432)
+
+| 서비스 | 포트 |
+|--------|------|
+| API (dev) | **3100** |
+| Web (dev) | 4200 |
+| Web (preview) | 4201 |
+| Admin (dev) | 4300 |
+| Admin (preview) | 4301 |
+| PostgreSQL | 5433 |
+| Redis | 6380 |
+
+**절대 사용 금지**: 3000, 4173, 5432 (다른 시스템 점유)
+
+### 8.3 pnpm PATH 설정
+스크립트들이 자동 처리하므로 별도 설정 불필요.
+수동 실행 시:
 ```bash
 export PATH="$HOME/.local/node_modules/.bin:$PATH"
 ```
 
-### 8.3 dev 서버 실행
-`pnpm nx serve`는 종료되지 않는 장기 프로세스. 백그라운드 실행 필요:
+### 8.4 dev 서버 실행
+`scripts/` 폴더의 스크립트를 사용 (재시작 후에도 동작):
 ```bash
-nohup pnpm nx serve web --port=4200 --host=0.0.0.0 > /tmp/web.log 2>&1 &
+./scripts/start-db.sh      # 터미널 1
+./scripts/start-api.sh     # 터미널 2
+./scripts/start-web.sh     # 터미널 3
+./scripts/start-admin.sh   # 터미널 4 (선택)
+./scripts/status.sh        # 상태 확인
+./scripts/stop-servers.sh  # 서버 종료
 ```
 
-### 8.4 Prisma 스키마 위치
+### 8.5 Prisma 스키마 위치
 표준 위치(`prisma/`)가 아닌 `libs/prisma-client/prisma/`에 있으므로 모든 prisma 명령에 `--schema` 플래그 필수.
 
 ---
