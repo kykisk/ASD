@@ -1,7 +1,4 @@
 #!/bin/bash
-set -e
-
-cd "$(dirname "$0")/.."
 
 echo "🛑 DB 컨테이너 종료 중..."
 
