@@ -4,11 +4,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "🛑 AutiCare 서버 종료 중..."
 
-pkill -f "nx.*serve.*api"   2>/dev/null && echo "  ✅ API 서버 종료"   || true
-pkill -f "nx.*serve.*web"   2>/dev/null && echo "  ✅ Web 서버 종료"   || true
-pkill -f "nx.*serve.*admin" 2>/dev/null && echo "  ✅ Admin 서버 종료" || true
-pkill -f "nest.*start"      2>/dev/null || true
-pkill -f "vite"             2>/dev/null || true
+for SVC in api web admin; do
+  PID_FILE="$ROOT/logs/$SVC.pid"
+  if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    kill "$PID" 2>/dev/null && echo "  ✅ $SVC 종료 (PID: $PID)" || echo "  ℹ️  $SVC 이미 종료됨"
+    rm -f "$PID_FILE"
+  fi
+done
 
 for PORT in 3100 4200 4300; do
   PIDS=$(lsof -ti :$PORT 2>/dev/null || true)

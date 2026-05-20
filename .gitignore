@@ -5,6 +5,11 @@
 .env.local
 .env.*.local
 
+# Server logs and PID files
+logs/
+*.pid
+*.log
+
 # compiled output
 dist
 tmp

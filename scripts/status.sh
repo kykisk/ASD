@@ -6,39 +6,52 @@ export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 
 echo "📊 AutiCare 서비스 상태"
-echo "══════════════════════════════════"
+echo "══════════════════════════════════════"
 
 echo ""
-echo "🐳 컨테이너"
+echo "🐳 DB 컨테이너"
 PG_STATUS=$(podman inspect --format "{{.State.Status}}" auticare-postgres 2>/dev/null || echo "없음")
 RD_STATUS=$(podman inspect --format "{{.State.Status}}" auticare-redis    2>/dev/null || echo "없음")
-echo "  PostgreSQL (5433): $PG_STATUS"
-echo "  Redis      (6380): $RD_STATUS"
+echo "  PostgreSQL (:5433) : $PG_STATUS"
+echo "  Redis      (:6380) : $RD_STATUS"
 
 echo ""
-echo "🌐 포트 사용 현황"
-for PORT in 3100 4200 4300; do
-  PIDS=$(lsof -ti :$PORT 2>/dev/null || true)
-  if [ -n "$PIDS" ]; then
-    NAME=$(lsof -i :$PORT 2>/dev/null | grep LISTEN | awk '{print $1}' | head -1)
-    echo "  :$PORT → ✅ 실행 중 ($NAME, PID: $PIDS)"
+echo "🚀 서버 프로세스"
+for SVC in api web admin; do
+  PID_FILE="$ROOT/logs/$SVC.pid"
+  PORT=$( [ "$SVC" = "api" ] && echo 3100 || ( [ "$SVC" = "web" ] && echo 4200 || echo 4300 ) )
+  if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+      echo "  ✅ $SVC  (:$PORT)  실행 중 (PID: $PID)"
+    else
+      echo "  ❌ $SVC  (:$PORT)  PID 파일 있으나 프로세스 없음"
+      rm -f "$PID_FILE"
+    fi
   else
-    echo "  :$PORT → ❌ 중지됨"
+    echo "  ❌ $SVC  (:$PORT)  중지됨"
   fi
 done
 
 echo ""
 echo "🔗 HTTP 응답"
-for URL in "http://localhost:3100/v1" "http://localhost:4200" "http://localhost:4300"; do
-  CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 "$URL" 2>/dev/null || echo "ERR")
-  echo "  $URL → $CODE"
+for ITEM in "3100:/v1" "4200:/" "4300:/"; do
+  PORT="${ITEM%%:*}"
+  PATH_="${ITEM##*:}"
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 "http://localhost:$PORT$PATH_" 2>/dev/null || echo "ERR")
+  echo "  :$PORT$PATH_  →  HTTP $CODE"
 done
 
 echo ""
-echo "🔧 환경"
-echo "  node:  $(node --version 2>/dev/null || echo 'not found')"
-echo "  pnpm:  $(pnpm --version 2>/dev/null || echo 'not found')"
-echo "  .env:  $([ -f "$ROOT/.env" ] && echo '✅ 있음' || echo '❌ 없음')"
+echo "📋 최근 로그 (마지막 3줄)"
+for SVC in api web admin; do
+  LOG="$ROOT/logs/$SVC.log"
+  if [ -f "$LOG" ]; then
+    echo "  [$SVC]"
+    tail -3 "$LOG" 2>/dev/null | sed 's/^/    /'
+  fi
+done
 
 echo ""
-echo "══════════════════════════════════"
+echo "══════════════════════════════════════"
+echo "  로그 실시간 보기: tail -f $ROOT/logs/<api|web|admin>.log"
