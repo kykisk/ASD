@@ -18,6 +18,9 @@ const mockPrismaService = {
     update: vi.fn(),
     updateMany: vi.fn(),
   },
+  familyMember: {
+    findFirst: vi.fn().mockResolvedValue(null),
+  },
 };
 
 const mockJwtService = {
@@ -334,6 +337,7 @@ describe('AuthService', () => {
       expect(mockJwtService.signAsync).toHaveBeenCalledWith({
         sub: 'user-1',
         role: 'FAMILY_ADMIN',
+        familyId: null,
         iss: 'auticare',
       });
     });

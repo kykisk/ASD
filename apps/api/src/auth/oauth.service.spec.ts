@@ -20,6 +20,9 @@ const mockPrismaService = {
     update: vi.fn(),
     updateMany: vi.fn(),
   },
+  familyMember: {
+    findFirst: vi.fn().mockResolvedValue(null),
+  },
 };
 
 const mockJwtService = {

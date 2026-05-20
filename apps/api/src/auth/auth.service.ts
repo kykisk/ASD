@@ -247,9 +247,16 @@ export class AuthService {
   private async generateTokens(user: { id: string; role: string }): Promise<TokenPair> {
     await this.enforceMaxTokens(user.id);
 
+    const familyMember = await this.prisma.familyMember.findFirst({
+      where: { userId: user.id },
+      orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }],
+      select: { familyId: true },
+    });
+
     const payload = {
       sub: user.id,
       role: user.role,
+      familyId: familyMember?.familyId ?? null,
       iss: 'auticare',
     };
 
