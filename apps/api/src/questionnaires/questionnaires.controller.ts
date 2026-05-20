@@ -20,7 +20,7 @@ import {
   ReorderItemsDto,
 } from '@auticare/dto';
 
-@Controller('v1')
+@Controller()
 export class QuestionnairesController {
   constructor(
     private questionnairesService: QuestionnairesService,

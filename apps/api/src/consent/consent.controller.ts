@@ -4,7 +4,7 @@ import { ConsentService } from './consent.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { RecordConsentDto } from '@auticare/dto';
 
-@Controller('v1/consent')
+@Controller('consent')
 export class ConsentController {
   constructor(private consentService: ConsentService) {}
 

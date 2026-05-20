@@ -10,7 +10,7 @@ import { AssessmentsService } from './assessments.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { CreateAssessmentDto, QueryAssessmentDto } from '@auticare/dto';
 
-@Controller('v1')
+@Controller()
 export class AssessmentsController {
   constructor(private assessmentsService: AssessmentsService) {}
 

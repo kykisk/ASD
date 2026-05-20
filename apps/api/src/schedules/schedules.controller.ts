@@ -13,7 +13,7 @@ import { ConflictDetectionService } from './conflict-detection.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { CreateScheduleDto, UpdateScheduleDto, QueryScheduleDto } from '@auticare/dto';
 
-@Controller('v1')
+@Controller()
 export class SchedulesController {
   constructor(
     private schedulesService: SchedulesService,

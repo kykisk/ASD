@@ -15,7 +15,7 @@ import { ApiException } from '../common/exceptions/api.exception.js';
 
 const VALID_PROVIDERS = ['CLAUDE_BEDROCK', 'CLAUDE_DIRECT', 'GEMINI', 'OPENAI'];
 
-@Controller('v1/admin/ai-config')
+@Controller('admin/ai-config')
 @Roles(UserRole.SYSTEM_ADMIN)
 export class AiConfigController {
   constructor(private readonly aiConfigService: AiConfigService) {}

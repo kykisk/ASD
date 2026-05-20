@@ -3,7 +3,7 @@ import { DashboardService } from './dashboard.service.js';
 import { GrowthService } from './growth.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 
-@Controller('v1')
+@Controller()
 export class DashboardController {
   constructor(
     private dashboardService: DashboardService,

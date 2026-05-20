@@ -21,7 +21,7 @@ interface RecordAttachmentBody {
   fileSize: number;
 }
 
-@Controller('v1')
+@Controller()
 export class UploadsController {
   constructor(private uploadsService: UploadsService) {}
 
