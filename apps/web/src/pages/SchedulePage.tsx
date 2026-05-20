@@ -31,6 +31,7 @@ import { MonthView } from '../components/calendar/MonthView';
 import { WeekView } from '../components/calendar/WeekView';
 import { DayView } from '../components/calendar/DayView';
 import { ScheduleFormModal } from '../components/calendar/ScheduleFormModal';
+import { RecurringEditDialog } from '../components/calendar/RecurringEditDialog';
 
 const ALL_CATEGORIES: ScheduleCategory[] = [
   'THERAPY',
@@ -51,6 +52,8 @@ export function SchedulePage() {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<Date | undefined>();
   const [modalDefaultTime, setModalDefaultTime] = useState<string | undefined>();
+  const [pendingSave, setPendingSave] = useState<(CreateScheduleInput & { id: string }) | null>(null);
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false);
 
   const { selectedChildId } = useChildStore();
   const childId = selectedChildId;
@@ -142,6 +145,16 @@ export function SchedulePage() {
   const handleSave = useCallback(
     (data: CreateScheduleInput) => {
       if (data.id) {
+        const realId = data.id.includes('_') ? data.id.split('_')[0] : data.id;
+        const originalSchedule = schedules?.find(s => s.id.split('_')[0] === realId);
+
+        if (originalSchedule && originalSchedule.recurrenceType !== 'NONE' && data.id.includes('_')) {
+          setPendingSave(data as CreateScheduleInput & { id: string });
+          setShowRecurringDialog(true);
+          handleModalClose();
+          return;
+        }
+
         updateSchedule.mutate(data as CreateScheduleInput & { id: string }, {
           onSuccess: () => handleModalClose(),
         });
@@ -151,8 +164,16 @@ export function SchedulePage() {
         });
       }
     },
-    [createSchedule, updateSchedule, handleModalClose]
+    [schedules, createSchedule, updateSchedule, handleModalClose]
   );
+
+  const handleRecurringChoice = useCallback((mode: 'THIS_ONLY' | 'ALL') => {
+    if (!pendingSave) return;
+    setShowRecurringDialog(false);
+    updateSchedule.mutate({ ...pendingSave, editMode: mode }, {
+      onSuccess: () => { setPendingSave(null); },
+    });
+  }, [pendingSave, updateSchedule]);
 
   const handleDeleteSchedule = useCallback(
     (id: string) => {
@@ -260,6 +281,12 @@ export function SchedulePage() {
         existingSchedules={schedules}
         defaultDate={modalDefaultDate}
         defaultTime={modalDefaultTime}
+      />
+
+      <RecurringEditDialog
+        isOpen={showRecurringDialog}
+        onSelect={handleRecurringChoice}
+        onCancel={() => { setShowRecurringDialog(false); setPendingSave(null); }}
       />
     </div>
   );

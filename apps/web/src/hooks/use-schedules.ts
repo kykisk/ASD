@@ -70,15 +70,18 @@ export function useUpdateSchedule() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateScheduleInput & { id: string }) => {
-      const { id, childId, recurrenceDays, recurrenceEndDate, ...rest } = input;
+    mutationFn: async (input: CreateScheduleInput & { id: string; editMode?: 'THIS_ONLY' | 'ALL'; occurrenceDate?: string }) => {
+      const { id, childId, recurrenceDays, recurrenceEndDate, editMode, occurrenceDate, ...rest } = input;
       const realId = id.includes('_') ? id.split('_')[0] : id;
+      const occDate = occurrenceDate || (id.includes('_') ? id.split('_').slice(1).join('_').split('T')[0] : undefined);
       const body = {
         ...rest,
         recurrenceRule: recurrenceDays && recurrenceDays.length > 0
           ? { daysOfWeek: recurrenceDays }
           : undefined,
         recurrenceEnd: recurrenceEndDate || undefined,
+        editMode: editMode ?? 'ALL',
+        occurrenceDate: occDate,
       };
       const { data } = await api.patch<{ success: true; data: Schedule }>(
         `/schedules/${realId}`,

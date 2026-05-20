@@ -203,6 +203,7 @@ model Schedule {
   recurrenceType RecurrenceType   @default(NONE)
   recurrenceRule Json?            // { daysOfWeek?: number[], interval?: number, endDate?: string }
   recurrenceEnd  DateTime?
+  exceptedDates  Json?            // string[] — dates (YYYY-MM-DD) excluded from recurrence expansion
 
   // Metadata
   location       String?

@@ -152,6 +152,55 @@ export class SchedulesService {
 
     await this.verifyFamilyMember(schedule.familyId, userId);
 
+    const editMode = dto.editMode ?? 'ALL';
+
+    if (editMode === 'THIS_ONLY' && dto.occurrenceDate && schedule.recurrenceType !== 'NONE') {
+      // 1. Add occurrenceDate to original schedule's exceptedDates
+      const currentExcepted = (schedule.exceptedDates as string[] | null) ?? [];
+      if (!currentExcepted.includes(dto.occurrenceDate)) {
+        await this.prisma.schedule.update({
+          where: { id: scheduleId },
+          data: { exceptedDates: [...currentExcepted, dto.occurrenceDate] },
+        });
+      }
+
+      // 2. Create new one-time schedule for this occurrence
+      const originalStart = new Date(schedule.startTime);
+      const originalEnd = new Date(schedule.endTime);
+      const occDate = new Date(dto.occurrenceDate);
+
+      const newStart = new Date(occDate);
+      newStart.setHours(
+        dto.startTime ? new Date(dto.startTime).getHours() : originalStart.getHours(),
+        dto.startTime ? new Date(dto.startTime).getMinutes() : originalStart.getMinutes(),
+      );
+      const newEnd = new Date(occDate);
+      newEnd.setHours(
+        dto.endTime ? new Date(dto.endTime).getHours() : originalEnd.getHours(),
+        dto.endTime ? new Date(dto.endTime).getMinutes() : originalEnd.getMinutes(),
+      );
+
+      const created = await this.prisma.schedule.create({
+        data: {
+          childId: schedule.childId,
+          familyId: schedule.familyId,
+          title: dto.title ?? schedule.title,
+          description: dto.description ?? schedule.description ?? undefined,
+          category: (dto.category as any) ?? schedule.category,
+          startTime: newStart,
+          endTime: newEnd,
+          isAllDay: dto.isAllDay ?? schedule.isAllDay,
+          recurrenceType: 'NONE',
+          location: dto.location ?? schedule.location ?? undefined,
+          notes: dto.notes ?? schedule.notes ?? undefined,
+          color: dto.color ?? schedule.color ?? undefined,
+        },
+      });
+      await this.cacheService.delByPattern('dashboard:*');
+      return created;
+    }
+
+    // ALL mode: update original schedule
     const data: Record<string, unknown> = {};
 
     if (dto.title !== undefined) data.title = dto.title;
@@ -202,6 +251,8 @@ export class SchedulesService {
     const scheduleEnd = new Date(schedule.endTime);
     const duration = scheduleEnd.getTime() - scheduleStart.getTime();
 
+    const excepted = (schedule.exceptedDates as string[] | null) ?? [];
+
     const recurrenceEnd = schedule.recurrenceEnd
       ? new Date(schedule.recurrenceEnd)
       : endDate;
@@ -240,7 +291,10 @@ export class SchedulesService {
       while (current < effectiveEnd) {
         const occEnd = new Date(current.getTime() + duration);
         if (occEnd > startDate && current < endDate) {
-          occurrences.push(toOccurrence(new Date(current)));
+          const dateKey = current.toISOString().split('T')[0];
+          if (!excepted.includes(dateKey)) {
+            occurrences.push(toOccurrence(new Date(current)));
+          }
         }
         current.setDate(current.getDate() + interval);
       }
@@ -249,7 +303,10 @@ export class SchedulesService {
       while (current < effectiveEnd) {
         const occEnd = new Date(current.getTime() + duration);
         if (occEnd > startDate && current < endDate) {
-          occurrences.push(toOccurrence(new Date(current)));
+          const dateKey = current.toISOString().split('T')[0];
+          if (!excepted.includes(dateKey)) {
+            occurrences.push(toOccurrence(new Date(current)));
+          }
         }
         current.setDate(current.getDate() + 7 * interval);
       }
@@ -257,7 +314,10 @@ export class SchedulesService {
       const daysOfWeek = rule?.daysOfWeek ?? [];
       if (daysOfWeek.length === 0) {
         if (scheduleStart >= startDate && scheduleStart < endDate) {
-          occurrences.push(toOccurrence(scheduleStart));
+          const dateKey = scheduleStart.toISOString().split('T')[0];
+          if (!excepted.includes(dateKey)) {
+            occurrences.push(toOccurrence(scheduleStart));
+          }
         }
         return occurrences;
       }
@@ -273,7 +333,10 @@ export class SchedulesService {
         if (daysOfWeek.includes(current.getDay())) {
           const occEnd = new Date(current.getTime() + duration);
           if (occEnd > startDate && current < endDate && current >= scheduleStart) {
-            occurrences.push(toOccurrence(new Date(current)));
+            const dateKey = current.toISOString().split('T')[0];
+            if (!excepted.includes(dateKey)) {
+              occurrences.push(toOccurrence(new Date(current)));
+            }
           }
         }
         current.setDate(current.getDate() + 1);
