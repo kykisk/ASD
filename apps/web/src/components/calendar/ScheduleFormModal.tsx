@@ -10,6 +10,7 @@ import {
   CATEGORY_COLORS,
 } from '../../types/schedule';
 import { ConflictWarning } from './ConflictWarning';
+import { TimePicker } from './TimePicker';
 import { useConflictCheck } from '../../hooks/use-conflict-check';
 
 const RECURRENCE_OPTIONS = [
@@ -361,16 +362,17 @@ export function ScheduleFormModal({
               />
             </div>
             {!isAllDay && (
-              <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">
-                  시작 시간
-                </label>
-                <input
-                  type="time"
-                  {...register('startTimeStr')}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                />
-              </div>
+              <Controller
+                name="startTimeStr"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="시작 시간"
+                  />
+                )}
+              />
             )}
             <div>
               <label className="block text-xs font-medium text-neutral-500 mb-1">
@@ -383,21 +385,18 @@ export function ScheduleFormModal({
               />
             </div>
             {!isAllDay && (
-              <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">
-                  종료 시간
-                </label>
-                <input
-                  type="time"
-                  {...register('endTimeStr')}
-                  className={`w-full px-3 py-2 rounded-lg border bg-neutral-50 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 ${
-                    errors.endTimeStr ? 'border-red-300' : 'border-neutral-200'
-                  }`}
-                />
-                {errors.endTimeStr && (
-                  <p className="mt-1 text-xs text-red-500">{errors.endTimeStr.message}</p>
+              <Controller
+                name="endTimeStr"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="종료 시간"
+                    error={errors.endTimeStr?.message}
+                  />
                 )}
-              </div>
+              />
             )}
           </div>
 
