@@ -22,7 +22,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     ]);
     if (isPublic) return true;
 
-    const parentResult = (await super.canActivate(context)) as boolean;
+    let parentResult: boolean;
+    try {
+      parentResult = (await super.canActivate(context)) as boolean;
+    } catch (err: any) {
+      if (err?.message === 'jwt expired') {
+        throw new ApiException(401, 'AUTH_002', '액세스 토큰이 만료되었습니다');
+      }
+      throw new ApiException(401, 'AUTH_003', '유효하지 않은 토큰입니다');
+    }
     if (!parentResult) return false;
 
     const request = context.switchToHttp().getRequest();
