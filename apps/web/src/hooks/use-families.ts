@@ -37,10 +37,10 @@ export function useMyFamily() {
   return useQuery({
     queryKey: ['family', 'my'],
     queryFn: async () => {
-      const { data } = await api.get<{ success: true; data: Family }>(
+      const { data } = await api.get<{ success: true; data: Family[] }>(
         '/families/my',
       );
-      return data.data;
+      return data.data[0] ?? null;
     },
     retry: false,
   });
