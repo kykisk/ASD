@@ -29,10 +29,14 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../../.env'] }),
-    ThrottlerModule.forRoot([
-      { name: 'global', ttl: 60000, limit: 100 },
-      { name: 'auth', ttl: 60000, limit: 5 },
-    ]),
+    ThrottlerModule.forRoot(
+      process.env['NODE_ENV'] === 'production'
+        ? [
+            { name: 'global', ttl: 60000, limit: 100 },
+            { name: 'auth', ttl: 60000, limit: 5 },
+          ]
+        : [],
+    ),
     PrismaModule,
     EncryptionModule,
     CacheModule,
