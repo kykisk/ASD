@@ -211,7 +211,7 @@ const encrypted = await this.encryptionService.encryptPii({ name, birthDate });
 ## 8. 알려진 이슈 / 주의사항
 
 ### 8.1 familyId JWT 이슈 (수정됨)
-`generateTokens()`에서 FamilyMember 테이블을 조회해 familyId를 JWT에 포함하도록 수정 완료.
+`generateTokens()`에서 FamilyMember 테이블을 조회해 familyId를 JWT에 포함. **중요**: 모든 페이지에서 `user.familyId` (JWT값) 대신 `useMyFamily().data?.id` 를 사용해야 함. JWT의 familyId는 가족 생성 후 재로그인 전까지 null임.
 
 ### 8.2 포트 맵 (충돌 금지 포트: 3000, 4173, 5432)
 
@@ -227,25 +227,69 @@ const encrypted = await this.encryptionService.encryptPii({ name, birthDate });
 
 **절대 사용 금지**: 3000, 4173, 5432 (다른 시스템 점유)
 
-### 8.3 pnpm PATH 설정
+### 8.3 JWT TTL 설정
+
+| 환경 | TTL | 설정 |
+|------|-----|------|
+| 개발 | 8시간 (28800초) | `.env` JWT_ACCESS_TTL=28800 |
+| 프로덕션 | 15분 (900초) | JWT_ACCESS_TTL=900 |
+
+### 8.4 스키마 변경 시 순서 (CRITICAL)
+```bash
+# 반드시 이 순서대로:
+pnpm prisma migrate dev --schema=libs/prisma-client/prisma/schema.prisma --name xxx
+pnpm prisma generate --schema=libs/prisma-client/prisma/schema.prisma
+pnpm nx run api:build --skip-nx-cache
+./scripts/restart-api.sh
+```
+`generate` 누락 시 "Unknown argument" Prisma 런타임 오류 발생.
+
+### 8.5 API 컨트롤러 prefix 규칙 (CRITICAL)
+`main.ts`에 `setGlobalPrefix('v1')`이 있으므로 컨트롤러에 절대 `@Controller('v1/...')` 형태 금지.
+- ✅ `@Controller('schedules')`
+- ❌ `@Controller('v1/schedules')` → `/v1/v1/schedules` 이중 등록됨
+
+### 8.6 프론트엔드 API 타입 불일치 패턴
+Phase 1 검증에서 반복 발견된 패턴. 새 훅/컴포넌트 작성 시 반드시 백엔드 service/interface를 먼저 확인:
+```typescript
+// 잘못된 예 (프론트가 임의로 추측한 타입)
+assessment.overallScore  // 실제: assessment.totalScore
+aggregated.domainScores  // 실제: aggregated.domains
+growth.entries           // 실제: growth.domains (DomainTimeSeries[])
+growth.summary           // 존재하지 않음
+
+// 올바른 방법: 백엔드 service 파일에서 interface 확인 후 작성
+```
+
+### 8.7 Mock 훅 주의
+일부 훅이 Phase 1 구현 시 mock으로 만들어졌다가 나중에 실제 API로 교체됨. 새 훅 작성 시 mock 패턴(`setTimeout`, 가짜 ID 반환) 절대 금지. 반드시 실제 API 호출.
+
+### 8.8 반복 일정 Occurrence ID
+반복 일정의 캘린더 표시 항목은 가상 ID: `{realScheduleId}_{date}`. PATCH/DELETE 시 `_` 앞의 실제 ID 추출 필요:
+```typescript
+const realId = id.includes('_') ? id.split('_')[0] : id;
+```
+
+### 8.9 pnpm PATH 설정
 스크립트들이 자동 처리하므로 별도 설정 불필요.
 수동 실행 시:
 ```bash
 export PATH="$HOME/.local/node_modules/.bin:$PATH"
 ```
 
-### 8.4 dev 서버 실행
-`scripts/` 폴더의 스크립트를 사용 (재시작 후에도 동작):
+### 8.10 dev 서버 실행
+`scripts/` 폴더의 스크립트 사용:
 ```bash
-./scripts/start-db.sh      # 터미널 1
-./scripts/start-api.sh     # 터미널 2
-./scripts/start-web.sh     # 터미널 3
-./scripts/start-admin.sh   # 터미널 4 (선택)
-./scripts/status.sh        # 상태 확인
-./scripts/stop-servers.sh  # 서버 종료
+./scripts/start-db.sh      # DB (제일 먼저)
+./scripts/start-api.sh     # 백엔드
+./scripts/start-web.sh     # 프론트엔드 (사용자)
+./scripts/start-admin.sh   # 프론트엔드 (관리자, 선택)
+./scripts/restart-api.sh   # 백엔드만 재시작
+./scripts/restart-fe.sh    # 프론트엔드 둘 다 재시작
+./scripts/status.sh        # 전체 상태 확인
 ```
 
-### 8.5 Prisma 스키마 위치
+### 8.11 Prisma 스키마 위치
 표준 위치(`prisma/`)가 아닌 `libs/prisma-client/prisma/`에 있으므로 모든 prisma 명령에 `--schema` 플래그 필수.
 
 ---
