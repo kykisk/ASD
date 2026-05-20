@@ -1,5 +1,4 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes, hkdf } from 'node:crypto';
 import { promisify } from 'node:util';
 
@@ -27,10 +26,9 @@ const KEY_LENGTH = 32;
 export class EncryptionService implements OnModuleInit {
   private masterKey!: Buffer;
 
-  constructor(private readonly configService: ConfigService) {}
-
   onModuleInit() {
-    const keyBase64 = this.configService.getOrThrow<string>('ENCRYPTION_MASTER_KEY');
+    const keyBase64 = process.env['ENCRYPTION_MASTER_KEY'];
+    if (!keyBase64) throw new Error('ENCRYPTION_MASTER_KEY env var is not set');
     this.masterKey = Buffer.from(keyBase64, 'base64');
     if (this.masterKey.length !== KEY_LENGTH) {
       throw new Error('ENCRYPTION_MASTER_KEY must be 32 bytes (256 bits) base64-encoded');

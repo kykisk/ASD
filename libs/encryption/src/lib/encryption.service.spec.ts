@@ -6,13 +6,8 @@ import { EncryptionService, EncryptedPayload } from './encryption.service.js';
 const TEST_MASTER_KEY = randomBytes(32).toString('base64');
 
 function createService(key = TEST_MASTER_KEY): EncryptionService {
-  const mockConfigService = {
-    getOrThrow: (k: string) => {
-      if (k === 'ENCRYPTION_MASTER_KEY') return key;
-      throw new Error(`Unknown key: ${k}`);
-    },
-  } as any;
-  const svc = new EncryptionService(mockConfigService);
+  const svc = new EncryptionService();
+  process.env['ENCRYPTION_MASTER_KEY'] = key;
   svc.onModuleInit();
   return svc;
 }
