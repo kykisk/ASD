@@ -78,14 +78,17 @@ export function useLogout() {
   const { clearAuth } = useAuthStore();
   const navigate = useNavigate();
 
+  const doLogout = () => {
+    clearAuth();
+    navigate('/login');
+  };
+
   return useMutation({
     mutationFn: async () => {
       await api.post('/auth/logout');
     },
-    onSuccess: () => {
-      clearAuth();
-      navigate('/login');
-    },
+    onSuccess: doLogout,
+    onError: doLogout,
   });
 }
 
