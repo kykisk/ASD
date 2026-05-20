@@ -39,11 +39,11 @@ const questions: Record<string, { id: string; text: string }[]> = {
 };
 
 const DEFAULT_QUESTIONNAIRE_ITEMS = [
-  { domain: 'COMMUNICATION' as const, text: '오늘 아이의 의사소통 능력은 어떠했나요?', weight: 1 },
-  { domain: 'SOCIAL' as const, text: '오늘 아이의 사회적 상호작용은 어떠했나요?', weight: 1 },
-  { domain: 'MOTOR' as const, text: '오늘 아이의 운동 능력은 어떠했나요?', weight: 1 },
-  { domain: 'COGNITIVE' as const, text: '오늘 아이의 인지 발달은 어떠했나요?', weight: 1 },
-  { domain: 'EMOTIONAL' as const, text: '오늘 아이의 정서 상태는 어떠했나요?', weight: 1 },
+  { domain: 'COMMUNICATION' as const, text: '오늘 아이의 의사소통 능력은 어떠했나요?', orderIndex: 0, weight: 1 },
+  { domain: 'SOCIAL' as const, text: '오늘 아이의 사회적 상호작용은 어떠했나요?', orderIndex: 1, weight: 1 },
+  { domain: 'MOTOR' as const, text: '오늘 아이의 운동 능력은 어떠했나요?', orderIndex: 2, weight: 1 },
+  { domain: 'COGNITIVE' as const, text: '오늘 아이의 인지 발달은 어떠했나요?', orderIndex: 3, weight: 1 },
+  { domain: 'EMOTIONAL' as const, text: '오늘 아이의 정서 상태는 어떠했나요?', orderIndex: 4, weight: 1 },
 ];
 
 interface DomainAnswer {
