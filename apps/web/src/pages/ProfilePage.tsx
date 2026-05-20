@@ -9,7 +9,7 @@ const profileSchema = z.object({
     .string()
     .min(2, '이름은 최소 2자 이상이어야 합니다')
     .max(20, '이름은 최대 20자까지 가능합니다')
-    .regex(/^[가-힣a-zA-Z\s]+$/, '이름은 한글 또는 영문만 입력 가능합니다'),
+    .regex(/^[가-힣a-zA-Z\s\-'.]+$/, '이름은 한글, 영문, 공백, 하이픈(-)만 입력 가능합니다'),
   phone: z
     .string()
     .regex(
@@ -20,6 +20,14 @@ const profileSchema = z.object({
     .nullable()
     .optional(),
 });
+
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  if (digits.length <= 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+}
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
@@ -186,6 +194,12 @@ export function ProfilePage() {
                   : 'border-neutral-200'
               }`}
               {...register('phone')}
+              onChange={(e) => {
+                const formatted = formatPhone(e.target.value);
+                e.target.value = formatted;
+                register('phone').onChange(e);
+              }}
+              maxLength={13}
             />
             {errors.phone && (
               <p className="mt-1.5 text-xs text-red-500">
