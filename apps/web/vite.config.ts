@@ -8,11 +8,23 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/apps/web',
   server: {
     port: 4200,
-    host: 'localhost',
+    host: '0.0.0.0',
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     port: 4201,
-    host: 'localhost',
+    host: '0.0.0.0',
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [react(), nxViteTsPaths()],
   build: {
