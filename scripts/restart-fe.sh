@@ -17,21 +17,21 @@ for SVC in web admin; do
 done
 
 pkill -f "auticare.*vite" 2>/dev/null || true
+pkill -f "vite.*4200\|vite.*4300\|vite.*4201\|vite.*4301" 2>/dev/null || true
 
 sleep 1
 
-for PORT in 4200 4201 4202 4300 4301; do
+for PORT in 4200 4201 4202 4300 4301 4302; do
   PIDS=$(lsof -ti :$PORT 2>/dev/null || true)
   [ -n "$PIDS" ] && kill -9 $PIDS 2>/dev/null || true
 done
 
-sleep 1
+sleep 2
 echo ""
 
-"$ROOT/scripts/start-web.sh" &
-WEB_PID=$!
-"$ROOT/scripts/start-admin.sh" &
-ADMIN_PID=$!
+echo "── Web 시작 ─────────────────────────"
+"$ROOT/scripts/start-web.sh"
 
-wait $WEB_PID
-wait $ADMIN_PID
+echo ""
+echo "── Admin 시작 ───────────────────────"
+"$ROOT/scripts/start-admin.sh"
