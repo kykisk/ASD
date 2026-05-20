@@ -53,7 +53,7 @@ export function SchedulePage() {
   const [modalDefaultTime, setModalDefaultTime] = useState<string | undefined>();
 
   const { selectedChildId } = useChildStore();
-  const childId = selectedChildId || 'child-1';
+  const childId = selectedChildId;
 
   const dateRange = useMemo(() => {
     switch (viewMode) {
@@ -167,6 +167,11 @@ export function SchedulePage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
+      {!childId && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+          상단에서 아이를 선택하면 일정을 확인할 수 있어요
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-800">일정</h1>
