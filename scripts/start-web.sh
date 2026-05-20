@@ -40,7 +40,7 @@ echo ""
 
 echo "  시작 대기 중..."
 for i in $(seq 1 40); do
-  if grep -q "localhost:4200\|Local:" "$LOG" 2>/dev/null; then
+  if grep -q "ready in" "$LOG" 2>/dev/null; then
     echo "  ✅ Web 서버 준비됨"
     echo "     앱:     http://localhost:4200"
     echo "     디자인: http://localhost:4200/design-preview"
