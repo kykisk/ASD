@@ -3,6 +3,13 @@
 > AI 에이전트가 이 프로젝트에서 작업할 때 반드시 읽어야 하는 문서입니다.
 > 이 프로젝트는 자폐 아동 가정치료 지원 시스템입니다.
 
+| 항목 | 내용 |
+|------|------|
+| 현재 Phase | **Phase 1 완료 + 검증 완료. Phase 2 시작 전** |
+| 최종 업데이트 | 2026-05-20 |
+| 총 커밋 | 42개 |
+| 테스트 | 145개 통과 |
+
 ---
 
 ## 1. 프로젝트 개요
@@ -13,7 +20,7 @@
 | 목적 | 자폐 아동 가정치료를 지원하는 부모용 웹/모바일 앱 |
 | 기술 스택 | NestJS 11 + React 18 + React Native (Expo) + PostgreSQL 16 + Redis 7 |
 | 모노레포 | Nx 20 + pnpm |
-| 현재 Phase | Phase 1 완료 (8주 MVP) |
+| 현재 Phase | **Phase 2 시작 예정 (AI Integration)** |
 
 ---
 
@@ -294,15 +301,40 @@ export PATH="$HOME/.local/node_modules/.bin:$PATH"
 
 ---
 
-## 9. Phase 2 예정 작업
+## 9. Phase 2 작업 계획 (AI Integration, 6주)
 
-Phase 2 — AI Integration (6주, 240h):
+### 9.1 Week 9-10: AI Provider 어댑터 + 커리큘럼 생성 엔진
 
-| 주차 | 작업 |
-|------|------|
-| Week 9-10 | AI Provider 어댑터(Claude Bedrock/Direct, Gemini, GPT), AIService 파사드, Zod 출력 검증, 비용 추적, 커리큘럼 생성 엔진, 야간 배치 작업 |
-| Week 11-12 | AI 질문지 필터링(라이선스 유사도), AI 질문지 자동 생성, AI 스케줄 수정 제안 |
-| Week 13-14 | AI 주간 성장 인사이트, 스마트 알림, 월간 PDF 보고서(Puppeteer) |
+**이미 구현된 인프라:**
+- `AiConfig` DB 모델 (API 키 AES-256 암호화 저장)
+- Admin AI 설정 UI (`apps/admin/src/pages/AiSettingsPage.tsx`) — 현재 mock, 실제 API 연결 필요
+- `apps/api/src/ai-config/ai-config.service.ts` — CRUD + 복호화
+
+**구현 필요:**
+- AI Provider 어댑터 (Claude Bedrock/Direct, Gemini, OpenAI) — provider-agnostic interface
+- AIService 파사드 — 설정된 기본 프로바이더로 요청 라우팅
+- Zod 기반 출력 검증 (AI 응답 스키마 강제)
+- 비용 추적 (일일 호출 수 Redis 카운터)
+- 커리큘럼 생성 엔진 (아이 평가 데이터 → 프롬프트 → AI → 커리큘럼)
+- 야간 배치 작업 (cron: 새벽 3시, 모든 활성 아이 대상)
+
+### 9.2 Week 11-12: AI 질문지 + 스케줄 AI 제안
+
+- AI 질문지 자동 생성 (영역/연령 기반)
+- AI 질문지 필터링 (라이선스 도구 유사도 분석)
+- AI 스케줄 수정 제안 (평가 추세 기반)
+
+### 9.3 Week 13-14: 인사이트 + 알림 + PDF
+
+- AI 주간 성장 인사이트 (대시보드 카드)
+- 스마트 알림 (평가 예정, 커리큘럼, 마일스톤)
+- 월간 PDF 보고서 (Puppeteer)
+
+### 9.4 Phase 2 시작 전 체크리스트
+
+- [ ] Admin AI 설정 페이지를 실제 API에 연결 (Phase 2 첫 작업 권장)
+- [ ] .env에 AI 프로바이더 API 키 설정 (개발 테스트용)
+- [ ] `SPEC/IMPLEMENTATION_PLAN.md` Week 9-10 상세 태스크 확인
 
 ---
 
