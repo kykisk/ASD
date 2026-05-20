@@ -378,7 +378,11 @@ export function AssessmentForm() {
             onClick={handleSubmit}
             disabled={createAssessment.isPending || !questionnaireState}
           >
-            {createAssessment.isPending ? '제출 중...' : '제출하기'}
+            {createAssessment.isPending
+              ? '제출 중...'
+              : !questionnaireState
+              ? '준비 중...'
+              : '제출하기'}
           </button>
         </div>
       </div>
