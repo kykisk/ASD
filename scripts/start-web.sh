@@ -18,16 +18,16 @@ fi
 
 if [ -f "$PID_FILE" ]; then
   OLD_PID=$(cat "$PID_FILE")
-  kill "$OLD_PID" 2>/dev/null && echo "  이전 Web 프로세스 종료 (PID: $OLD_PID)" || true
+  kill "$OLD_PID" 2>/dev/null || true
   rm -f "$PID_FILE"
-  sleep 1
 fi
 
-EXISTING=$(lsof -ti :4200 2>/dev/null || true)
-if [ -n "$EXISTING" ]; then
-  kill -9 $EXISTING 2>/dev/null || true
-  sleep 1
-fi
+for PORT in 4200 4201 4202; do
+  PIDS=$(lsof -ti :$PORT 2>/dev/null || true)
+  [ -n "$PIDS" ] && kill -9 $PIDS 2>/dev/null || true
+done
+
+sleep 1
 
 echo "🌐 Web 서버 시작 중..."
 cd "$ROOT"
@@ -45,9 +45,6 @@ for i in $(seq 1 40); do
     echo "     앱:     http://localhost:4200"
     echo "     디자인: http://localhost:4200/design-preview"
     exit 0
-  fi
-  if grep -q "error\|Error" "$LOG" 2>/dev/null && ! grep -q "LocalhostPlugin\|DepOptimization" "$LOG" 2>/dev/null; then
-    sleep 2
   fi
   sleep 1
 done
