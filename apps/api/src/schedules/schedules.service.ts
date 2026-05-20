@@ -256,6 +256,9 @@ export class SchedulesService {
     } else if (schedule.recurrenceType === 'SPECIFIC_DAYS') {
       const daysOfWeek = rule?.daysOfWeek ?? [];
       if (daysOfWeek.length === 0) {
+        if (scheduleStart >= startDate && scheduleStart < endDate) {
+          occurrences.push(toOccurrence(scheduleStart));
+        }
         return occurrences;
       }
 

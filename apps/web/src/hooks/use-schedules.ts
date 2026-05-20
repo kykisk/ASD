@@ -46,10 +46,17 @@ export function useCreateSchedule() {
 
   return useMutation({
     mutationFn: async (input: CreateScheduleInput) => {
-      const { childId, ...rest } = input;
+      const { childId, recurrenceDays, recurrenceEndDate, ...rest } = input;
+      const body = {
+        ...rest,
+        recurrenceRule: recurrenceDays && recurrenceDays.length > 0
+          ? { daysOfWeek: recurrenceDays }
+          : undefined,
+        recurrenceEnd: recurrenceEndDate || undefined,
+      };
       const { data } = await api.post<{ success: true; data: Schedule }>(
         `/children/${childId}/schedules`,
-        rest
+        body
       );
       return data.data;
     },
