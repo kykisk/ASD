@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useChildStore } from '../stores/child.store';
 import { useChildren } from '../hooks/use-children';
 import { useAuthStore } from '../stores/auth.store';
+import { useMyFamily } from '../hooks/use-families';
 import { useGrowthData } from '../hooks/use-growth';
 import type { GrowthData } from '../hooks/use-growth';
 import { GrowthLineChart } from '../components/charts/GrowthLineChart';
@@ -151,7 +152,8 @@ export function GrowthPage() {
   const [dayRange, setDayRange] = useState<DayRange>(30);
   const { selectedChildId } = useChildStore();
   const { user } = useAuthStore();
-  const { data: children } = useChildren(user?.familyId);
+  const { data: family } = useMyFamily();
+  const { data: children } = useChildren(family?.id);
   const { data: growthData, isLoading } = useGrowthData(selectedChildId, dayRange);
 
   const selectedChild = children?.find((c) => c.id === selectedChildId);

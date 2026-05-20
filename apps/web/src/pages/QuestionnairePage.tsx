@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '../stores/auth.store';
 import { useQuestionnaires, type Questionnaire, type Domain } from '../hooks/use-questionnaires';
+import { useMyFamily } from '../hooks/use-families';
 import { QuestionnaireFormModal } from '../components/questionnaire/QuestionnaireFormModal';
 import { ImportModal } from '../components/questionnaire/ImportModal';
 import { Skeleton, ErrorState, EmptyState, PageHeader } from '../components/ui';
@@ -30,7 +31,8 @@ function formatDate(dateStr: string): string {
 
 export function QuestionnairePage() {
   const { user } = useAuthStore();
-  const { data: questionnaires, isLoading, isError, refetch } = useQuestionnaires(user?.familyId);
+  const { data: family } = useMyFamily();
+  const { data: questionnaires, isLoading, isError, refetch } = useQuestionnaires(family?.id);
 
   const [activeTab, setActiveTab] = useState<'custom' | 'licensed'>('custom');
   const [showFormModal, setShowFormModal] = useState(false);

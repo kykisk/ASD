@@ -61,7 +61,7 @@ function getGenderLabel(gender?: string | null): string {
 export function ChildrenPage() {
   const { user } = useAuthStore();
   const { data: family } = useMyFamily();
-  const { data: children, isLoading, isError, refetch } = useChildren(user?.familyId);
+  const { data: children, isLoading, isError, refetch } = useChildren(family?.id);
   const createChild = useCreateChild();
   const updateChild = useUpdateChild();
   const deleteChild = useDeleteChild();
@@ -146,9 +146,9 @@ export function ChildrenPage() {
         },
       );
     } else {
-      if (!user?.familyId) return;
+      if (!family?.id) return;
       createChild.mutate(
-        { familyId: user.familyId, input: payload },
+        { familyId: family.id, input: payload },
         {
           onSuccess: () => {
             showToast('success', '아이가 등록되었습니다.');
@@ -223,8 +223,8 @@ export function ChildrenPage() {
       <PageHeader
         title="아이 관리"
         subtitle="아이의 프로필을 등록하고 관리하세요."
-        action={
-          user?.familyId ? (
+          action={
+          family?.id ? (
             <button
               onClick={openCreateForm}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 shadow-sage-sm transition-colors min-h-[44px]"
@@ -238,7 +238,7 @@ export function ChildrenPage() {
         }
       />
 
-      {!user?.familyId && (
+      {!family?.id && (
         <EmptyState
           icon={
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -250,7 +250,7 @@ export function ChildrenPage() {
         />
       )}
 
-      {user?.familyId && children && children.length === 0 && (
+      {family?.id && children && children.length === 0 && (
         <EmptyState
           icon={
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
