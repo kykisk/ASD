@@ -115,24 +115,26 @@ export function GrowthLineChart({
   height = 240,
   showLegend = true,
 }: GrowthLineChartProps) {
-  const chartData = data.entries.map((entry) => {
-    const point: Record<string, string | number> = {
-      date: new Date(entry.date).toLocaleDateString('ko-KR', {
-        month: '2-digit',
-        day: '2-digit',
-      }),
-    };
-    entry.domains.forEach((d) => {
-      point[d.domain] = d.score;
-    });
-    return point;
-  });
-
-  const allDomains = data.entries[0]?.domains.map((d) => d.domain) || [];
+  const allDomains = data.domains.map((d) => d.domain);
   const domainsToShow =
     selectedDomains && selectedDomains.length > 0
       ? allDomains.filter((d) => selectedDomains.includes(d))
       : allDomains;
+
+  const allDates = Array.from(
+    new Set(data.overall.map((p) => p.date))
+  ).sort();
+
+  const chartData = allDates.map((date) => {
+    const point: Record<string, string | number> = {
+      date: new Date(date).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' }),
+    };
+    data.domains.forEach((ds) => {
+      const match = ds.data.find((p) => p.date === date);
+      if (match) point[ds.domain] = match.score;
+    });
+    return point;
+  });
 
   return (
     <ResponsiveContainer width="100%" height={height}>

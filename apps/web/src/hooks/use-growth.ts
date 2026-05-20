@@ -1,28 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 
-export interface DomainScore {
-  domain: string;
-  label: string;
+export interface TimeSeriesPoint {
+  date: string;
   score: number;
-  maxScore: number;
+  assessmentId: string;
 }
 
-export interface GrowthEntry {
-  date: string;
-  domains: DomainScore[];
-  overallScore: number;
+export interface DomainTimeSeries {
+  domain: string;
+  label: string;
+  color: string;
+  data: TimeSeriesPoint[];
 }
 
 export interface GrowthData {
   childId: string;
-  entries: GrowthEntry[];
-  summary: {
-    currentScores: DomainScore[];
-    averageScore: number;
-    trend: 'up' | 'down' | 'stable';
-    totalAssessments: number;
-  };
+  dateRange: { from: string; to: string };
+  domains: DomainTimeSeries[];
+  overall: TimeSeriesPoint[];
+  weeklyAverages: { week: string; score: number }[];
+  monthlyAverages: { month: string; score: number }[];
 }
 
 export function useGrowthData(

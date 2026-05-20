@@ -55,51 +55,46 @@ const MOCK_MILESTONES: Milestone[] = [
   },
 ];
 
+const DOMAIN_LIST = [
+  { domain: 'COMMUNICATION', label: '의사소통', color: '#7B9FD4' },
+  { domain: 'SOCIAL', label: '사회성', color: '#E8A87C' },
+  { domain: 'MOTOR', label: '운동', color: '#9B8EC4' },
+  { domain: 'COGNITIVE', label: '인지', color: '#7EC8C8' },
+  { domain: 'EMOTIONAL', label: '정서', color: '#F2B880' },
+];
+
 const MOCK_GROWTH_DATA: GrowthData = {
   childId: 'mock',
-  entries: Array.from({ length: 14 }, (_, i) => {
+  dateRange: { from: new Date(Date.now() - 13 * 2 * 86400000).toISOString(), to: new Date().toISOString() },
+  domains: DOMAIN_LIST.map((d) => ({
+    domain: d.domain,
+    label: d.label,
+    color: d.color,
+    data: Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i) * 2);
+      return { date: date.toISOString().split('T')[0], score: 2.5 + Math.random() * 2, assessmentId: `mock-${i}` };
+    }),
+  })),
+  overall: Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
-    date.setDate(date.getDate() - (13 - i) * 2);
-    return {
-      date: date.toISOString(),
-      overallScore: 2.5 + Math.random() * 1.5,
-      domains: [
-        { domain: 'communication', label: '의사소통', score: 2.5 + Math.random() * 2, maxScore: 5 },
-        { domain: 'social', label: '사회성', score: 2.0 + Math.random() * 2, maxScore: 5 },
-        { domain: 'motor', label: '운동', score: 2.2 + Math.random() * 1.8, maxScore: 5 },
-        { domain: 'cognitive', label: '인지', score: 2.8 + Math.random() * 1.5, maxScore: 5 },
-        { domain: 'emotional', label: '정서', score: 2.3 + Math.random() * 2, maxScore: 5 },
-      ],
-    };
+    date.setDate(date.getDate() - (6 - i) * 2);
+    return { date: date.toISOString().split('T')[0], score: 2.8 + Math.random() * 1.5, assessmentId: `mock-${i}` };
   }),
-  summary: {
-    currentScores: [
-      { domain: 'communication', label: '의사소통', score: 3.8, maxScore: 5 },
-      { domain: 'social', label: '사회성', score: 3.2, maxScore: 5 },
-      { domain: 'motor', label: '운동', score: 2.9, maxScore: 5 },
-      { domain: 'cognitive', label: '인지', score: 3.6, maxScore: 5 },
-      { domain: 'emotional', label: '정서', score: 3.5, maxScore: 5 },
-    ],
-    averageScore: 3.4,
-    trend: 'up',
-    totalAssessments: 14,
-  },
+  weeklyAverages: [
+    { week: '1주', score: 2.8 },
+    { week: '2주', score: 3.1 },
+    { week: '3주', score: 3.4 },
+    { week: '4주', score: 3.6 },
+  ],
+  monthlyAverages: [
+    { month: '1월', score: 2.4 },
+    { month: '2월', score: 2.7 },
+    { month: '3월', score: 3.0 },
+    { month: '4월', score: 3.3 },
+    { month: '5월', score: 3.5 },
+  ],
 };
-
-const MOCK_WEEKLY = [
-  { week: '1주', score: 2.8 },
-  { week: '2주', score: 3.1 },
-  { week: '3주', score: 3.4 },
-  { week: '4주', score: 3.6 },
-];
-
-const MOCK_MONTHLY = [
-  { month: '1월', score: 2.4 },
-  { month: '2월', score: 2.7 },
-  { month: '3월', score: 3.0 },
-  { month: '4월', score: 3.3 },
-  { month: '5월', score: 3.5 },
-];
 
 const cardStyle: React.CSSProperties = {
   background: '#fff',
@@ -288,7 +283,7 @@ export function GrowthPage() {
                 현재 도메인 점수 분포
               </p>
             </div>
-            <DomainRadarChart domains={displayData.summary.currentScores} />
+            <DomainRadarChart domains={displayData.domains.map(d => ({ domain: d.domain, label: d.label, score: d.data[d.data.length - 1]?.score ?? 0, maxScore: 5 }))} />
           </div>
 
           <div style={cardStyle}>
@@ -300,7 +295,7 @@ export function GrowthPage() {
                 전체 평균 점수 변화
               </p>
             </div>
-            <ComparisonChart weeklyData={MOCK_WEEKLY} monthlyData={MOCK_MONTHLY} />
+            <ComparisonChart weeklyData={displayData.weeklyAverages} monthlyData={displayData.monthlyAverages} />
           </div>
         </div>
       )}
