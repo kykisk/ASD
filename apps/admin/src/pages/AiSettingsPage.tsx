@@ -36,10 +36,10 @@ import {
 const { Title, Text } = Typography;
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
-  'claude-bedrock': 'Claude Bedrock',
-  'claude-direct': 'Claude Direct',
-  gemini: 'Gemini',
-  openai: 'OpenAI',
+  'CLAUDE_BEDROCK': 'Claude Bedrock (AWS)',
+  'CLAUDE_DIRECT': 'Claude Direct (Anthropic)',
+  'GEMINI': 'Gemini (Google)',
+  'OPENAI': 'OpenAI',
 };
 
 function formatDateTime(iso: string | null): string {
@@ -125,7 +125,11 @@ function ProviderConfigForm({
       form={form}
       layout="vertical"
       initialValues={{
-        ...config.config,
+        region: '',
+        accessKeyId: '',
+        secretKey: '',
+        apiKey: '',
+        modelId: config.modelId ?? '',
         maxTokens: config.maxTokens,
         temperature: config.temperature,
         dailyBudgetLimit: config.dailyBudgetLimit,
@@ -133,11 +137,11 @@ function ProviderConfigForm({
       }}
       size="middle"
     >
-      {config.provider === 'claude-bedrock' && (
+      {config.provider === 'CLAUDE_BEDROCK' && (
         <>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="AWS Region" name="awsRegion" rules={[{ required: true }]}>
+              <Form.Item label="AWS Region" name="region" rules={[{ required: true }]}>
                 <Select
                   options={[
                     { value: 'us-east-1', label: 'us-east-1' },
@@ -156,12 +160,12 @@ function ProviderConfigForm({
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="AWS Access Key ID" name="awsAccessKeyId">
+              <Form.Item label="AWS Access Key ID" name="accessKeyId">
                 <Input.Password placeholder="AKIA..." />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="AWS Secret Key" name="awsSecretKey">
+              <Form.Item label="AWS Secret Key" name="secretKey">
                 <Input.Password placeholder="••••••••" />
               </Form.Item>
             </Col>
@@ -169,7 +173,7 @@ function ProviderConfigForm({
         </>
       )}
 
-      {config.provider === 'claude-direct' && (
+      {config.provider === 'CLAUDE_DIRECT' && (
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item label="API Key" name="apiKey" rules={[{ required: true }]}>
@@ -184,7 +188,7 @@ function ProviderConfigForm({
         </Row>
       )}
 
-      {config.provider === 'gemini' && (
+      {config.provider === 'GEMINI' && (
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item label="API Key" name="apiKey" rules={[{ required: true }]}>
@@ -199,7 +203,7 @@ function ProviderConfigForm({
         </Row>
       )}
 
-      {config.provider === 'openai' && (
+      {config.provider === 'OPENAI' && (
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item label="API Key" name="apiKey" rules={[{ required: true }]}>
