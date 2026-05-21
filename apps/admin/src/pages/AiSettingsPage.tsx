@@ -318,7 +318,24 @@ export function AiSettingsPage() {
   if (isLoading) {
     return <div style={{ padding: 24 }}>로딩 중...</div>;
   }
-  const collapseItems = configs.map((config) => ({
+
+  const ALL_PROVIDERS: AiProvider[] = ['CLAUDE_BEDROCK', 'CLAUDE_DIRECT', 'GEMINI', 'OPENAI'];
+  const displayConfigs = ALL_PROVIDERS.map((provider) => {
+    const existing = configs.find((c) => c.provider === provider);
+    return existing ?? {
+      provider,
+      isActive: false,
+      isDefault: false,
+      lastTestedAt: null,
+      lastTestSuccess: null,
+      modelId: null,
+      maxTokens: 4096,
+      temperature: 0.7,
+      dailyBudgetLimit: 100,
+    } as AiProviderConfig;
+  });
+
+  const collapseItems = displayConfigs.map((config) => ({
     key: config.provider,
     label: (
       <Space>
