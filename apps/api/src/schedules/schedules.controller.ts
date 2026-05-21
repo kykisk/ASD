@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { SchedulesService } from './schedules.service.js';
 import { ConflictDetectionService } from './conflict-detection.service.js';
+import { ScheduleSuggestionService } from './schedule-suggestion.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { CreateScheduleDto, UpdateScheduleDto, QueryScheduleDto } from '@auticare/dto';
 
@@ -18,6 +19,7 @@ export class SchedulesController {
   constructor(
     private schedulesService: SchedulesService,
     private conflictDetectionService: ConflictDetectionService,
+    private scheduleSuggestionService: ScheduleSuggestionService,
   ) {}
 
   @Post('children/:childId/schedules')
@@ -72,6 +74,28 @@ export class SchedulesController {
       new Date(body.startTime),
       new Date(body.endTime),
       body.excludeId,
+    );
+  }
+
+  @Get('children/:childId/schedules/ai-suggest')
+  async getAiSuggestions(
+    @Param('childId') childId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.scheduleSuggestionService.getSuggestions(childId, user.id);
+  }
+
+  @Post('children/:childId/schedules/ai-suggest/accept')
+  async acceptAiSuggestion(
+    @Param('childId') childId: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: { suggestion: any; targetDate: string },
+  ) {
+    return this.scheduleSuggestionService.acceptSuggestion(
+      childId,
+      user.id,
+      body.suggestion,
+      body.targetDate,
     );
   }
 }

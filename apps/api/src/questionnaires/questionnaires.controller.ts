@@ -12,6 +12,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { QuestionnairesService } from './questionnaires.service.js';
 import { QuestionnaireImportService } from './questionnaire-import.service.js';
+import { QuestionnaireFilterService } from './questionnaire-filter.service.js';
+import { QuestionnaireGenerateService } from './questionnaire-generate.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import {
   CreateQuestionnaireDto,
@@ -25,6 +27,8 @@ export class QuestionnairesController {
   constructor(
     private questionnairesService: QuestionnairesService,
     private importService: QuestionnaireImportService,
+    private filterService: QuestionnaireFilterService,
+    private generateService: QuestionnaireGenerateService,
   ) {}
 
   @Post('families/:familyId/questionnaires')
@@ -125,5 +129,39 @@ export class QuestionnairesController {
     @Body() dto: ReorderItemsDto,
   ) {
     return this.questionnairesService.reorderItems(id, user.id, dto);
+  }
+
+  @Post('questionnaires/ai-filter')
+  async aiFilter(
+    @Body() body: { items: Array<{ text: string; domain: string }> },
+  ) {
+    return this.filterService.filterItems(body.items);
+  }
+
+  @Post('questionnaires/ai-generate')
+  async aiGenerate(
+    @CurrentUser() user: { id: string; familyId?: string },
+    @Body() body: {
+      familyId: string;
+      childAgeMonths: number;
+      targetDomains: string[];
+      additionalContext?: string;
+    },
+  ) {
+    const generated = await this.generateService.generateQuestionnaire({
+      familyId: body.familyId,
+      userId: user.id,
+      childAgeMonths: body.childAgeMonths,
+      targetDomains: body.targetDomains,
+      additionalContext: body.additionalContext,
+    });
+
+    const questionnaire = await this.generateService.createFromGenerated(
+      body.familyId,
+      user.id,
+      generated,
+    );
+
+    return { generated, questionnaire };
   }
 }

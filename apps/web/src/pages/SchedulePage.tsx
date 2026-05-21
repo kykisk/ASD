@@ -25,6 +25,7 @@ import {
   useDeleteSchedule,
   CreateScheduleInput,
 } from '../hooks/use-schedules';
+import { useScheduleSuggestions, useAcceptSuggestion, type ScheduleSuggestion } from '../hooks/use-schedule-ai';
 import { useChildStore } from '../stores/child.store';
 import { CalendarHeader } from '../components/calendar/CalendarHeader';
 import { MonthView } from '../components/calendar/MonthView';
@@ -54,9 +55,15 @@ export function SchedulePage() {
   const [modalDefaultTime, setModalDefaultTime] = useState<string | undefined>();
   const [pendingSave, setPendingSave] = useState<(CreateScheduleInput & { id: string }) | null>(null);
   const [showRecurringDialog, setShowRecurringDialog] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   const { selectedChildId } = useChildStore();
   const childId = selectedChildId;
+
+  const suggestions = useScheduleSuggestions(childId);
+  const acceptSuggestion = useAcceptSuggestion(childId);
 
   const dateRange = useMemo(() => {
     switch (viewMode) {
@@ -175,6 +182,39 @@ export function SchedulePage() {
     });
   }, [pendingSave, updateSchedule]);
 
+  const handleToggleAiPanel = useCallback(() => {
+    setShowAiPanel((prev) => {
+      const opening = !prev;
+      if (opening && !suggestions.data && !suggestions.isFetching) {
+        suggestions.refetch();
+      }
+      return opening;
+    });
+  }, [suggestions]);
+
+  const handleDismissSuggestion = useCallback((id: string) => {
+    setDismissedSuggestions((prev) => new Set(prev).add(id));
+  }, []);
+
+  const handleAcceptSuggestion = useCallback((suggestion: ScheduleSuggestion) => {
+    const today = new Date().toISOString().split('T')[0];
+    setAcceptingId(suggestion.id);
+    acceptSuggestion.mutate(
+      { suggestion, targetDate: today },
+      {
+        onSuccess: () => {
+          handleDismissSuggestion(suggestion.id);
+          setAcceptingId(null);
+        },
+        onError: () => setAcceptingId(null),
+      },
+    );
+  }, [acceptSuggestion, handleDismissSuggestion]);
+
+  const visibleSuggestions = suggestions.data?.suggestions.filter(
+    (s) => !dismissedSuggestions.has(s.id),
+  ) || [];
+
   const handleDeleteSchedule = useCallback(
     (id: string) => {
       deleteSchedule.mutate(id, {
@@ -198,6 +238,16 @@ export function SchedulePage() {
           <h1 className="text-2xl font-bold text-neutral-800">일정</h1>
           <p className="text-sm text-neutral-500 mt-0.5">아이의 일정을 관리하세요</p>
         </div>
+        <button
+          onClick={handleToggleAiPanel}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] text-sm font-semibold transition-all ${
+            showAiPanel
+              ? 'bg-[#5B8A72] text-white shadow-[0_4px_12px_rgba(91,138,114,0.25)]'
+              : 'bg-[#5B8A72]/[0.08] text-[#5B8A72] hover:bg-[#5B8A72]/[0.15]'
+          }`}
+        >
+          <span>🤖</span> AI 스케줄 제안
+        </button>
       </div>
 
       <CalendarHeader
@@ -260,6 +310,103 @@ export function SchedulePage() {
           />
         )}
       </div>
+
+      {showAiPanel && (
+        <div className="mt-4 rounded-[16px] border border-[#E8E4DF] bg-white shadow-[0_4px_16px_rgba(91,138,114,0.08)] overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+          <div className="px-5 py-4 border-b border-[#E8E4DF] bg-[#FDFBF7]">
+            <h3 className="text-sm font-bold text-[#2C3E50] flex items-center gap-2">
+              <span>🤖</span> AI 스케줄 개선 제안
+            </h3>
+            <p className="text-xs text-[#6B7B8D] mt-0.5">최근 평가 데이터 기반</p>
+          </div>
+
+          <div className="p-4">
+            {suggestions.isFetching && (
+              <div className="py-6 flex flex-col items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_infinite]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.2s_infinite]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.4s_infinite]" />
+                </div>
+                <p className="text-sm text-[#6B7B8D]">분석 중입니다...</p>
+              </div>
+            )}
+
+            {suggestions.isError && (
+              <div className="py-6 text-center">
+                <p className="text-sm text-red-600 mb-3">제안을 불러올 수 없습니다.</p>
+                <button
+                  onClick={() => suggestions.refetch()}
+                  className="px-4 py-2 text-sm font-medium text-[#5B8A72] hover:bg-[#5B8A72]/[0.08] rounded-[8px] transition-colors"
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+
+            {!suggestions.isFetching && !suggestions.isError && visibleSuggestions.length === 0 && (
+              <div className="py-6 text-center">
+                <p className="text-sm text-[#94A3B4]">
+                  {suggestions.data ? '모든 제안을 확인했어요' : '분석할 일정이나 평가 데이터가 없어요'}
+                </p>
+              </div>
+            )}
+
+            {!suggestions.isFetching && visibleSuggestions.length > 0 && (
+              <div className="space-y-3">
+                {visibleSuggestions.map((suggestion) => (
+                  <div
+                    key={suggestion.id}
+                    className="px-4 py-3.5 rounded-[12px] border border-[#E8E4DF] bg-[#FDFBF7] hover:border-[#5B8A72]/30 transition-colors"
+                  >
+                    <div className="flex items-start gap-2.5 mb-2">
+                      <span className="text-base shrink-0">
+                        {suggestion.type === 'ADD' ? '➕' : suggestion.type === 'MODIFY' ? '✏️' : '🗑️'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#2C3E50]">{suggestion.title}</p>
+                        <p className="text-xs text-[#6B7B8D] mt-0.5">{suggestion.reason}</p>
+                        {suggestion.suggestedDay && suggestion.suggestedTime && (
+                          <p className="text-xs text-[#94A3B4] mt-1">
+                            {suggestion.suggestedDay} {suggestion.suggestedTime}
+                            {suggestion.durationMinutes && ` · ${suggestion.durationMinutes}분`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-7">
+                      {suggestion.type === 'ADD' && (
+                        <button
+                          onClick={() => handleAcceptSuggestion(suggestion)}
+                          disabled={acceptingId === suggestion.id}
+                          className="px-3 py-1.5 text-xs font-semibold text-white bg-[#5B8A72] rounded-[8px] hover:bg-[#3D6B54] disabled:opacity-50 transition-colors"
+                        >
+                          {acceptingId === suggestion.id ? '처리 중...' : '수락'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDismissSuggestion(suggestion.id)}
+                        className="px-3 py-1.5 text-xs font-medium text-[#6B7B8D] hover:text-[#2C3E50] hover:bg-[#E8E4DF]/60 rounded-[8px] transition-colors"
+                      >
+                        {suggestion.type === 'ADD' ? '무시' : '확인'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {suggestions.data?.summary && visibleSuggestions.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-[#E8E4DF]">
+                <p className="text-xs text-[#6B7B8D]">
+                  <span className="font-medium text-[#2C3E50]">전체 요약:</span> {suggestions.data.summary}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <button
         onClick={handleAddNew}

@@ -4,6 +4,7 @@ import { useQuestionnaires, type Questionnaire, type Domain } from '../hooks/use
 import { useMyFamily } from '../hooks/use-families';
 import { QuestionnaireFormModal } from '../components/questionnaire/QuestionnaireFormModal';
 import { ImportModal } from '../components/questionnaire/ImportModal';
+import { AiGenerateModal } from '../components/questionnaire/AiGenerateModal';
 import { Skeleton, ErrorState, EmptyState, PageHeader } from '../components/ui';
 
 const DOMAIN_LABELS: Record<Domain, { label: string; color: string }> = {
@@ -37,6 +38,7 @@ export function QuestionnairePage() {
   const [activeTab, setActiveTab] = useState<'custom' | 'licensed'>('custom');
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAiGenerateModal, setShowAiGenerateModal] = useState(false);
   const [editingQuestionnaire, setEditingQuestionnaire] = useState<Questionnaire | null>(null);
 
   const openEdit = (q: Questionnaire) => {
@@ -116,6 +118,13 @@ export function QuestionnairePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               새 질문지 만들기
+            </button>
+            <button
+              onClick={() => setShowAiGenerateModal(true)}
+              className="h-[48px] flex items-center gap-2 px-6 rounded-xl border-[1.5px] border-primary-500 text-primary-600 text-[15px] font-semibold hover:bg-primary-50 transition-colors"
+            >
+              <span className="text-base">✨</span>
+              AI로 생성하기
             </button>
             <button
               onClick={() => setShowImportModal(true)}
@@ -253,6 +262,11 @@ export function QuestionnairePage() {
       <ImportModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
+      />
+
+      <AiGenerateModal
+        isOpen={showAiGenerateModal}
+        onClose={() => setShowAiGenerateModal(false)}
       />
     </div>
   );

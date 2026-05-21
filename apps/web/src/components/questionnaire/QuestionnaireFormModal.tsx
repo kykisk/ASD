@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Domain, QuestionnaireItem, Questionnaire } from '../../hooks/use-questionnaires';
 import { useCreateQuestionnaire } from '../../hooks/use-questionnaires';
 import { useAuthStore } from '../../stores/auth.store';
+import { useAiFilter, type AiFilterItemResult, type OverallRisk } from '../../hooks/use-questionnaire-ai';
 
 const DOMAIN_OPTIONS: { value: Domain; label: string; color: string }[] = [
   { value: 'COMMUNICATION', label: '의사소통', color: '#7B9FD4' },
@@ -44,8 +45,45 @@ export function QuestionnaireFormModal({
   const [newItemText, setNewItemText] = useState('');
   const [newItemWeight, setNewItemWeight] = useState('1.0');
   const [error, setError] = useState('');
+  const [aiFilterResults, setAiFilterResults] = useState<AiFilterItemResult[] | null>(null);
+  const [overallRisk, setOverallRisk] = useState<OverallRisk | null>(null);
+  const [expandedRiskItem, setExpandedRiskItem] = useState<number | null>(null);
+
+  const aiFilter = useAiFilter();
 
   if (!isOpen) return null;
+
+  const handleAiFilter = () => {
+    if (items.length === 0) return;
+    aiFilter.mutate(
+      items.map((item) => ({ text: item.text, domain: item.domain })),
+      {
+        onSuccess: (data) => {
+          setAiFilterResults(data.items);
+          setOverallRisk(data.overallRisk);
+        },
+      },
+    );
+  };
+
+  const applyAiSuggestions = () => {
+    if (!aiFilterResults) return;
+    const newItems = items.map((item, idx) => {
+      const filterItem = aiFilterResults.find((r) => r.index === idx);
+      if (filterItem?.riskLevel === 'HIGH_RISK' && filterItem.suggestedRevision) {
+        return { ...item, text: filterItem.suggestedRevision };
+      }
+      return item;
+    });
+    setItems(newItems);
+    setAiFilterResults(null);
+    setOverallRisk(null);
+    setExpandedRiskItem(null);
+  };
+
+  const getItemRisk = (index: number): AiFilterItemResult | undefined => {
+    return aiFilterResults?.find((r) => r.index === index);
+  };
 
   const toggleDomain = (domain: Domain) => {
     setSelectedDomains((prev) =>
@@ -212,17 +250,68 @@ export function QuestionnaireFormModal({
                   </span>
                 )}
               </label>
-              <button
-                type="button"
-                onClick={() => setShowAddItem(true)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#5B8A72] hover:bg-[#5B8A72]/8 rounded-[8px] transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                문항 추가
-              </button>
+              <div className="flex items-center gap-2">
+                {items.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAiFilter}
+                    disabled={aiFilter.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#5B8A72] hover:bg-[#5B8A72]/[0.08] rounded-[8px] transition-colors disabled:opacity-50"
+                  >
+                    <span className="text-xs">✨</span>
+                    {aiFilter.isPending ? 'AI 분석 중...' : 'AI 라이선스 필터 검토'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowAddItem(true)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#5B8A72] hover:bg-[#5B8A72]/[0.08] rounded-[8px] transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  문항 추가
+                </button>
+              </div>
             </div>
+
+            {aiFilter.isPending && (
+              <div className="mb-3 px-4 py-3 rounded-[12px] bg-[#5B8A72]/[0.05] border border-[#5B8A72]/20 flex items-center gap-2">
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_infinite]" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.2s_infinite]" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.4s_infinite]" />
+                </div>
+                <span className="text-sm text-[#5B8A72] font-medium">AI가 문항을 분석 중입니다...</span>
+              </div>
+            )}
+
+            {overallRisk && (
+              <div className={`mb-3 px-4 py-3 rounded-[12px] border flex items-center justify-between ${
+                overallRisk === 'LOW' ? 'bg-[#5B8A72]/[0.05] border-[#5B8A72]/20' :
+                overallRisk === 'MEDIUM' ? 'bg-[#F0A86E]/[0.08] border-[#F0A86E]/30' :
+                'bg-[#E88B8B]/[0.08] border-[#E88B8B]/30'
+              }`}>
+                <span className={`text-sm font-medium ${
+                  overallRisk === 'LOW' ? 'text-[#5B8A72]' :
+                  overallRisk === 'MEDIUM' ? 'text-[#D4851F]' :
+                  'text-[#C0504D]'
+                }`}>
+                  {overallRisk === 'LOW' && '✓ 전체 안전 — 라이선스 위반 위험이 낮습니다'}
+                  {overallRisk === 'MEDIUM' && '⚠ 주의 필요 — 일부 문항을 검토해주세요'}
+                  {overallRisk === 'HIGH' && '✗ 위험 — 라이선스 위반 가능성이 있습니다'}
+                </span>
+                {(overallRisk === 'MEDIUM' || overallRisk === 'HIGH') && aiFilterResults?.some(r => r.riskLevel === 'HIGH_RISK' && r.suggestedRevision) && (
+                  <button
+                    type="button"
+                    onClick={applyAiSuggestions}
+                    className="px-3 py-1.5 text-xs font-semibold text-white bg-[#5B8A72] rounded-[8px] hover:bg-[#3D6B54] transition-colors"
+                  >
+                    적용
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Items List */}
             {items.length === 0 && !showAddItem && (
@@ -236,64 +325,95 @@ export function QuestionnaireFormModal({
             <div className="space-y-2">
               {items.map((item, index) => {
                 const domainInfo = getDomainInfo(item.domain);
+                const risk = getItemRisk(index);
                 return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 px-4 py-3 rounded-[12px] border border-[#E8E4DF] bg-white hover:border-[#5B8A72]/30 transition-colors group"
-                  >
-                    {/* Domain badge */}
-                    <span
-                      className="shrink-0 px-2 py-0.5 rounded-[6px] text-xs font-medium"
-                      style={{
-                        backgroundColor: `${domainInfo.color}18`,
-                        color: domainInfo.color,
-                      }}
+                  <div key={index}>
+                    <div
+                      className={`flex items-center gap-3 px-4 py-3 rounded-[12px] border bg-white hover:border-[#5B8A72]/30 transition-colors group ${
+                        risk?.riskLevel === 'HIGH_RISK' ? 'border-[#E88B8B]/50' :
+                        risk?.riskLevel === 'CAUTION' ? 'border-[#F0A86E]/50' :
+                        'border-[#E8E4DF]'
+                      }`}
                     >
-                      {domainInfo.label}
-                    </span>
-
-                    {/* Text */}
-                    <span className="flex-1 text-sm text-[#2C3E50] truncate">
-                      {item.text}
-                    </span>
-
-                    {/* Weight */}
-                    <span className="shrink-0 text-xs text-[#94A3B4] font-medium">
-                      {item.weight}
-                    </span>
-
-                    {/* Actions */}
-                    <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        type="button"
-                        onClick={() => moveItem(index, 'up')}
-                        disabled={index === 0}
-                        className="p-1 rounded text-[#94A3B4] hover:text-[#2C3E50] disabled:opacity-30"
+                      <span
+                        className="shrink-0 px-2 py-0.5 rounded-[6px] text-xs font-medium"
+                        style={{
+                          backgroundColor: `${domainInfo.color}18`,
+                          color: domainInfo.color,
+                        }}
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveItem(index, 'down')}
-                        disabled={index === items.length - 1}
-                        className="p-1 rounded text-[#94A3B4] hover:text-[#2C3E50] disabled:opacity-30"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(index)}
-                        className="p-1 rounded text-[#94A3B4] hover:text-red-500 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                        </svg>
-                      </button>
+                        {domainInfo.label}
+                      </span>
+
+                      <span className="flex-1 text-sm text-[#2C3E50] truncate">
+                        {item.text}
+                      </span>
+
+                      {risk && (
+                        <span className={`shrink-0 px-2 py-0.5 rounded-[6px] text-[11px] font-semibold ${
+                          risk.riskLevel === 'SAFE' ? 'bg-[#5B8A72]/10 text-[#5B8A72]' :
+                          risk.riskLevel === 'CAUTION' ? 'bg-[#F0A86E]/15 text-[#D4851F]' :
+                          'bg-[#E88B8B]/15 text-[#C0504D]'
+                        }`}>
+                          {risk.riskLevel === 'SAFE' && '✓ 안전'}
+                          {risk.riskLevel === 'CAUTION' && '⚠ 주의'}
+                          {risk.riskLevel === 'HIGH_RISK' && '✗ 위험'}
+                        </span>
+                      )}
+
+                      <span className="shrink-0 text-xs text-[#94A3B4] font-medium">
+                        {item.weight}
+                      </span>
+
+                      <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => moveItem(index, 'up')}
+                          disabled={index === 0}
+                          className="p-1 rounded text-[#94A3B4] hover:text-[#2C3E50] disabled:opacity-30"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveItem(index, 'down')}
+                          disabled={index === items.length - 1}
+                          className="p-1 rounded text-[#94A3B4] hover:text-[#2C3E50] disabled:opacity-30"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(index)}
+                          className="p-1 rounded text-[#94A3B4] hover:text-red-500 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
+
+                    {risk?.riskLevel === 'HIGH_RISK' && risk.suggestedRevision && (
+                      <div className="ml-4 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedRiskItem(expandedRiskItem === index ? null : index)}
+                          className="text-xs text-[#C0504D] font-medium hover:underline"
+                        >
+                          {expandedRiskItem === index ? '▾ 수정 제안 접기' : '▸ 수정 제안 보기'}
+                        </button>
+                        {expandedRiskItem === index && (
+                          <div className="mt-1.5 px-3 py-2 rounded-[8px] bg-[#E88B8B]/[0.06] border border-[#E88B8B]/20 text-xs text-[#6B7B8D]">
+                            <span className="font-medium text-[#2C3E50]">제안:</span> {risk.suggestedRevision}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
