@@ -38,6 +38,7 @@ model User {
   auditLogs        AuditLog[]
   familyMembers    FamilyMember[]
   legalConsents    LegalConsent[]
+  notifications    Notification[]
 
   @@index([email])
   @@index([role])
@@ -434,6 +435,34 @@ model ActivityLog {
 
   @@index([curriculumId])
   @@index([childId])
+}
+
+enum NotificationType {
+  ASSESSMENT_DUE
+  CURRICULUM_READY
+  MILESTONE_ACHIEVED
+  INPUT_REMINDER
+  WEEKLY_INSIGHT_READY
+  SYSTEM
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  childId     String?
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 model BatchJob {

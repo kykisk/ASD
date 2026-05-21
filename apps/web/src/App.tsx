@@ -13,8 +13,10 @@ import { QuestionnairePage } from './pages/QuestionnairePage';
 import { AssessmentPage } from './pages/AssessmentPage';
 import { AssessmentHistoryPage } from './pages/AssessmentHistoryPage';
 import { GrowthPage } from './pages/GrowthPage';
+import { InsightsPage } from './pages/InsightsPage';
 import { CurriculumPage } from './pages/CurriculumPage';
 import { CurriculumHistoryPage } from './pages/CurriculumHistoryPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { DesignPreviewIndex } from './pages/design-preview/index';
 import { DesignPreviewLogin } from './pages/design-preview/DesignPreviewLogin';
 import { DesignPreviewRegister } from './pages/design-preview/DesignPreviewRegister';
@@ -47,8 +49,10 @@ export default function App() {
         <Route path="assessment" element={<AssessmentPage />} />
         <Route path="assessment/history" element={<AssessmentHistoryPage />} />
         <Route path="growth" element={<GrowthPage />} />
+        <Route path="insights" element={<InsightsPage />} />
         <Route path="curriculum" element={<CurriculumPage />} />
         <Route path="curriculum/history" element={<CurriculumHistoryPage />} />
+        <Route path="reports" element={<ReportsPage />} />
       </Route>
       <Route path="/design-preview" element={<DesignPreviewIndex />} />
       <Route path="/design-preview/login" element={<DesignPreviewLogin />} />

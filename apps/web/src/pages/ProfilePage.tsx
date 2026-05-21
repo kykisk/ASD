@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProfile, useUpdateProfile } from '../hooks/use-profile';
+import { useNotificationSettings } from '../stores/notification-settings.store';
 
 const profileSchema = z.object({
   name: z
@@ -30,6 +31,75 @@ function formatPhone(value: string): string {
 }
 
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+interface ToggleProps {
+  label: string;
+  enabled: boolean;
+  onToggle: () => void;
+}
+
+function Toggle({ label, enabled, onToggle }: ToggleProps) {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <span className="text-sm text-neutral-700">{label}</span>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`relative w-11 h-6 rounded-full transition-colors ${
+          enabled ? 'bg-primary-500' : 'bg-neutral-300'
+        }`}
+        aria-label={`${label} ${enabled ? '끄기' : '켜기'}`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+            enabled ? 'translate-x-5' : 'translate-x-0'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function NotificationSettingsSection() {
+  const {
+    assessmentAlerts,
+    curriculumAlerts,
+    weeklyInsights,
+    inputReminders,
+    setPreference,
+  } = useNotificationSettings();
+
+  return (
+    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
+      <h3 className="text-lg font-semibold text-neutral-800 mb-1">알림 설정</h3>
+      <p className="text-sm text-neutral-500 mb-4">
+        받고 싶은 알림을 선택하세요.
+      </p>
+      <div className="divide-y divide-neutral-100">
+        <Toggle
+          label="평가 알림"
+          enabled={assessmentAlerts}
+          onToggle={() => setPreference('assessmentAlerts', !assessmentAlerts)}
+        />
+        <Toggle
+          label="커리큘럼 알림"
+          enabled={curriculumAlerts}
+          onToggle={() => setPreference('curriculumAlerts', !curriculumAlerts)}
+        />
+        <Toggle
+          label="주간 인사이트"
+          enabled={weeklyInsights}
+          onToggle={() => setPreference('weeklyInsights', !weeklyInsights)}
+        />
+        <Toggle
+          label="입력 리마인더"
+          enabled={inputReminders}
+          onToggle={() => setPreference('inputReminders', !inputReminders)}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
@@ -244,6 +314,8 @@ export function ProfilePage() {
           비밀번호 변경 (준비 중)
         </button>
       </div>
+
+      <NotificationSettingsSection />
     </div>
   );
 }

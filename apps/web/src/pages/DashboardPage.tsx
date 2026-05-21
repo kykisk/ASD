@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useChildStore } from '../stores/child.store';
 import { useDashboard, DomainScore } from '../hooks/use-dashboard';
+import { useWeeklyInsight, InsightRecord } from '../hooks/use-insights';
 import { Skeleton, ErrorState, EmptyState } from '../components/ui';
 
 const DOMAIN_COLORS: Record<string, string> = {
@@ -98,6 +99,127 @@ function ProgressRing({ percent, size = 80, strokeWidth = 6 }: { percent: number
   );
 }
 
+const TREND_CONFIG: Record<InsightRecord['overallTrend'], { label: string; color: string; bg: string }> = {
+  IMPROVING: { label: '성장 중', color: '#5B8A72', bg: '#E8F5EE' },
+  STABLE: { label: '안정', color: '#64748B', bg: '#F1F5F9' },
+  NEEDS_ATTENTION: { label: '관심 필요', color: '#D97706', bg: '#FFFBEB' },
+};
+
+function InsightCard({ insight, isLoading, isError }: { insight?: InsightRecord; isLoading: boolean; isError: boolean }) {
+  if (isLoading) {
+    return (
+      <div
+        className="dashboard-animate-in bg-gradient-to-br from-[#E8F5EE] to-white border border-primary-100 rounded-xl shadow-sage-sm p-5"
+        style={{ animationDelay: '480ms' }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">✨</span>
+          <Skeleton height="h-5" className="w-40" />
+        </div>
+        <Skeleton lines={2} />
+      </div>
+    );
+  }
+
+  if (isError || !insight) {
+    return (
+      <div
+        className="dashboard-animate-in bg-gradient-to-br from-[#E8F5EE] to-white border border-primary-100 rounded-xl shadow-sage-sm p-5"
+        style={{ animationDelay: '480ms' }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">✨</span>
+          <h3 className="text-base font-semibold text-neutral-800">이번 주 AI 성장 분석</h3>
+        </div>
+        <p className="text-sm text-neutral-500 leading-relaxed">
+          AI 분석 준비 중이에요. 평가 데이터를 조금 더 쌓으면 인사이트를 제공해드릴게요.
+        </p>
+      </div>
+    );
+  }
+
+  const trendCfg = TREND_CONFIG[insight.overallTrend];
+
+  return (
+    <div
+      className="dashboard-animate-in bg-gradient-to-br from-[#E8F5EE] to-white border border-primary-100 rounded-xl shadow-sage-sm p-5"
+      style={{ animationDelay: '480ms' }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">✨</span>
+          <h3 className="text-base font-semibold text-neutral-800">이번 주 AI 성장 분석</h3>
+        </div>
+        <span
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+          style={{ color: trendCfg.color, background: trendCfg.bg }}
+        >
+          {trendCfg.label}
+        </span>
+      </div>
+
+      <p className="text-sm text-neutral-700 leading-relaxed mb-4">
+        {insight.summary}
+      </p>
+
+      {insight.highlights.length > 0 && (
+        <div className="mb-3">
+          <h4 className="text-[13px] font-semibold text-neutral-600 mb-1.5 flex items-center gap-1">
+            <span>🌟</span> 하이라이트
+          </h4>
+          <ul className="space-y-1">
+            {insight.highlights.map((h, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-neutral-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
+                {h}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {insight.concerns.length > 0 && (
+        <div className="mb-3">
+          <h4 className="text-[13px] font-semibold text-neutral-600 mb-1.5 flex items-center gap-1">
+            <span>⚠️</span> 관심 영역
+          </h4>
+          <ul className="space-y-1">
+            {insight.concerns.map((c, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-neutral-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                {c}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {insight.recommendations.length > 0 && (
+        <div className="mb-3">
+          <h4 className="text-[13px] font-semibold text-neutral-600 mb-1.5 flex items-center gap-1">
+            <span>💡</span> 이번 주 집중 포인트
+          </h4>
+          <ul className="space-y-1">
+            {insight.recommendations.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-neutral-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                {r}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <Link
+        to="/insights"
+        className="inline-block mt-1 text-[13px] text-primary-600 font-semibold hover:text-primary-700 transition-colors"
+      >
+        자세히 보기 →
+      </Link>
+    </div>
+  );
+}
+
 function DomainScoreCard({ domain, score, trend, delay }: DomainScore & { delay: number }) {
   const color = DOMAIN_COLORS[domain] || '#7B9FD4';
   const icon = DOMAIN_ICONS[domain] || '📊';
@@ -142,6 +264,7 @@ function DomainScoreCard({ domain, score, trend, delay }: DomainScore & { delay:
 export function DashboardPage() {
   const { selectedChildId } = useChildStore();
   const { data, isLoading, isError, refetch } = useDashboard(selectedChildId);
+  const { data: insight, isLoading: insightLoading, isError: insightError } = useWeeklyInsight(selectedChildId);
 
   if (!selectedChildId) {
     return (
@@ -294,6 +417,8 @@ export function DashboardPage() {
             ))}
           </div>
         )}
+
+        <InsightCard insight={insight} isLoading={insightLoading} isError={insightError} />
 
         <div
           className="dashboard-animate-in bg-white border border-neutral-200 rounded-xl shadow-sage-sm p-5"
