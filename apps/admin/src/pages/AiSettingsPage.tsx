@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import {
   useAiConfigs,
+  UpsertAiConfigInput,
   useUpsertAiConfig,
   useTestConnection,
   type AiProvider,
@@ -262,7 +263,7 @@ function ProviderConfigForm({
 }
 
 export function AiSettingsPage() {
-  const { configs, setConfigs } = useAiConfigs();
+  const { data: configs = [], isLoading } = useAiConfigs();
   const upsert = useUpsertAiConfig();
   const test = useTestConnection();
   const [testingProvider, setTestingProvider] = useState<AiProvider | null>(null);
@@ -270,20 +271,25 @@ export function AiSettingsPage() {
 
   const handleSetDefault = useCallback(
     (provider: AiProvider) => {
-      setConfigs((prev) =>
-        prev.map((c) => ({ ...c, isDefault: c.provider === provider })),
-      );
+      upsert.mutate({ provider, data: { isDefault: true } });
       message.success(`${PROVIDER_LABELS[provider]}이(가) 기본 프로바이더로 설정되었습니다.`);
     },
-    [setConfigs],
+    [upsert],
   );
 
   const handleSave = useCallback(
     async (provider: AiProvider, values: Record<string, unknown>) => {
       setSavingProvider(provider);
-      await upsert.mutate(provider, values as Partial<AiProviderConfig>);
-      setSavingProvider(null);
-      message.success(`${PROVIDER_LABELS[provider]} 설정이 저장되었습니다.`);
+      upsert.mutate({ provider, data: values as UpsertAiConfigInput }, {
+        onSuccess: () => {
+          setSavingProvider(null);
+          message.success(`${PROVIDER_LABELS[provider]} 설정이 저장되었습니다.`);
+        },
+        onError: () => {
+          setSavingProvider(null);
+          message.error('저장에 실패했습니다.');
+        },
+      });
     },
     [upsert],
   );
@@ -291,17 +297,27 @@ export function AiSettingsPage() {
   const handleTest = useCallback(
     async (provider: AiProvider) => {
       setTestingProvider(provider);
-      const result = await test.mutate(provider);
-      setTestingProvider(null);
-      if (result.success) {
-        message.success(`연결 성공 (${result.latencyMs}ms)`);
-      } else {
-        message.error('연결 실패: 프로바이더 설정을 확인해주세요.');
-      }
+      test.mutate(provider, {
+        onSuccess: (result) => {
+          setTestingProvider(null);
+          if (result.success) {
+            message.success(`연결 성공 (${result.latencyMs}ms)`);
+          } else {
+            message.error(`연결 실패: ${result.error || '프로바이더 설정을 확인해주세요.'}`);
+          }
+        },
+        onError: () => {
+          setTestingProvider(null);
+          message.error('연결 테스트에 실패했습니다.');
+        },
+      });
     },
     [test],
   );
 
+  if (isLoading) {
+    return <div style={{ padding: 24 }}>로딩 중...</div>;
+  }
   const collapseItems = configs.map((config) => ({
     key: config.provider,
     label: (
