@@ -50,7 +50,7 @@ export function useUpsertAiConfig() {
     mutationFn: async ({ provider, data }: { provider: AiProvider; data: UpsertAiConfigInput }) => {
       const { data: response } = await adminApi.put<{ success: true; data: AiProviderConfig }>(
         `/admin/ai-config/${provider}`,
-        data,
+        { ...data, provider },
       );
       return response.data;
     },
