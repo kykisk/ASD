@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -8,6 +8,8 @@ import {
   useUpdateChild,
   useDeleteChild,
   Child,
+  DevelopmentalLevel,
+  CenterInfoItem,
 } from '../hooks/use-children';
 import { useMyFamily, FamilyMember } from '../hooks/use-families';
 import { useAuthStore } from '../stores/auth.store';
@@ -30,6 +32,20 @@ const childSchema = z.object({
     .or(z.literal(''))
     .optional(),
   notes: z.string().max(500).optional(),
+  developmentalLevel: z.object({
+    language: z.string().max(500).optional(),
+    cognitive: z.string().max(500).optional(),
+    motor: z.string().max(500).optional(),
+    selfCare: z.string().max(500).optional(),
+    social: z.string().max(500).optional(),
+    overall: z.string().max(500).optional(),
+  }).optional(),
+  centerInfo: z.array(z.object({
+    name: z.string().min(1, '센터명을 입력해주세요').max(100),
+    type: z.string().min(1, '유형을 선택해주세요').max(50),
+    frequency: z.string().max(50),
+    currentGoal: z.string().max(300).optional(),
+  })).max(10).optional(),
 });
 
 type ChildFormData = z.infer<typeof childSchema>;
@@ -84,7 +100,21 @@ export function ChildrenPage() {
       diagnosisName: '',
       diagnosisDate: '',
       notes: '',
+      developmentalLevel: {
+        language: '',
+        cognitive: '',
+        motor: '',
+        selfCare: '',
+        social: '',
+        overall: '',
+      },
+      centerInfo: [],
     },
+  });
+
+  const { fields: centerFields, append: appendCenter, remove: removeCenter } = useFieldArray({
+    control: form.control,
+    name: 'centerInfo',
   });
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -101,6 +131,15 @@ export function ChildrenPage() {
       diagnosisName: '',
       diagnosisDate: '',
       notes: '',
+      developmentalLevel: {
+        language: '',
+        cognitive: '',
+        motor: '',
+        selfCare: '',
+        social: '',
+        overall: '',
+      },
+      centerInfo: [],
     });
     setShowForm(true);
   };
@@ -114,6 +153,20 @@ export function ChildrenPage() {
       diagnosisName: child.diagnosisName || '',
       diagnosisDate: child.diagnosisDate || '',
       notes: child.notes || '',
+      developmentalLevel: {
+        language: child.developmentalLevel?.language || '',
+        cognitive: child.developmentalLevel?.cognitive || '',
+        motor: child.developmentalLevel?.motor || '',
+        selfCare: child.developmentalLevel?.selfCare || '',
+        social: child.developmentalLevel?.social || '',
+        overall: child.developmentalLevel?.overall || '',
+      },
+      centerInfo: child.centerInfo?.map((c) => ({
+        name: c.name,
+        type: c.type,
+        frequency: c.frequency,
+        currentGoal: c.currentGoal || '',
+      })) || [],
     });
     setShowForm(true);
   };
@@ -125,6 +178,12 @@ export function ChildrenPage() {
   };
 
   const onSubmit = (data: ChildFormData) => {
+    const dl = data.developmentalLevel;
+    const hasDevelopmentalLevel = dl && Object.values(dl).some((v) => v && v.trim());
+    const cleanedDl = hasDevelopmentalLevel
+      ? Object.fromEntries(Object.entries(dl).filter(([, v]) => v && v.trim()))
+      : undefined;
+
     const payload = {
       name: data.name,
       birthDate: data.birthDate,
@@ -132,6 +191,8 @@ export function ChildrenPage() {
       ...(data.diagnosisName ? { diagnosisName: data.diagnosisName } : {}),
       ...(data.diagnosisDate && data.diagnosisDate !== '' ? { diagnosisDate: data.diagnosisDate } : {}),
       ...(data.notes ? { notes: data.notes } : {}),
+      ...(cleanedDl ? { developmentalLevel: cleanedDl } : {}),
+      ...(data.centerInfo && data.centerInfo.length > 0 ? { centerInfo: data.centerInfo } : {}),
     };
 
     if (editingChild) {
@@ -441,6 +502,164 @@ export function ChildrenPage() {
                   className="w-full px-4 py-3 rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
                   {...form.register('notes')}
                 />
+              </div>
+
+              {/* 발달 수준 섹션 */}
+              <div className="bg-white rounded-2xl border border-[#E8E4DF] p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-neutral-800 flex items-center gap-1.5">
+                  <span className="text-base">📊</span> 발달 수준
+                  <span className="text-neutral-400 text-xs font-normal ml-1">(선택)</span>
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">언어 발달</label>
+                  <input
+                    placeholder="예: 2어 조합 수준, 요구 표현 가능"
+                    className="w-full px-3 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    {...form.register('developmentalLevel.language')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">인지 발달</label>
+                  <input
+                    placeholder="예: 색상/크기 구분 가능, 수 1-5 인식"
+                    className="w-full px-3 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    {...form.register('developmentalLevel.cognitive')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">대소근육</label>
+                  <input
+                    placeholder="예: 계단 한 발씩, 가위질 어려움"
+                    className="w-full px-3 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    {...form.register('developmentalLevel.motor')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">자조 능력 (배변/식사/옷)</label>
+                  <input
+                    placeholder="예: 배변 훈련 중, 식사 도움 필요"
+                    className="w-full px-3 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    {...form.register('developmentalLevel.selfCare')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">사회성</label>
+                  <input
+                    placeholder="예: 눈맞춤 짧음, 이름 부르면 30% 반응"
+                    className="w-full px-3 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    {...form.register('developmentalLevel.social')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">종합 메모</label>
+                  <textarea
+                    placeholder="전반적인 발달 수준에 대한 메모"
+                    rows={2}
+                    className="w-full px-3 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
+                    {...form.register('developmentalLevel.overall')}
+                  />
+                </div>
+              </div>
+
+              {/* 센터/치료 정보 섹션 */}
+              <div className="bg-white rounded-2xl border border-[#E8E4DF] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-neutral-800 flex items-center gap-1.5">
+                    <span className="text-base">🏥</span> 센터/치료 정보
+                    <span className="text-neutral-400 text-xs font-normal ml-1">(선택)</span>
+                  </h3>
+                  {centerFields.length < 10 && (
+                    <button
+                      type="button"
+                      onClick={() => appendCenter({ name: '', type: '', frequency: '', currentGoal: '' })}
+                      className="text-xs font-medium text-primary-600 hover:text-primary-700 px-2.5 py-1.5 rounded-md hover:bg-primary-50 transition-colors"
+                    >
+                      + 센터 추가
+                    </button>
+                  )}
+                </div>
+
+                {centerFields.length === 0 && (
+                  <p className="text-xs text-neutral-400 py-2">등록된 센터가 없습니다. 위 버튼으로 추가해주세요.</p>
+                )}
+
+                {centerFields.map((field, index) => (
+                  <div key={field.id} className="relative bg-neutral-50 rounded-xl border border-neutral-200 p-4 space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={() => removeCenter(index)}
+                      className="absolute top-3 right-3 p-1 rounded text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1">센터명</label>
+                      <input
+                        placeholder="예: 해피키즈 언어치료"
+                        className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                        {...form.register(`centerInfo.${index}.name`)}
+                      />
+                      {form.formState.errors.centerInfo?.[index]?.name && (
+                        <p className="mt-1 text-xs text-red-500">{form.formState.errors.centerInfo[index]?.name?.message}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1">유형</label>
+                        <select
+                          className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                          {...form.register(`centerInfo.${index}.type`)}
+                        >
+                          <option value="">선택</option>
+                          <option value="언어치료">언어치료</option>
+                          <option value="ABA">ABA</option>
+                          <option value="작업치료">작업치료</option>
+                          <option value="감각통합">감각통합</option>
+                          <option value="음악치료">음악치료</option>
+                          <option value="미술치료">미술치료</option>
+                          <option value="놀이치료">놀이치료</option>
+                          <option value="기타">기타</option>
+                        </select>
+                        {form.formState.errors.centerInfo?.[index]?.type && (
+                          <p className="mt-1 text-xs text-red-500">{form.formState.errors.centerInfo[index]?.type?.message}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1">빈도</label>
+                        <input
+                          placeholder="예: 주 2회 (월,수)"
+                          className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                          {...form.register(`centerInfo.${index}.frequency`)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1">현재 목표 <span className="text-neutral-400 font-normal">(선택)</span></label>
+                      <textarea
+                        placeholder="예: 요구 표현 문장화"
+                        rows={2}
+                        className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
+                        {...form.register(`centerInfo.${index}.currentGoal`)}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {centerFields.length > 0 && centerFields.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => appendCenter({ name: '', type: '', frequency: '', currentGoal: '' })}
+                    className="w-full py-2 text-xs font-medium text-primary-600 hover:text-primary-700 border border-dashed border-primary-300 rounded-lg hover:bg-primary-50 transition-colors"
+                  >
+                    + 센터 추가
+                  </button>
+                )}
               </div>
 
               <div className="flex gap-3 pt-2">

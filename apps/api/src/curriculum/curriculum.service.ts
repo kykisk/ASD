@@ -98,6 +98,8 @@ export class CurriculumService {
         recentAssessmentCount: aggregated.assessmentCount,
         targetDate: date,
         previousWeeklyGoal: previousCurriculum?.weeklyGoal ?? undefined,
+        developmentalLevel: (child.developmentalLevel as { language?: string; cognitive?: string; motor?: string; selfCare?: string; social?: string; overall?: string }) ?? undefined,
+        centerInfo: (child.centerInfo as Array<{ name: string; type: string; frequency: string; currentGoal?: string }>) ?? undefined,
       });
 
       const result = await this.aiService.generateStructured(

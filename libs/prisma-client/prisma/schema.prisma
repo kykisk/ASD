@@ -201,6 +201,12 @@ model Child {
   diagnosisDate  DateTime?
   notes          String?
 
+  // 발달 수준 (자유 텍스트, Phase 4에서 구조화 체크리스트로 고도화 예정)
+  developmentalLevel Json?    // { language?: string, cognitive?: string, motor?: string, selfCare?: string, social?: string, overall?: string }
+
+  // 센터/치료 정보
+  centerInfo         Json?    // Array<{ name: string, type: string, frequency: string, currentGoal?: string }>
+
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

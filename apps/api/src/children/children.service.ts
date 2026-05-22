@@ -13,6 +13,8 @@ export interface DecryptedChild {
   diagnosisName: string | null;
   diagnosisDate: Date | null;
   notes: string | null;
+  developmentalLevel: Record<string, unknown> | null;
+  centerInfo: Record<string, unknown>[] | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +45,8 @@ export class ChildrenService {
         diagnosisName: dto.diagnosisName ?? null,
         diagnosisDate: dto.diagnosisDate ? new Date(dto.diagnosisDate) : null,
         notes: dto.notes ?? null,
+        developmentalLevel: dto.developmentalLevel ?? undefined,
+        centerInfo: dto.centerInfo ?? undefined,
       },
     });
 
@@ -110,6 +114,8 @@ export class ChildrenService {
     if (dto.diagnosisName !== undefined) data.diagnosisName = dto.diagnosisName;
     if (dto.diagnosisDate !== undefined) data.diagnosisDate = new Date(dto.diagnosisDate);
     if (dto.notes !== undefined) data.notes = dto.notes;
+    if (dto.developmentalLevel !== undefined) data.developmentalLevel = dto.developmentalLevel;
+    if (dto.centerInfo !== undefined) data.centerInfo = dto.centerInfo;
 
     const updated = await this.prisma.child.update({
       where: { id: childId },
@@ -145,6 +151,8 @@ export class ChildrenService {
     diagnosisName: string | null;
     diagnosisDate: Date | null;
     notes: string | null;
+    developmentalLevel: unknown;
+    centerInfo: unknown;
     createdAt: Date;
     updatedAt: Date;
   }): Promise<DecryptedChild> {
@@ -164,6 +172,8 @@ export class ChildrenService {
       diagnosisName: child.diagnosisName,
       diagnosisDate: child.diagnosisDate,
       notes: child.notes,
+      developmentalLevel: (child.developmentalLevel as Record<string, unknown>) ?? null,
+      centerInfo: (child.centerInfo as Record<string, unknown>[]) ?? null,
       createdAt: child.createdAt,
       updatedAt: child.updatedAt,
     };

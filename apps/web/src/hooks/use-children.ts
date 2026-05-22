@@ -1,6 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 
+export interface DevelopmentalLevel {
+  language?: string;
+  cognitive?: string;
+  motor?: string;
+  selfCare?: string;
+  social?: string;
+  overall?: string;
+}
+
+export interface CenterInfoItem {
+  name: string;
+  type: string;
+  frequency: string;
+  currentGoal?: string;
+}
+
 export interface Child {
   id: string;
   familyId: string;
@@ -10,6 +26,8 @@ export interface Child {
   diagnosisName?: string | null;
   diagnosisDate?: string | null;
   notes?: string | null;
+  developmentalLevel?: DevelopmentalLevel | null;
+  centerInfo?: CenterInfoItem[] | null;
   createdAt: string;
 }
 
@@ -20,6 +38,8 @@ interface CreateChildInput {
   diagnosisName?: string;
   diagnosisDate?: string;
   notes?: string;
+  developmentalLevel?: DevelopmentalLevel;
+  centerInfo?: CenterInfoItem[];
 }
 
 interface UpdateChildInput {
@@ -29,6 +49,8 @@ interface UpdateChildInput {
   diagnosisName?: string;
   diagnosisDate?: string;
   notes?: string;
+  developmentalLevel?: DevelopmentalLevel;
+  centerInfo?: CenterInfoItem[];
 }
 
 export function useChildren(familyId: string | null | undefined) {

@@ -12,6 +12,8 @@ export interface CurriculumPromptParams {
   recentAssessmentCount: number;
   targetDate: string; // YYYY-MM-DD
   previousWeeklyGoal?: string;
+  developmentalLevel?: { language?: string; cognitive?: string; motor?: string; selfCare?: string; social?: string; overall?: string };
+  centerInfo?: Array<{ name: string; type: string; frequency: string; currentGoal?: string }>;
 }
 
 @Injectable()
@@ -36,15 +38,38 @@ export class CurriculumPromptService {
       ? `\n지난 주 목표: ${params.previousWeeklyGoal}`
       : '';
 
-    const userContent = `아이 정보:
+    let userContent = `아이 정보:
 - 연령: ${ageText}
 - 최근 평가 횟수: ${params.recentAssessmentCount}회
 ${previousGoalText}
 
 발달 영역별 점수 (5점 만점):
-${domainText}
+${domainText}`;
 
-오늘(${params.targetDate}) 커리큘럼을 생성해주세요.
+    // 발달 수준 (있으면 포함)
+    if (params.developmentalLevel) {
+      const dl = params.developmentalLevel;
+      userContent += `\n\n아이의 발달 수준:\n`;
+      if (dl.language) userContent += `- 언어 발달: ${dl.language}\n`;
+      if (dl.cognitive) userContent += `- 인지 발달: ${dl.cognitive}\n`;
+      if (dl.motor) userContent += `- 대소근육: ${dl.motor}\n`;
+      if (dl.selfCare) userContent += `- 자조 능력: ${dl.selfCare}\n`;
+      if (dl.social) userContent += `- 사회성: ${dl.social}\n`;
+      if (dl.overall) userContent += `- 종합: ${dl.overall}\n`;
+    }
+
+    // 센터/치료 정보 (있으면 포함)
+    if (params.centerInfo && params.centerInfo.length > 0) {
+      userContent += `\n\n현재 다니는 치료 센터:\n`;
+      for (const center of params.centerInfo) {
+        userContent += `- ${center.name} (${center.type}, ${center.frequency})`;
+        if (center.currentGoal) userContent += ` — 현재 목표: ${center.currentGoal}`;
+        userContent += `\n`;
+      }
+      userContent += `\n위 센터 치료를 보완하는 가정 활동을 만들어주세요. 센터에서 하는 것과 중복되지 않도록 해주세요.\n`;
+    }
+
+    userContent += `\n오늘(${params.targetDate}) 커리큘럼을 생성해주세요.
 
 다음 JSON 형식으로만 응답하세요:
 {
