@@ -44,17 +44,19 @@ export function useLogActivity() {
     mutationFn: async ({
       curriculumId,
       activityIndex,
+      activityTitle,
       result,
       notes,
     }: {
       curriculumId: string;
       activityIndex: number;
+      activityTitle: string;
       result: ActivityResult;
       notes?: string;
     }) => {
       const { data } = await api.post<{ success: true; data: ActivityLog }>(
         `/activities`,
-        { curriculumId, activityIndex, result, notes },
+        { curriculumId, activityIndex, activityTitle, result, notes },
       );
       return data.data;
     },

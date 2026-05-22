@@ -144,13 +144,15 @@ function ActivityCard({ activity, index, curriculumId, existingLog }: ActivityCa
       await logActivity.mutateAsync({
         curriculumId,
         activityIndex: index,
+        activityTitle: activity.title,
         result: selectedResult,
         notes: notes.trim() || undefined,
       });
       setSaved(true);
       setShowNotes(false);
-    } catch {
-      // intentionally empty
+    } catch (err) {
+      console.error('활동 저장 실패:', err);
+      alert('저장에 실패했습니다. 다시 시도해주세요.');
     }
   }
 
