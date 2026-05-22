@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
+  App,
   Card,
   Tag,
   Typography,
@@ -14,7 +15,6 @@ import {
   Space,
   Row,
   Col,
-  message,
   Radio,
 } from 'antd';
 import {
@@ -267,6 +267,7 @@ function ProviderConfigForm({
 }
 
 export function AiSettingsPage() {
+  const { message } = App.useApp();
   const { data: configs = [], isLoading } = useAiConfigs();
   const upsert = useUpsertAiConfig();
   const test = useTestConnection();
