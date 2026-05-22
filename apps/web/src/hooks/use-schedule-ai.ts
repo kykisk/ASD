@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { getAiErrorMessage } from './use-curriculum';
 
 export type SuggestionType = 'ADD' | 'MODIFY' | 'REMOVE';
 
@@ -29,6 +30,13 @@ export function useScheduleSuggestions(childId: string | null) {
       return data.data;
     },
     enabled: false,
+    throwOnError: false,
+    meta: {
+      onError: (err: unknown) => {
+        const msg = getAiErrorMessage(err);
+        if (msg) alert(msg);
+      },
+    },
   });
 }
 

@@ -2,6 +2,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import type { Curriculum, ActivityLog, ActivityResult } from '../types/curriculum';
 
+export function getAiErrorMessage(err: unknown): string | null {
+  const code = (err as any)?.response?.data?.error?.code;
+  const status = (err as any)?.response?.status;
+  if (code === 'AI_002' || status === 503) {
+    return 'AI 요금 한도에 도달했습니다. 관리자에게 문의해주세요.';
+  }
+  if (code === 'AI_002' || status === 429) {
+    return '오늘의 AI 사용량이 소진됐어요. 내일 다시 시도해주세요.';
+  }
+  if (code === 'AI_001') {
+    return 'AI 서비스를 사용할 수 없습니다. 관리자에게 문의해주세요.';
+  }
+  if (status === 503) {
+    return 'AI 서비스가 일시적으로 사용 불가합니다. 관리자에게 문의해주세요.';
+  }
+  return null;
+}
+
 export function useTodayCurriculum(childId: string | null) {
   return useQuery({
     queryKey: ['curriculum', 'today', childId],

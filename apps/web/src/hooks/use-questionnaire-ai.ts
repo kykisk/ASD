@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../services/api';
 import type { Domain, QuestionnaireItem } from './use-questionnaires';
+import { getAiErrorMessage } from './use-curriculum';
 
 export type RiskLevel = 'SAFE' | 'CAUTION' | 'HIGH_RISK';
 export type OverallRisk = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -49,6 +50,10 @@ export function useAiFilter() {
       );
       return data.data;
     },
+    onError: (err) => {
+      const msg = getAiErrorMessage(err);
+      if (msg) alert(msg);
+    },
   });
 }
 
@@ -60,6 +65,10 @@ export function useAiGenerate() {
         input,
       );
       return data.data.generated;
+    },
+    onError: (err) => {
+      const msg = getAiErrorMessage(err);
+      if (msg) alert(msg);
     },
   });
 }

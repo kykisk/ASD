@@ -10,6 +10,7 @@ import {
   useRegenerateCurriculum,
   useDeleteCurriculum,
   useCurriculumActivities,
+  getAiErrorMessage,
 } from '../hooks/use-curriculum';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
@@ -371,6 +372,25 @@ export function CurriculumPage() {
   const today = new Date();
   const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
 
+  const handleGenerate = () => {
+    if (!selectedChildId) return;
+    generateCurriculum.mutate(selectedChildId, {
+      onError: (err) => {
+        const msg = getAiErrorMessage(err);
+        if (msg) alert(msg);
+      },
+    });
+  };
+
+  const handleRegenerate = (curriculumId: string) => {
+    regenerateCurriculum.mutate(curriculumId, {
+      onError: (err) => {
+        const msg = getAiErrorMessage(err);
+        if (msg) alert(msg);
+      },
+    });
+  };
+
   const allCompleted =
     curriculum?.activities &&
     activityLogs &&
@@ -426,7 +446,7 @@ export function CurriculumPage() {
               description="AI가 아이의 발달 단계에 맞는 활동을 추천해드릴게요"
               action={{
                 label: generateCurriculum.isPending ? '생성 중...' : '✨ AI 커리큘럼 생성하기',
-                onClick: () => generateCurriculum.mutate(selectedChildId),
+                onClick: () => handleGenerate(),
               }}
             />
             {generateCurriculum.isPending && (
@@ -461,7 +481,7 @@ export function CurriculumPage() {
           <ErrorState
             title="커리큘럼 생성에 실패했습니다"
             message="다시 시도하시면 새로운 커리큘럼을 만들어 드릴게요"
-            onRetry={() => regenerateCurriculum.mutate(curriculum.id)}
+            onRetry={() => handleRegenerate(curriculum.id)}
           />
         </div>
       );
@@ -475,7 +495,7 @@ export function CurriculumPage() {
           action={
             <div className="flex items-center gap-2">
               <button
-                onClick={() => regenerateCurriculum.mutate(curriculum.id)}
+                onClick={() => handleRegenerate(curriculum.id)}
                 disabled={regenerateCurriculum.isPending || deleteCurriculum.isPending}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-neutral-600 bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors min-h-[40px] disabled:opacity-60"
               >
