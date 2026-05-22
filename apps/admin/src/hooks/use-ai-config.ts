@@ -63,10 +63,10 @@ export function useUpsertAiConfig() {
 export function useTestConnection() {
   return useMutation({
     mutationFn: async (provider: AiProvider) => {
-      const { data } = await adminApi.get<{ success: true; data: { success: boolean; latencyMs: number; error?: string } }>(
+      const { data } = await adminApi.get<{ success: boolean; latencyMs: number; error?: string }>(
         `/admin/ai-config/${provider}/test`,
       );
-      return data.data;
+      return data;
     },
   });
 }
