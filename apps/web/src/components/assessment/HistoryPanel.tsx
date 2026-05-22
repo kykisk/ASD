@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAssessments } from '../../hooks/use-assessments';
 import type { Assessment } from '../../hooks/use-assessments';
+import { DatePickerPopup } from '../ui/DatePickerPopup';
 import './history-panel.css';
 
 const domainNames: Record<string, string> = {
@@ -27,15 +28,6 @@ function getScoreEmoji(score: number): { emoji: string; color: string } {
   return { emoji: '😢', color: '#E88B8B' };
 }
 
-function formatKoreanDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
-  const dayOfWeek = days[date.getDay()];
-  return `${year}년 ${month}월 ${day}일 (${dayOfWeek})`;
-}
-
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
   const hours = date.getHours();
@@ -51,10 +43,6 @@ function isSameDay(d1: Date, d2: Date): boolean {
     d1.getMonth() === d2.getMonth() &&
     d1.getDate() === d2.getDate()
   );
-}
-
-function isToday(date: Date): boolean {
-  return isSameDay(date, new Date());
 }
 
 interface AssessmentCardProps {
@@ -162,21 +150,6 @@ export function HistoryPanel({ childId }: HistoryPanelProps) {
     return isSameDay(assessDate, selectedDate);
   });
 
-  const goToPrevDay = () => {
-    const prev = new Date(selectedDate);
-    prev.setDate(prev.getDate() - 1);
-    setSelectedDate(prev);
-  };
-
-  const goToNextDay = () => {
-    if (isToday(selectedDate)) return;
-    const next = new Date(selectedDate);
-    next.setDate(next.getDate() + 1);
-    setSelectedDate(next);
-  };
-
-  const todaySelected = isToday(selectedDate);
-
   return (
     <div className="hp-container">
       <div className="hp-header">
@@ -184,26 +157,8 @@ export function HistoryPanel({ childId }: HistoryPanelProps) {
         <span className="hp-header-title">평가 기록</span>
       </div>
 
-      <div className="hp-date-nav">
-        <button className="hp-date-arrow" onClick={goToPrevDay} aria-label="이전 날">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <span className={`hp-date-display ${todaySelected ? 'hp-date-today' : ''}`}>
-          {formatKoreanDate(selectedDate)}
-          {todaySelected && <span className="hp-today-badge">오늘</span>}
-        </span>
-        <button
-          className={`hp-date-arrow ${todaySelected ? 'hp-date-arrow-disabled' : ''}`}
-          onClick={goToNextDay}
-          disabled={todaySelected}
-          aria-label="다음 날"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+      <div className="hp-date-picker-wrap">
+        <DatePickerPopup selectedDate={selectedDate} onChange={setSelectedDate} />
       </div>
 
       <div className="hp-content">

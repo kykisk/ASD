@@ -79,15 +79,7 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    to: '/curriculum/history',
-    label: '커리큘럼 기록',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.331 0 4.472.89 6.075 2.356M12 6.042c1.61-1.29 3.654-2.062 5.906-2.292A8.987 8.987 0 0121 3.75v14.25a8.966 8.966 0 00-3-.512c-2.252 0-4.295.772-5.906 2.062M12 6.042V20.356" />
-      </svg>
-    ),
-  },
+
   {
     to: '/reports',
     label: '보고서',

@@ -89,6 +89,10 @@
   min-height: 120px;
 }
 
+.hp-date-picker-wrap {
+  margin-bottom: 16px;
+}
+
 .hp-loading {
   display: flex;
   align-items: center;

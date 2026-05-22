@@ -15,6 +15,7 @@ import { Card } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
+import { CurriculumHistoryPanel } from '../components/curriculum/CurriculumHistoryPanel';
 import type {
   CurriculumActivity,
   DifficultyLevel,
@@ -22,6 +23,7 @@ import type {
   ActivityLog,
 } from '../types/curriculum';
 import { DOMAIN_LABELS, DOMAIN_COLORS, DIFFICULTY_LABELS } from '../types/curriculum';
+import './curriculum-page.css';
 
 const PROGRESS_STEPS = [
   { label: '아이 발달 데이터 분석 중', duration: 3000 },
@@ -387,44 +389,76 @@ export function CurriculumPage() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div>
-        <PageHeader
-          title="🤖 오늘의 커리큘럼"
-          subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
-        />
-        <CurriculumSkeleton />
-      </div>
-    );
-  }
-
-  if (error || !curriculum) {
-    const is404 = (error as { response?: { status?: number } })?.response?.status === 404;
-
-    if (is404 || !curriculum) {
+  const renderContent = () => {
+    if (isLoading) {
       return (
         <div>
           <PageHeader
             title="🤖 오늘의 커리큘럼"
             subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
           />
-          <EmptyState
-            icon={
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-              </svg>
-            }
-            title="오늘의 커리큘럼이 아직 없어요"
-            description="AI가 아이의 발달 단계에 맞는 활동을 추천해드릴게요"
-            action={{
-              label: generateCurriculum.isPending ? '생성 중...' : '✨ AI 커리큘럼 생성하기',
-              onClick: () => generateCurriculum.mutate(selectedChildId),
-            }}
+          <CurriculumSkeleton />
+        </div>
+      );
+    }
+
+    if (error || !curriculum) {
+      const is404 = (error as { response?: { status?: number } })?.response?.status === 404;
+
+      if (is404 || !curriculum) {
+        return (
+          <div>
+            <PageHeader
+              title="🤖 오늘의 커리큘럼"
+              subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
+            />
+            <EmptyState
+              icon={
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                </svg>
+              }
+              title="오늘의 커리큘럼이 아직 없어요"
+              description="AI가 아이의 발달 단계에 맞는 활동을 추천해드릴게요"
+              action={{
+                label: generateCurriculum.isPending ? '생성 중...' : '✨ AI 커리큘럼 생성하기',
+                onClick: () => generateCurriculum.mutate(selectedChildId),
+              }}
+            />
+            {generateCurriculum.isPending && (
+              <GeneratingProgress onCancel={() => generateCurriculum.reset()} />
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <PageHeader
+            title="🤖 오늘의 커리큘럼"
+            subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
           />
-           {generateCurriculum.isPending && (
-            <GeneratingProgress onCancel={() => generateCurriculum.reset()} />
-          )}
+          <ErrorState
+            title="커리큘럼을 불러올 수 없습니다"
+            message="잠시 후 다시 시도해주세요"
+            onRetry={() => refetch()}
+          />
+        </div>
+      );
+    }
+
+    if (curriculum.status === 'FAILED') {
+      return (
+        <div>
+          <PageHeader
+            title="🤖 오늘의 커리큘럼"
+            subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
+          />
+          <ErrorState
+            title="커리큘럼 생성에 실패했습니다"
+            message="다시 시도하시면 새로운 커리큘럼을 만들어 드릴게요"
+            onRetry={() => regenerateCurriculum.mutate(curriculum.id)}
+          />
         </div>
       );
     }
@@ -434,105 +468,88 @@ export function CurriculumPage() {
         <PageHeader
           title="🤖 오늘의 커리큘럼"
           subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
+          action={
+            <button
+              onClick={() => regenerateCurriculum.mutate(curriculum.id)}
+              disabled={regenerateCurriculum.isPending}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-neutral-600 bg-white border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 transition-colors min-h-[40px] disabled:opacity-60"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              재생성
+            </button>
+          }
         />
-        <ErrorState
-          title="커리큘럼을 불러올 수 없습니다"
-          message="잠시 후 다시 시도해주세요"
-          onRetry={() => refetch()}
-        />
-      </div>
-    );
-  }
 
-  if (curriculum.status === 'FAILED') {
-    return (
-      <div>
-        <PageHeader
-          title="🤖 오늘의 커리큘럼"
-          subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
-        />
-        <ErrorState
-          title="커리큘럼 생성에 실패했습니다"
-          message="다시 시도하시면 새로운 커리큘럼을 만들어 드릴게요"
-          onRetry={() => regenerateCurriculum.mutate(curriculum.id)}
-        />
+        {curriculum.weeklyGoal && (
+          <Card className="mb-5 border-primary-100 bg-primary-50/30">
+            <div className="flex items-start gap-3">
+              <span className="text-lg">📌</span>
+              <div>
+                <p className="text-xs font-medium text-primary-600 mb-0.5">이번 주 목표</p>
+                <p className="text-sm text-neutral-700 font-medium leading-relaxed">
+                  {curriculum.weeklyGoal}
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <div className="space-y-3">
+          {curriculum.activities.map((activity, i) => {
+            const log = activityLogs?.find((l) => l.activityIndex === i);
+            return (
+              <ActivityCard
+                key={i}
+                activity={activity}
+                index={i}
+                curriculumId={curriculum.id}
+                existingLog={log}
+              />
+            );
+          })}
+        </div>
+
+        {allCompleted && (
+          <div className="mt-6 text-center py-6 bg-primary-50/50 rounded-xl border border-primary-100 animate-fade-slide-in">
+            <p className="text-lg font-semibold text-primary-700">
+              오늘도 수고했어요 🌱
+            </p>
+            <p className="text-sm text-neutral-500 mt-1">
+              아이와 함께한 시간이 소중한 성장이 됩니다
+            </p>
+          </div>
+        )}
+
+        {curriculum.status === 'GENERATED' && (
+          <div className="mt-5">
+            <button
+              onClick={() => confirmCurriculum.mutate(curriculum.id)}
+              disabled={confirmCurriculum.isPending}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 active:bg-primary-700 transition-colors shadow-sage min-h-[48px] disabled:opacity-60"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              📋 커리큘럼 확인하기
+            </button>
+          </div>
+        )}
       </div>
     );
-  }
+  };
 
   return (
-    <div className="max-w-2xl">
-      <PageHeader
-        title="🤖 오늘의 커리큘럼"
-        subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
-        action={
-          <button
-            onClick={() => regenerateCurriculum.mutate(curriculum.id)}
-            disabled={regenerateCurriculum.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-neutral-600 bg-white border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 transition-colors min-h-[40px] disabled:opacity-60"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-            재생성
-          </button>
-        }
-      />
-
-      {curriculum.weeklyGoal && (
-        <Card className="mb-5 border-primary-100 bg-primary-50/30">
-          <div className="flex items-start gap-3">
-            <span className="text-lg">📌</span>
-            <div>
-              <p className="text-xs font-medium text-primary-600 mb-0.5">이번 주 목표</p>
-              <p className="text-sm text-neutral-700 font-medium leading-relaxed">
-                {curriculum.weeklyGoal}
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      <div className="space-y-3">
-        {curriculum.activities.map((activity, i) => {
-          const log = activityLogs?.find((l) => l.activityIndex === i);
-          return (
-            <ActivityCard
-              key={i}
-              activity={activity}
-              index={i}
-              curriculumId={curriculum.id}
-              existingLog={log}
-            />
-          );
-        })}
+    <div className="curriculum-page-layout">
+      <div className="curriculum-page-grid">
+        <div className="curriculum-page-content">
+          {renderContent()}
+        </div>
+        <div className="curriculum-page-history">
+          <CurriculumHistoryPanel childId={selectedChildId} />
+        </div>
       </div>
-
-      {allCompleted && (
-        <div className="mt-6 text-center py-6 bg-primary-50/50 rounded-xl border border-primary-100 animate-fade-slide-in">
-          <p className="text-lg font-semibold text-primary-700">
-            오늘도 수고했어요 🌱
-          </p>
-          <p className="text-sm text-neutral-500 mt-1">
-            아이와 함께한 시간이 소중한 성장이 됩니다
-          </p>
-        </div>
-      )}
-
-      {curriculum.status === 'GENERATED' && (
-        <div className="mt-5">
-          <button
-            onClick={() => confirmCurriculum.mutate(curriculum.id)}
-            disabled={confirmCurriculum.isPending}
-            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 active:bg-primary-700 transition-colors shadow-sage min-h-[48px] disabled:opacity-60"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            📋 커리큘럼 확인하기
-          </button>
-        </div>
-      )}
     </div>
   );
 }
