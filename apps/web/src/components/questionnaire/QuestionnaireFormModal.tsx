@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Domain, QuestionnaireItem, Questionnaire } from '../../hooks/use-questionnaires';
 import { useCreateQuestionnaire } from '../../hooks/use-questionnaires';
-import { useAuthStore } from '../../stores/auth.store';
+import { useMyFamily } from '../../hooks/use-families';
 import { useAiFilter, type AiFilterItemResult, type OverallRisk } from '../../hooks/use-questionnaire-ai';
 
 const DOMAIN_OPTIONS: { value: Domain; label: string; color: string }[] = [
@@ -29,17 +29,13 @@ export function QuestionnaireFormModal({
   onClose,
   editingQuestionnaire,
 }: QuestionnaireFormModalProps) {
-  const { user } = useAuthStore();
-  const createQuestionnaire = useCreateQuestionnaire(user?.familyId);
+  const { data: family } = useMyFamily();
+  const createQuestionnaire = useCreateQuestionnaire(family?.id);
 
-  const [name, setName] = useState(editingQuestionnaire?.name || '');
-  const [description, setDescription] = useState(editingQuestionnaire?.description || '');
-  const [selectedDomains, setSelectedDomains] = useState<Domain[]>(
-    editingQuestionnaire?.domains || [],
-  );
-  const [items, setItems] = useState<QuestionnaireItem[]>(
-    editingQuestionnaire?.items || [],
-  );
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedDomains, setSelectedDomains] = useState<Domain[]>([]);
+  const [items, setItems] = useState<QuestionnaireItem[]>([]);
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemDomain, setNewItemDomain] = useState<Domain>('COMMUNICATION');
   const [newItemText, setNewItemText] = useState('');
@@ -50,6 +46,17 @@ export function QuestionnaireFormModal({
   const [expandedRiskItem, setExpandedRiskItem] = useState<number | null>(null);
 
   const aiFilter = useAiFilter();
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(editingQuestionnaire?.name || '');
+      setDescription(editingQuestionnaire?.description || '');
+      setSelectedDomains(editingQuestionnaire?.domains as Domain[] || []);
+      setItems(editingQuestionnaire?.items || []);
+      setAiFilterResults(null);
+      setOverallRisk(null);
+    }
+  }, [isOpen, editingQuestionnaire]);
 
   if (!isOpen) return null;
 
