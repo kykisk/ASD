@@ -97,6 +97,19 @@ export function useRegenerateCurriculum() {
   });
 }
 
+export function useDeleteCurriculum() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (curriculumId: string) => {
+      await api.delete(`/curricula/${curriculumId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['curriculum'] });
+    },
+  });
+}
+
 export function useCurriculumHistory(childId: string | null, limit = 10) {
   return useQuery({
     queryKey: ['curriculum', 'history', childId, limit],

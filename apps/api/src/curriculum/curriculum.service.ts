@@ -217,8 +217,20 @@ export class CurriculumService {
 
     await this.prisma.curriculum.delete({ where: { id: curriculumId } });
 
-    const dateStr = curriculum.date.toISOString().split('T')[0];
+    const dateStr = curriculum.date instanceof Date
+      ? curriculum.date.toISOString().split('T')[0]
+      : String(curriculum.date).split('T')[0];
+
     return this.generateForChild(curriculum.childId, userId, dateStr);
+  }
+
+  async deleteCurriculum(curriculumId: string, userId: string): Promise<void> {
+    const curriculum = await this.prisma.curriculum.findUnique({ where: { id: curriculumId } });
+    if (!curriculum) {
+      throw new ApiException(404, 'CURRICULUM_404', '커리큘럼을 찾을 수 없습니다');
+    }
+    await this.verifyFamilyMember(curriculum.familyId, userId);
+    await this.prisma.curriculum.delete({ where: { id: curriculumId } });
   }
 
   private getTargetDate(): string {

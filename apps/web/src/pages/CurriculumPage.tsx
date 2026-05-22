@@ -8,6 +8,7 @@ import {
   useLogActivity,
   useConfirmCurriculum,
   useRegenerateCurriculum,
+  useDeleteCurriculum,
   useCurriculumActivities,
 } from '../hooks/use-curriculum';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -362,6 +363,7 @@ export function CurriculumPage() {
   const generateCurriculum = useGenerateCurriculum();
   const confirmCurriculum = useConfirmCurriculum();
   const regenerateCurriculum = useRegenerateCurriculum();
+  const deleteCurriculum = useDeleteCurriculum();
 
   const selectedChild = children?.find((c) => c.id === selectedChildId);
   const today = new Date();
@@ -469,20 +471,47 @@ export function CurriculumPage() {
           title="🤖 오늘의 커리큘럼"
           subtitle={`${selectedChild?.name ?? ''} · ${dateStr}`}
           action={
-            <button
-              onClick={() => regenerateCurriculum.mutate(curriculum.id)}
-              disabled={regenerateCurriculum.isPending}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-neutral-600 bg-white border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 transition-colors min-h-[40px] disabled:opacity-60"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-              </svg>
-              재생성
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => regenerateCurriculum.mutate(curriculum.id)}
+                disabled={regenerateCurriculum.isPending || deleteCurriculum.isPending}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-neutral-600 bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors min-h-[40px] disabled:opacity-60"
+              >
+                {regenerateCurriculum.isPending ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                )}
+                {regenerateCurriculum.isPending ? '재생성 중...' : '재생성'}
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('커리큘럼을 삭제할까요?')) {
+                    deleteCurriculum.mutate(curriculum.id);
+                  }
+                }}
+                disabled={deleteCurriculum.isPending || regenerateCurriculum.isPending}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-red-500 bg-white border border-red-200 hover:bg-red-50 transition-colors min-h-[40px] disabled:opacity-60"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {deleteCurriculum.isPending ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
           }
         />
 
-        {curriculum.weeklyGoal && (
+        {regenerateCurriculum.isPending && (
+          <GeneratingProgress onCancel={() => regenerateCurriculum.reset()} />
+        )}
+
+        {curriculum.weeklyGoal && !regenerateCurriculum.isPending && (
           <Card className="mb-5 border-primary-100 bg-primary-50/30">
             <div className="flex items-start gap-3">
               <span className="text-lg">📌</span>

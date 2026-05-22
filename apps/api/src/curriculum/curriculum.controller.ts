@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Query,
 } from '@nestjs/common';
@@ -67,6 +68,15 @@ export class CurriculumController {
     @CurrentUser() user: { id: string },
   ) {
     return this.curriculumService.regenerateCurriculum(curriculumId, user.id);
+  }
+
+  @Delete('curricula/:curriculumId')
+  async deleteCurriculum(
+    @Param('curriculumId') curriculumId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    await this.curriculumService.deleteCurriculum(curriculumId, user.id);
+    return null;
   }
 
   @Post('admin/curriculum/batch')
