@@ -140,10 +140,11 @@ export function QuestionnaireFormModal({
         name: name.trim(),
         description: description.trim() || undefined,
         domains: selectedDomains,
-        items: items.map((item) => ({
+        items: items.map((item, idx) => ({
           domain: item.domain,
           text: item.text,
-          weight: item.weight,
+          weight: item.weight ?? 1,
+          orderIndex: idx,
         })),
       },
       {
