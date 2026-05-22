@@ -75,11 +75,14 @@ export function AiGenerateModal({ isOpen, onClose }: AiGenerateModalProps) {
       {
         name: result.name,
         description: result.description,
-        domains: result.domains,
-        items: result.items.map((item) => ({
+        domains: selectedDomains.length > 0
+          ? selectedDomains
+          : [...new Set(result.items.map((i) => i.domain))],
+        items: result.items.map((item, idx) => ({
           domain: item.domain,
           text: item.text,
           weight: item.weight,
+          orderIndex: idx,
         })),
       },
       {
