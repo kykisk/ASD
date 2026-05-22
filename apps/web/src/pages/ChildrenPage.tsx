@@ -151,7 +151,9 @@ export function ChildrenPage() {
       birthDate: child.birthDate,
       gender: child.gender || '',
       diagnosisName: child.diagnosisName || '',
-      diagnosisDate: child.diagnosisDate || '',
+      diagnosisDate: child.diagnosisDate
+        ? child.diagnosisDate.split('T')[0]
+        : '',
       notes: child.notes || '',
       developmentalLevel: {
         language: child.developmentalLevel?.language || '',
