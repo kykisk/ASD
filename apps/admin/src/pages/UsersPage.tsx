@@ -7,7 +7,7 @@ import {
   Switch,
   Space,
   Typography,
-  message,
+  App,
   Tooltip,
 } from 'antd';
 import { EyeOutlined, SearchOutlined } from '@ant-design/icons';
@@ -62,14 +62,22 @@ export function UsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL');
+  const { message } = App.useApp();
 
-  const { users, total, isLoading } = useAdminUsers(page, search, roleFilter, statusFilter);
+  const { data: usersData, isLoading } = useAdminUsers({
+    page,
+    search: search || undefined,
+    role: roleFilter !== 'ALL' ? roleFilter : undefined,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+  });
+  const users = usersData?.data ?? [];
+  const total = usersData?.meta?.total ?? 0;
   const updateRole = useUpdateUserRole();
   const toggleStatus = useToggleUserStatus();
 
   const handleRoleChange = useCallback(
     async (userId: string, role: UserRole) => {
-      await updateRole.mutate(userId, role);
+      updateRole.mutate({ userId, role });
       message.success('역할이 변경되었습니다.');
     },
     [updateRole],
@@ -77,7 +85,7 @@ export function UsersPage() {
 
   const handleStatusToggle = useCallback(
     async (userId: string, active: boolean) => {
-      await toggleStatus.mutate(userId, active);
+      toggleStatus.mutate({ userId, isActive: active });
       message.success(active ? '계정이 활성화되었습니다.' : '계정이 비활성화되었습니다.');
     },
     [toggleStatus],
