@@ -3,6 +3,7 @@ import { PrismaService } from '@auticare/prisma-client';
 import { AIService } from '../ai/ai.service.js';
 import { DomainAggregationService } from '../assessments/domain-aggregation.service.js';
 import { CacheService } from '../common/cache/cache.service.js';
+import { NotificationTriggerService } from '../notifications/notification-trigger.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { insightOutputSchema } from '../ai/schemas/insight.schema.js';
 
@@ -26,6 +27,7 @@ export class InsightsService {
     private prisma: PrismaService,
     private domainAggregation: DomainAggregationService,
     private cacheService: CacheService,
+    private notificationTrigger: NotificationTriggerService,
   ) {}
 
   async getWeeklyInsight(childId: string, userId: string): Promise<InsightRecord> {
@@ -42,6 +44,11 @@ export class InsightsService {
     const insight = await this.generateInsight(childId, weekKey);
 
     await this.cacheService.set(cacheKey, insight, 86400); // 24h TTL
+
+    const child = await this.prisma.child.findUnique({ where: { id: childId }, select: { familyId: true } });
+    if (child?.familyId) {
+      this.notificationTrigger.triggerWeeklyInsightReady(childId, child.familyId, userId).catch(() => {});
+    }
 
     return insight;
   }

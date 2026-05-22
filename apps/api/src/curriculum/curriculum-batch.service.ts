@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaService } from '@auticare/prisma-client';
 import { CurriculumService } from './curriculum.service.js';
+import { NotificationTriggerService } from '../notifications/notification-trigger.service.js';
 import type { Curriculum } from '@prisma/client';
 import * as cron from 'node-cron';
 
@@ -22,6 +23,7 @@ export class CurriculumBatchService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private prisma: PrismaService,
     private curriculumService: CurriculumService,
+    private notificationTrigger: NotificationTriggerService,
   ) {}
 
   onModuleInit() {
@@ -93,6 +95,8 @@ export class CurriculumBatchService implements OnModuleInit, OnModuleDestroy {
 
       if (success) {
         successCount++;
+        await this.notificationTrigger.triggerAssessmentReminder(child.id, child.familyId).catch(() => {});
+        await this.notificationTrigger.triggerInputReminder(child.id, child.familyId).catch(() => {});
       } else {
         failureCount++;
       }

@@ -11,8 +11,8 @@ export class NotificationTriggerService {
     private prisma: PrismaService,
   ) {}
 
-  async triggerCurriculumReady(childId: string, familyId: string): Promise<void> {
-    const users = await this.getFamilyUsers(familyId);
+  async triggerCurriculumReady(childId: string, familyId: string, excludeUserId?: string): Promise<void> {
+    const users = await this.getFamilyUsers(familyId, excludeUserId);
 
     for (const userId of users) {
       await this.notificationsService.create({
@@ -74,8 +74,8 @@ export class NotificationTriggerService {
     }
   }
 
-  async triggerWeeklyInsightReady(childId: string, familyId: string): Promise<void> {
-    const users = await this.getFamilyUsers(familyId);
+  async triggerWeeklyInsightReady(childId: string, familyId: string, excludeUserId?: string): Promise<void> {
+    const users = await this.getFamilyUsers(familyId, excludeUserId);
 
     for (const userId of users) {
       await this.notificationsService.create({
@@ -89,12 +89,13 @@ export class NotificationTriggerService {
     }
   }
 
-  private async getFamilyUsers(familyId: string): Promise<string[]> {
+  private async getFamilyUsers(familyId: string, excludeUserId?: string): Promise<string[]> {
     const members = await this.prisma.familyMember.findMany({
       where: {
         familyId,
         role: { in: ['FAMILY_ADMIN', 'FAMILY_MEMBER'] },
         user: { isActive: true },
+        ...(excludeUserId ? { NOT: { userId: excludeUserId } } : {}),
       },
       select: { userId: true },
     });

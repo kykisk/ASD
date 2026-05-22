@@ -65,6 +65,10 @@ const mockDomainAggregation = {
   aggregate: vi.fn(),
 };
 
+const mockNotificationTrigger = {
+  triggerCurriculumReady: vi.fn().mockResolvedValue(undefined),
+};
+
 const defaultAggregationResult = {
   overallScore: 3.2,
   domains: [
@@ -123,6 +127,7 @@ describe('CurriculumService', () => {
         { provide: 'AIService', useValue: mockAiService },
         { provide: 'DomainAggregationService', useValue: mockDomainAggregation },
         { provide: 'EncryptionService', useValue: mockEncryptionService },
+        { provide: 'NotificationTriggerService', useValue: mockNotificationTrigger },
       ],
     }).compile();
 
@@ -132,6 +137,7 @@ describe('CurriculumService', () => {
     Object.defineProperty(service, 'promptService', { value: new CurriculumPromptService() });
     Object.defineProperty(service, 'domainAggregation', { value: mockDomainAggregation });
     Object.defineProperty(service, 'encryptionService', { value: mockEncryptionService });
+    Object.defineProperty(service, 'notificationTrigger', { value: mockNotificationTrigger });
   });
 
   describe('generateForChild', () => {

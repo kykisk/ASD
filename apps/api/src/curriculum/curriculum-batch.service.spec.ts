@@ -18,6 +18,11 @@ const mockCurriculumService = {
   generateForChild: vi.fn(),
 };
 
+const mockNotificationTrigger = {
+  triggerAssessmentReminder: vi.fn().mockResolvedValue(undefined),
+  triggerInputReminder: vi.fn().mockResolvedValue(undefined),
+};
+
 describe('CurriculumBatchService', () => {
   let service: CurriculumBatchService;
 
@@ -29,12 +34,14 @@ describe('CurriculumBatchService', () => {
         CurriculumBatchService,
         { provide: 'PrismaService', useValue: mockPrismaService },
         { provide: 'CurriculumService', useValue: mockCurriculumService },
+        { provide: 'NotificationTriggerService', useValue: mockNotificationTrigger },
       ],
     }).compile();
 
     service = module.get<CurriculumBatchService>(CurriculumBatchService);
     Object.defineProperty(service, 'prisma', { value: mockPrismaService });
     Object.defineProperty(service, 'curriculumService', { value: mockCurriculumService });
+    Object.defineProperty(service, 'notificationTrigger', { value: mockNotificationTrigger });
   });
 
   describe('runNightlyGeneration', () => {

@@ -4,6 +4,7 @@ import { EncryptionService } from '@auticare/encryption';
 import { AIService } from '../ai/ai.service.js';
 import { CurriculumPromptService } from './curriculum-prompt.service.js';
 import { DomainAggregationService } from '../assessments/domain-aggregation.service.js';
+import { NotificationTriggerService } from '../notifications/notification-trigger.service.js';
 import { curriculumOutputSchema } from '../ai/schemas/curriculum.schema.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { Curriculum } from '@prisma/client';
@@ -18,6 +19,7 @@ export class CurriculumService {
     private promptService: CurriculumPromptService,
     private domainAggregation: DomainAggregationService,
     private encryptionService: EncryptionService,
+    private notificationTrigger: NotificationTriggerService,
   ) {}
 
   async generateForChild(childId: string, userId: string, targetDate?: string): Promise<Curriculum> {
@@ -124,6 +126,8 @@ export class CurriculumService {
           promptVersion: 'v1',
         },
       });
+
+      this.notificationTrigger.triggerCurriculumReady(childId, child.familyId, userId).catch(() => {});
 
       return curriculum;
     } catch (error) {

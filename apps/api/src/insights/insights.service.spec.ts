@@ -22,6 +22,10 @@ const mockCacheService = {
   del: vi.fn(),
 };
 
+const mockNotificationTrigger = {
+  triggerWeeklyInsightReady: vi.fn().mockResolvedValue(undefined),
+};
+
 describe('InsightsService', () => {
   let service: InsightsService;
 
@@ -35,6 +39,7 @@ describe('InsightsService', () => {
         { provide: 'PrismaService', useValue: mockPrismaService },
         { provide: 'DomainAggregationService', useValue: mockDomainAggregation },
         { provide: 'CacheService', useValue: mockCacheService },
+        { provide: 'NotificationTriggerService', useValue: mockNotificationTrigger },
       ],
     }).compile();
 
@@ -43,6 +48,7 @@ describe('InsightsService', () => {
     Object.defineProperty(service, 'prisma', { value: mockPrismaService });
     Object.defineProperty(service, 'domainAggregation', { value: mockDomainAggregation });
     Object.defineProperty(service, 'cacheService', { value: mockCacheService });
+    Object.defineProperty(service, 'notificationTrigger', { value: mockNotificationTrigger });
   });
 
   describe('getWeeklyInsight', () => {
