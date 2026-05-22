@@ -17,6 +17,8 @@ export class QuestionnaireGenerateService {
     childAgeMonths: number;
     targetDomains: string[];
     additionalContext?: string;
+    developmentalLevel?: { language?: string; cognitive?: string; motor?: string; selfCare?: string; social?: string; overall?: string };
+    centerInfo?: Array<{ name: string; type: string; frequency: string; currentGoal?: string }>;
   }): Promise<GeneratedQuestionnaire> {
     const systemPrompt = `당신은 자폐 아동 발달 평가 전문가입니다.
 아이의 연령과 발달 영역에 맞는 맞춤형 평가 질문지를 생성합니다.
@@ -52,6 +54,26 @@ JSON 형식으로만 응답하세요.
 
     if (params.additionalContext) {
       userPrompt += `\n- 추가 맥락: ${params.additionalContext}`;
+    }
+
+    if (params.developmentalLevel) {
+      const dl = params.developmentalLevel;
+      userPrompt += `\n\n아이의 현재 발달 수준:`;
+      if (dl.language) userPrompt += `\n- 언어: ${dl.language}`;
+      if (dl.cognitive) userPrompt += `\n- 인지: ${dl.cognitive}`;
+      if (dl.motor) userPrompt += `\n- 대소근육: ${dl.motor}`;
+      if (dl.selfCare) userPrompt += `\n- 자조: ${dl.selfCare}`;
+      if (dl.social) userPrompt += `\n- 사회성: ${dl.social}`;
+      userPrompt += `\n\n위 발달 수준에 적합한 난이도의 문항을 만들어주세요.`;
+    }
+
+    if (params.centerInfo && params.centerInfo.length > 0) {
+      userPrompt += `\n\n현재 치료 센터:`;
+      for (const center of params.centerInfo) {
+        userPrompt += `\n- ${center.name} (${center.type}, ${center.frequency})`;
+        if (center.currentGoal) userPrompt += ` — 목표: ${center.currentGoal}`;
+      }
+      userPrompt += `\n\n센터에서 다루는 영역을 보완할 수 있는 가정용 문항을 포함해주세요.`;
     }
 
     return this.aiService.generateStructured(

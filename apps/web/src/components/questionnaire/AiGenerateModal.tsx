@@ -56,6 +56,7 @@ export function AiGenerateModal({ isOpen, onClose }: AiGenerateModalProps) {
     setStep('preview');
     aiGenerate.mutate(
       {
+        childId: selectedChild.id,
         childAgeMonths: getChildAgeMonths(selectedChild),
         targetDomains: selectedDomains,
         additionalContext: additionalContext.trim() || undefined,

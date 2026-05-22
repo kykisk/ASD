@@ -19,6 +19,7 @@ export interface AiFilterResult {
 }
 
 export interface AiGenerateInput {
+  childId?: string;
   childAgeMonths: number;
   targetDomains: Domain[];
   additionalContext?: string;

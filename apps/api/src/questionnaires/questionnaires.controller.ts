@@ -14,6 +14,7 @@ import { QuestionnairesService } from './questionnaires.service.js';
 import { QuestionnaireImportService } from './questionnaire-import.service.js';
 import { QuestionnaireFilterService } from './questionnaire-filter.service.js';
 import { QuestionnaireGenerateService } from './questionnaire-generate.service.js';
+import { PrismaService } from '@auticare/prisma-client';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import {
   CreateQuestionnaireDto,
@@ -29,6 +30,7 @@ export class QuestionnairesController {
     private importService: QuestionnaireImportService,
     private filterService: QuestionnaireFilterService,
     private generateService: QuestionnaireGenerateService,
+    private prisma: PrismaService,
   ) {}
 
   @Post('families/:familyId/questionnaires')
@@ -143,17 +145,31 @@ export class QuestionnairesController {
     @CurrentUser() user: { id: string; familyId?: string },
     @Body() body: {
       familyId: string;
+      childId?: string;
       childAgeMonths: number;
       targetDomains: string[];
       additionalContext?: string;
     },
   ) {
+    let developmentalLevel: Record<string, string> | undefined;
+    let centerInfo: Array<{ name: string; type: string; frequency: string; currentGoal?: string }> | undefined;
+
+    if (body.childId) {
+      const child = await this.prisma.child.findUnique({ where: { id: body.childId } });
+      if (child) {
+        developmentalLevel = child.developmentalLevel as any ?? undefined;
+        centerInfo = child.centerInfo as any ?? undefined;
+      }
+    }
+
     const generated = await this.generateService.generateQuestionnaire({
       familyId: body.familyId,
       userId: user.id,
       childAgeMonths: body.childAgeMonths,
       targetDomains: body.targetDomains,
       additionalContext: body.additionalContext,
+      developmentalLevel,
+      centerInfo,
     });
 
     const questionnaire = await this.generateService.createFromGenerated(
