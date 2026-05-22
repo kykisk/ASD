@@ -57,6 +57,7 @@ export function AiGenerateModal({ isOpen, onClose }: AiGenerateModalProps) {
     aiGenerate.mutate(
       {
         childId: selectedChild.id,
+        familyId: family?.id,
         childAgeMonths: getChildAgeMonths(selectedChild),
         targetDomains: selectedDomains,
         additionalContext: additionalContext.trim() || undefined,
