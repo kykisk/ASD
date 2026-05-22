@@ -4,71 +4,74 @@ HANDOFF CONTEXT
 USER REQUESTS (AS-IS)
 ---------------------
 - "phase1 구현해볼까" → Phase 1 전체 구현 완료 (8주)
-- Phase 1 검증: 다수 버그 발견 및 수정 완료
-- "Admin 나머지테스트는 Phase2하고 하자"
-- "Agent.md와 Handsoff.md 업데이트해주고 Git에 commit&Push해줘"
+- "go" × 6 → Phase 2 전체 구현 완료 (6주)
+- Phase 2 검증: 다수 버그 발견 및 수정 완료
+- "Phase2 테스트는 이만하면 된거같아. AGENTS.md와 HANDOFF.md 업데이트해주고 Git에 commit&push해줘"
 
 GOAL
 ----
-Phase 2 (AI Integration) 개발 시작. Admin AI 설정 페이지 실제 API 연결부터 시작 권장.
+Phase 3 (Mobile, React Native + Expo) 개발 시작.
 
 WORK COMPLETED
 --------------
-Phase 1 전체 구현 (8주, 145개 테스트)
-Phase 1 검증 완료 + 버그 수정 (42개 커밋):
+Phase 1 전체 구현 + 검증 (8주, 145→218 테스트)
+Phase 2 전체 구현 + 검증 (6주, 218 테스트):
 
-[CRITICAL 버그 수정]
-- 7개 컨트롤러 /v1/v1/ 이중 prefix → 대시보드/스케줄/평가 등 404 반환하던 문제
-- familyId JWT 미포함 → 가족 생성 후 모든 페이지 오동작
-- Assessment/Schedule/Growth 훅 전체 mock → 실제 API 연결
-- API/프론트 타입 불일치 다수 수정
+[Phase 2 핵심 구현]
+- 4개 AI 프로바이더 (Bedrock/Claude/Gemini/OpenAI) + AIService 파사드
+- 커리큘럼 생성 엔진 + 야간 배치 (03:00 KST)
+- AI 질문지 필터 (라이선스 유사도) + 생성
+- AI 스케줄 제안 (평가 추세 기반)
+- AI 주간 인사이트 (Redis 24h 캐시)
+- 알림 시스템 (5개 타입) + 트리거 연결
+- 월간 PDF 보고서 (Puppeteer)
+- Family AI Tier (DISABLED/BASIC/STANDARD/UNLIMITED)
+- 기능별 AI 모델 매핑 (Admin UI)
+- A기능: 아이 발달 수준 + 센터 정보 → 커리큘럼/질문지 프롬프트 반영
 
-[기능 추가]
-- 반복 일정 수정: C안 구현 (이 날만 / 전체 반복 일정)
-  - DB: exceptedDates 필드 추가
-  - RecurringEditDialog 컴포넌트
-- 평가 히스토리 → 평가 페이지 내 패널로 통합
-- 전화번호 자동 포맷 (010-xxxx-xxxx)
-- TimePicker native → 커스텀 드롭다운 (5분 단위)
-
-[설정 변경]
-- JWT Access TTL: 15분 → 8시간 (개발환경 .env)
-- Rate limiting: 개발환경 비활성화 (Vite proxy가 모든 요청을 127.0.0.1로 전달)
+[Phase 2 검증 수정]
+- AI 응답 래핑 불일치 (data.data vs data.data.generated)
+- orderIndex 누락 → 질문지 저장 400
+- originalIndex vs index 필드명 불일치 → 필터 배지 미표시
+- familyId 미전달 → AI 생성 500
+- 알림 트리거 정의만 됨 (연결 안 됨) → 연결 완료
+- Claude 최신 모델 temperature deprecated → 조건부 처리
+- 질문지 편집 모달 useState 초기화 문제 → useEffect 수정
 
 CURRENT STATE
 -------------
-- Phase 1: 완료 + 검증 완료
+- Phase 1 + Phase 2: 완료 + 검증 완료
 - 빌드: api ✅ web ✅ admin ✅
-- 테스트: 145개 통과
-- Git: 43개 커밋, remote: git@github.com:kykisk/ASD.git (master 브랜치 push 완료)
-- SSH: ~/.ssh/id_ed25519 (EC2 전용, GitHub에 auticare-ec2 등록됨)
-- Admin 페이지: 로그인만 테스트 완료. AI 설정 등 나머지 Phase 2에서 테스트
+- 테스트: 218개 통과
+- Git: 79개 커밋, master 브랜치 push 완료
+- AI 설정: Bedrock Sonnet 활성화됨
+- 알림: 트리거 4개 연결 완료 (본인 제외 옵션 포함)
 
 PENDING TASKS
 -------------
-1. [즉시] Admin AI 설정 페이지 실제 API 연결 (Phase 2 첫 작업 권장)
-2. Phase 2 Week 9-10: AI Provider 어댑터, 커리큘럼 생성 엔진
-3. Phase 2 Week 11-12: AI 질문지, 스케줄 AI 제안
-4. Phase 2 Week 13-14: AI 인사이트, 스마트 알림, PDF 보고서
+1. Phase 3: Mobile (React Native + Expo SDK 52)
+   Week 15: Expo scaffold, 인증, 보안 토큰
+   Week 16-18: 주요 화면 (대시보드, 커리큘럼, 평가, 일정, 성장)
+   Week 19: FCM 푸시 알림
+   Week 20: 오프라인 지원, EAS Build
 
 KEY FILES
 ---------
-- ASD/SPEC/IMPLEMENTATION_PLAN.md - Phase 2 Week 9-14 상세 태스크
-- ASD/auticare/AGENTS.md - Phase 2 개발 필수 참조 (패턴 주의사항)
-- ASD/auticare/apps/api/src/ai-config/ - AI 설정 모듈 (이미 CRUD 구현됨)
-- ASD/auticare/apps/admin/src/pages/AiSettingsPage.tsx - AI 설정 UI (mock → 실제 연결 필요)
-- ASD/auticare/apps/admin/src/hooks/use-ai-config.ts - AI 설정 훅 (mock)
-- ASD/auticare/libs/prisma-client/prisma/schema.prisma - DB 스키마 (AiConfig 모델 있음)
-- ASD/auticare/apps/api/src/schedules/schedules.service.ts - 반복 일정 로직
+- ASD/SPEC/IMPLEMENTATION_PLAN.md - Phase 3 Week 15-20 상세 태스크
+- ASD/auticare/AGENTS.md - Phase 3 개발 필수 참조
+- ASD/auticare/apps/api/src/ai/ - AI 서비스 (AIService, 비용 추적)
+- ASD/auticare/apps/api/src/curriculum/ - 커리큘럼 엔진
+- ASD/auticare/apps/api/src/notifications/ - 알림 시스템
+- ASD/auticare/apps/web/src/hooks/use-curriculum.ts - getAiErrorMessage() 공용 에러 처리
+- ASD/auticare/libs/ai-provider/ - 4개 AI 프로바이더 구현
 
 IMPORTANT DECISIONS
 -------------------
-- JWT Access TTL: 개발=8시간(28800s), 프로덕션=15분(900s)
-- user.familyId(JWT) 사용 금지 → useMyFamily().data?.id 필수
-- 스키마 변경: migrate → generate → build → restart (순서 중요)
-- @Controller('v1/...') 절대 금지 (global prefix v1과 이중 등록)
-- 반복 일정 수정: THIS_ONLY(예외 날짜+새 스케줄) / ALL(원본 수정)
-- 어드민 패널: Ant Design + teal #14b8a6 (web과 별도 디자인 유지)
+- AI 모델: Quality(Sonnet)=커리큘럼/인사이트/필터, Fast(Haiku)=스케줄제안/질문지생성
+- Family AI Tier: STANDARD(20회/일) 기본값. Admin에서 조정 가능
+- 알림 본인 제외: 사용자 행동 트리거는 자신 제외, 배치 작업은 전체
+- temperature: 최신 Claude 모델(Sonnet 4.5+)에서 temperature 파라미터 제거 필요
+- 발달 수준 A기능: Phase 4에서 구조화 체크리스트로 고도화 예정
 
 EXPLICIT CONSTRAINTS
 --------------------
@@ -76,23 +79,17 @@ EXPLICIT CONSTRAINTS
 - 충돌 금지 포트: 3000, 4173, 5432
 - ESM: 상대 임포트에 .js 확장자 필수
 - as any, @ts-ignore 금지
-- Mock 훅 패턴 (setTimeout + 가짜 ID) 절대 금지 → 반드시 실제 API
+- Mock 훅 패턴 절대 금지 → 반드시 실제 API 호출
 - 새 훅/컴포넌트 작성 시 백엔드 service interface 먼저 확인 (타입 불일치 주의)
-- 명시적 요청 없이 커밋 금지
+- AI 기능: 반드시 .catch(() => {}) — 알림/AI 실패가 주 기능 차단하면 안 됨
+- orderIndex: items 배열 저장 시 항상 idx 값 포함
 
 CONTEXT FOR CONTINUATION
 ------------------------
-Phase 2 첫 번째 작업:
-1. Admin AI 설정 페이지 실제 API 연결:
-   - apps/admin/src/hooks/use-ai-config.ts mock 제거 → adminApi 실제 호출
-   - GET /v1/admin/ai-config (목록), PUT /v1/admin/ai-config/:provider (저장)
-   - GET /v1/admin/ai-config/:provider/test (연결 테스트)
-
-2. AI Provider 어댑터 설계 (Week 9-10):
-   - apps/api/src/ai-config/ai-config.service.ts에 getDecryptedConfig() 있음
-   - 4개 프로바이더 각각 어댑터 구현 후 AIService 파사드로 통합
-   - 개발 시 .env의 ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY 사용
-
-3. 타입 불일치 방지:
-   - 백엔드 interface 먼저 작성 → 프론트 타입 동일하게 작성
-   - 특히 응답 필드명 주의 (예: totalScore vs overallScore 등)
+Phase 3 시작 시:
+1. SPEC/IMPLEMENTATION_PLAN.md Week 15-20 읽기
+2. Expo 프로젝트 생성: apps/mobile/ 아래
+3. 기존 api-client (libs/api-client)를 React Native용으로 확장 (expo-secure-store 토큰)
+4. 알림: FCM 연동 → NotificationTriggerService에 FCM send 추가 (P3-014)
+5. API 변경 없음 — 모바일은 기존 엔드포인트 그대로 사용
+6. 사전 필요: .env에 FCM 키, EAS 계정

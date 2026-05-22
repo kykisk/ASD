@@ -5,10 +5,10 @@
 
 | 항목 | 내용 |
 |------|------|
-| 현재 Phase | **Phase 1 완료 + 검증 완료. Phase 2 시작 전** |
-| 최종 업데이트 | 2026-05-20 |
-| 총 커밋 | 42개 |
-| 테스트 | 145개 통과 |
+| 현재 Phase | **Phase 2 완료 + 검증 완료. Phase 3 시작 전** |
+| 최종 업데이트 | 2026-05-22 |
+| 총 커밋 | 79개 |
+| 테스트 | 218개 통과 |
 
 ---
 
@@ -20,7 +20,7 @@
 | 목적 | 자폐 아동 가정치료를 지원하는 부모용 웹/모바일 앱 |
 | 기술 스택 | NestJS 11 + React 18 + React Native (Expo) + PostgreSQL 16 + Redis 7 |
 | 모노레포 | Nx 20 + pnpm |
-| 현재 Phase | **Phase 2 시작 예정 (AI Integration)** |
+| 현재 Phase | **Phase 3 시작 예정 (Mobile)** |
 
 ---
 
@@ -363,7 +363,48 @@ Phase 5 추가:  라이선스 도구 점수(P5-017) + 자동 발달 수준 업�
 
 ---
 
-## 10. Git 커밋 컨벤션
+## 9.5 Phase 2 완료 현황 (AI Integration, 6주)
+
+| 주차 | 구현 내용 | 테스트 |
+|------|----------|--------|
+| Week 9-10 | AI 4개 프로바이더, AIService 파사드, Zod 검증, 비용 추적, 커리큘럼 엔진, 야간 배치 | 183 |
+| Week 11-12 | AI 질문지 필터/생성, AI 스케줄 제안 | 195 |
+| Week 13-14 | AI 인사이트, 알림 시스템, PDF 보고서 | 218 |
+
+### Phase 2 검증에서 발견된 패턴 (CRITICAL)
+
+| # | 패턴 | 증상 | 해결 |
+|---|------|------|------|
+| 1 | **AI 응답 래핑** | `data.data` vs `data.data.generated` | API 반환 구조 먼저 확인 |
+| 2 | **orderIndex 누락** | 질문지 저장 400 에러 | 모든 items 배열에 `orderIndex: idx` 필수 |
+| 3 | **필드명 불일치** | AI 필터 배지 미표시 | `originalIndex` vs `index` 등 API 스키마 먼저 확인 |
+| 4 | **familyId 미전달** | 질문지 AI 생성 500 에러 | useMyFamily() 사용해서 항상 전달 |
+| 5 | **트리거 정의만 됨** | 알림 안 옴 | 서비스 메서드 작성 후 실제 호출 연결 필수 |
+| 6 | **temperature deprecated** | Bedrock 503 | 최신 Claude 모델은 temperature 파라미터 제거 |
+| 7 | **daily budget** | 503 모든 기능 | Admin AI 설정에서 일일 예산 한도 올리기 |
+
+### Phase 2 추가 기능 (계획 외)
+- **Family AI Tier** (DISABLED/BASIC/STANDARD/UNLIMITED) — 가족별 AI 접근 제어
+- **기능별 AI 모델 매핑** (Admin) — 커리큘럼=Sonnet, 스케줄=Haiku 등 개별 설정
+- **A기능**: 아이 프로필에 발달 수준 + 센터 정보 → AI 프롬프트 반영
+- **알림 본인 제외**: 사용자 행동 트리거는 자신 제외, 배치는 전체
+
+---
+
+## 10. Phase 3 작업 계획 (Mobile, 6주)
+
+React Native (Expo SDK 52) 기반 부모용 모바일 앱:
+- Week 15: Expo 스캐폴드, 인증, 보안 토큰 저장
+- Week 16-18: 주요 기능 화면 (대시보드, 커리큘럼, 평가, 일정)
+- Week 19: FCM 푸시 알림
+- Week 20: 오프라인 지원, EAS Build
+
+**Phase 3 시작 전 체크리스트:**
+- [ ] `.env`에 `FCM_PROJECT_ID`, `FCM_PRIVATE_KEY`, `FCM_CLIENT_EMAIL` 추가
+- [ ] EAS 계정 설정 (Apple/Google 개발자 계정)
+- [ ] 기존 알림 시스템(NotificationTriggerService)에 FCM 연동 추가 (P3-014)
+
+---
 
 ```
 feat(scope): 새 기능 추가
