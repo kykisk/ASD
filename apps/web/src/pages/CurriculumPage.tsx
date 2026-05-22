@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useChildStore } from '../stores/child.store';
 import { useChildren } from '../hooks/use-children';
 import { useMyFamily } from '../hooks/use-families';
@@ -22,6 +22,80 @@ import type {
   ActivityLog,
 } from '../types/curriculum';
 import { DOMAIN_LABELS, DOMAIN_COLORS, DIFFICULTY_LABELS } from '../types/curriculum';
+
+const PROGRESS_STEPS = [
+  { label: '아이 발달 데이터 분석 중', duration: 3000 },
+  { label: 'AI 커리큘럼 설계 중', duration: 8000 },
+  { label: '활동 생성 및 검증 중', duration: 6000 },
+  { label: '최적화 및 저장 중', duration: 3000 },
+];
+
+function GeneratingProgress({ onCancel }: { onCancel: () => void }) {
+  const [step, setStep] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const totalDuration = PROGRESS_STEPS.reduce((sum, s) => sum + s.duration, 0);
+    let elapsed = 0;
+
+    const interval = setInterval(() => {
+      elapsed += 200;
+      const pct = Math.min((elapsed / totalDuration) * 95, 95);
+      setProgress(pct);
+
+      let cumulative = 0;
+      for (let i = 0; i < PROGRESS_STEPS.length; i++) {
+        cumulative += PROGRESS_STEPS[i].duration;
+        if (elapsed < cumulative) { setStep(i); break; }
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="mt-6 bg-white rounded-2xl border border-[#E8E4DF] p-6 shadow-[0_4px_16px_rgba(91,138,114,0.08)]">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-semibold text-[#2C3E50]">🤖 AI 커리큘럼 생성 중</span>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1.5 text-xs rounded-lg border border-[#E8E4DF] text-[#6B7B8D] hover:bg-neutral-50 transition-colors"
+        >
+          중지
+        </button>
+      </div>
+
+      <div className="w-full h-2 bg-[#E8E4DF] rounded-full overflow-hidden mb-3">
+        <div
+          className="h-full bg-gradient-to-r from-[#5B8A72] to-[#7EC8C8] rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 animate-spin text-[#5B8A72]" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span className="text-sm text-[#6B7B8D]">{PROGRESS_STEPS[step]?.label ?? '처리 중...'}</span>
+        </div>
+        <span className="text-xs text-[#94A3B4]">{Math.round(progress)}%</span>
+      </div>
+
+      <div className="mt-4 flex gap-1">
+        {PROGRESS_STEPS.map((s, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+            <div className={`w-full h-1 rounded-full ${i <= step ? 'bg-[#5B8A72]' : 'bg-[#E8E4DF]'}`} />
+            <span className={`text-[10px] ${i <= step ? 'text-[#5B8A72]' : 'text-[#94A3B4]'}`}>
+              {i + 1}단계
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface ActivityCardProps {
   activity: CurriculumActivity;
@@ -348,14 +422,8 @@ export function CurriculumPage() {
               onClick: () => generateCurriculum.mutate(selectedChildId),
             }}
           />
-          {generateCurriculum.isPending && (
-            <div className="flex items-center justify-center gap-2 mt-4 text-sm text-neutral-500">
-              <svg className="w-4 h-4 animate-spin-slow text-primary-500" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              AI가 최적의 커리큘럼을 만들고 있어요...
-            </div>
+           {generateCurriculum.isPending && (
+            <GeneratingProgress onCancel={() => generateCurriculum.reset()} />
           )}
         </div>
       );
