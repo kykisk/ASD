@@ -10,10 +10,10 @@ export function useAiFeatureConfig() {
   return useQuery({
     queryKey: ['ai-feature-config'],
     queryFn: async () => {
-      const { data } = await adminApi.get<AiFeatureMapping[]>(
+      const { data } = await adminApi.get<{ success: true; data: AiFeatureMapping[] } | AiFeatureMapping[]>(
         '/admin/ai-config/feature-config',
       );
-      return data;
+      return Array.isArray(data) ? data : (data as any).data ?? data;
     },
   });
 }
