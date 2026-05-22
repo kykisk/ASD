@@ -287,30 +287,6 @@ export function SchedulePage() {
         })}
       </div>
 
-      <div className="mt-2">
-        {viewMode === 'month' && (
-          <MonthView
-            currentDate={currentDate}
-            schedules={filteredSchedules}
-            onEventClick={handleEventClick}
-          />
-        )}
-        {viewMode === 'week' && (
-          <WeekView
-            currentDate={currentDate}
-            schedules={filteredSchedules}
-            onEventClick={handleEventClick}
-          />
-        )}
-        {viewMode === 'day' && (
-          <DayView
-            currentDate={currentDate}
-            schedules={filteredSchedules}
-            onEventClick={handleEventClick}
-          />
-        )}
-      </div>
-
       {showAiPanel && (
         <div className="mt-4 rounded-[16px] border border-[#E8E4DF] bg-white shadow-[0_4px_16px_rgba(91,138,114,0.08)] overflow-hidden animate-[fadeIn_0.2s_ease-out]">
           <div className="px-5 py-4 border-b border-[#E8E4DF] bg-[#FDFBF7]">
@@ -407,6 +383,30 @@ export function SchedulePage() {
           </div>
         </div>
       )}
+
+      <div className="mt-2">
+        {viewMode === 'month' && (
+          <MonthView
+            currentDate={currentDate}
+            schedules={filteredSchedules}
+            onEventClick={handleEventClick}
+          />
+        )}
+        {viewMode === 'week' && (
+          <WeekView
+            currentDate={currentDate}
+            schedules={filteredSchedules}
+            onEventClick={handleEventClick}
+          />
+        )}
+        {viewMode === 'day' && (
+          <DayView
+            currentDate={currentDate}
+            schedules={filteredSchedules}
+            onEventClick={handleEventClick}
+          />
+        )}
+      </div>
 
       <button
         onClick={handleAddNew}
