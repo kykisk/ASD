@@ -22,7 +22,10 @@ export function useWeeklyInsight(childId: string | null) {
       return data.data;
     },
     enabled: !!childId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 }
 
@@ -37,6 +40,9 @@ export function useInsightHistory(childId: string | null, weeks = 4) {
       return data.data;
     },
     enabled: !!childId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 }
