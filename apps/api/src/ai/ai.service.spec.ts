@@ -1,6 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { AIService } from './ai.service';
-import { AICostTrackingService } from './ai-cost-tracking.service';
 import { z } from 'zod';
 
 const mockAiConfigService = {
@@ -11,6 +9,23 @@ const mockAiConfigService = {
 const mockCostTracker = {
   trackCall: vi.fn(),
   checkBudgetLimit: vi.fn(),
+};
+
+const mockPrismaService = {
+  family: {
+    findUnique: vi.fn(),
+  },
+};
+
+const mockConfigService = {
+  get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
+};
+
+const mockRedis = {
+  get: vi.fn().mockResolvedValue(null),
+  incr: vi.fn().mockResolvedValue(1),
+  expire: vi.fn().mockResolvedValue(1),
+  disconnect: vi.fn(),
 };
 
 const mockProvider = {
@@ -25,23 +40,25 @@ vi.mock('@auticare/ai-provider', () => ({
   },
 }));
 
+vi.mock('ioredis', () => ({
+  default: vi.fn().mockImplementation(() => mockRedis),
+}));
+
 describe('AIService', () => {
   let service: AIService;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
+    mockRedis.get.mockResolvedValue(null);
+    mockRedis.incr.mockResolvedValue(1);
+    mockRedis.expire.mockResolvedValue(1);
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AIService,
-        { provide: 'AiConfigService', useValue: mockAiConfigService },
-        { provide: AICostTrackingService, useValue: mockCostTracker },
-      ],
-    }).compile();
-
-    service = module.get<AIService>(AIService);
-    Object.defineProperty(service, 'aiConfigService', { value: mockAiConfigService });
-    Object.defineProperty(service, 'costTracker', { value: mockCostTracker });
+    service = new AIService(
+      mockAiConfigService as any,
+      mockCostTracker as any,
+      mockPrismaService as any,
+      mockConfigService as any,
+    );
   });
 
   const defaultConfigs = [

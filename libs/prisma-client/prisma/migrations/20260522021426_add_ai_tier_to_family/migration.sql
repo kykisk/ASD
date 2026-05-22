@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "AiTier" AS ENUM ('DISABLED', 'BASIC', 'STANDARD', 'UNLIMITED');
+
+-- AlterTable
+ALTER TABLE "Family" ADD COLUMN     "aiTier" "AiTier" NOT NULL DEFAULT 'STANDARD';

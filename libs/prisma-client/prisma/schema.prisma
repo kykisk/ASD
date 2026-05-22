@@ -146,9 +146,17 @@ enum BatchJobStatus {
 
 // ─── FAMILY ─────────────────────────────────────────────
 
+enum AiTier {
+  DISABLED
+  BASIC
+  STANDARD
+  UNLIMITED
+}
+
 model Family {
   id        String   @id @default(cuid())
   name      String
+  aiTier    AiTier   @default(STANDARD)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

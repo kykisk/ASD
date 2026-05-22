@@ -103,6 +103,8 @@ export class CurriculumService {
       const result = await this.aiService.generateStructured(
         { messages },
         curriculumOutputSchema,
+        undefined,
+        child.familyId,
       );
 
       const curriculum = await this.prisma.curriculum.create({

@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import Redis from 'ioredis';
 import { AIProviderFactory } from '@auticare/ai-provider';
 import type { AIProvider, AIRequestOptions, AIResponse } from '@auticare/ai-provider';
 import type { AIProviderName } from '@auticare/ai-provider';
+import { PrismaService } from '@auticare/prisma-client';
 import { AiConfigService } from '../ai-config/ai-config.service.js';
 import { AICostTrackingService } from './ai-cost-tracking.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
@@ -12,11 +15,21 @@ const MAX_STRUCTURED_RETRIES = 3;
 @Injectable()
 export class AIService {
   private readonly logger = new Logger(AIService.name);
+  private readonly redis: Redis;
 
   constructor(
     private readonly aiConfigService: AiConfigService,
     private readonly costTracker: AICostTrackingService,
-  ) {}
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    this.redis = new Redis({
+      host: this.configService.get('REDIS_HOST', 'localhost'),
+      port: this.configService.get('REDIS_PORT', 6379),
+      password: this.configService.get('REDIS_PASSWORD', undefined),
+      db: this.configService.get('REDIS_DB', 0),
+    });
+  }
 
   async getProvider(preferredProvider?: string): Promise<AIProvider> {
     const configs = await this.aiConfigService.findAll();
@@ -50,7 +63,12 @@ export class AIService {
   async generate(
     options: AIRequestOptions,
     preferredProvider?: string,
+    familyId?: string,
   ): Promise<AIResponse> {
+    if (familyId) {
+      await this.checkAiAccess(familyId);
+    }
+
     const configs = await this.aiConfigService.findAll();
     const activeConfigs = configs.filter((c) => c.isActive);
 
@@ -117,7 +135,12 @@ export class AIService {
     options: AIRequestOptions,
     schema: z.ZodSchema<T>,
     preferredProvider?: string,
+    familyId?: string,
   ): Promise<T> {
+    if (familyId) {
+      await this.checkAiAccess(familyId);
+    }
+
     let lastError: string | undefined;
 
     for (let attempt = 0; attempt < MAX_STRUCTURED_RETRIES; attempt++) {
@@ -155,6 +178,31 @@ export class AIService {
   async getAvailableProviders(): Promise<string[]> {
     const configs = await this.aiConfigService.findAll();
     return configs.filter((c) => c.isActive).map((c) => c.provider);
+  }
+
+  private async checkAiAccess(familyId: string): Promise<void> {
+    const family = await this.prisma.family.findUnique({
+      where: { id: familyId },
+      select: { aiTier: true },
+    });
+    if (!family) return;
+
+    if (family.aiTier === 'DISABLED') {
+      throw new ApiException(403, 'AI_001', 'AI 기능이 비활성화되어 있습니다');
+    }
+
+    const limits: Record<string, number> = { BASIC: 5, STANDARD: 20, UNLIMITED: Infinity };
+    const dailyLimit = limits[family.aiTier];
+    if (dailyLimit === Infinity) return;
+
+    const key = `auticare:ai-family:${familyId}:${new Date().toISOString().split('T')[0]}`;
+    const count = parseInt((await this.redis.get(key)) || '0');
+    if (count >= dailyLimit) {
+      throw new ApiException(429, 'AI_002', '오늘의 AI 사용량이 소진됐어요. 내일 다시 시도해주세요');
+    }
+
+    await this.redis.incr(key);
+    await this.redis.expire(key, 86400);
   }
 
   private buildFallbackChain(

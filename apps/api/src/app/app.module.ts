@@ -27,6 +27,7 @@ import { CurriculumModule } from '../curriculum/curriculum.module.js';
 import { InsightsModule } from '../insights/insights.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { ReportsModule } from '../reports/reports.module.js';
+import { AdminModule } from '../admin/admin.module.js';
 import { CacheModule } from '../common/cache/cache.module.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
@@ -61,6 +62,7 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
     InsightsModule,
     NotificationsModule,
     ReportsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

@@ -8,10 +8,12 @@ import {
   FileTextOutlined,
   MonitorOutlined,
   AuditOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import { LoginPage } from './pages/LoginPage';
 import { UsersPage } from './pages/UsersPage';
 import { AiSettingsPage } from './pages/AiSettingsPage';
+import { FamilyTierPage } from './pages/FamilyTierPage';
 import { QuestionnairesManagementPage } from './pages/QuestionnairesManagementPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { AuditLogPage } from './pages/AuditLogPage';
@@ -23,6 +25,7 @@ const { Sider, Content, Header } = Layout;
 const MENU_ITEMS = [
   { key: 'dashboard', icon: <DashboardOutlined />, label: '대시보드' },
   { key: 'users', icon: <UserOutlined />, label: '사용자 관리' },
+  { key: 'family-tier', icon: <TeamOutlined />, label: '가족 AI 관리' },
   { key: 'ai-settings', icon: <RobotOutlined />, label: 'AI 설정' },
   { key: 'questionnaires', icon: <FileTextOutlined />, label: '질문지 관리' },
   { key: 'monitoring', icon: <MonitorOutlined />, label: '모니터링' },
@@ -31,6 +34,7 @@ const MENU_ITEMS = [
 
 function getSelectedKey(pathname: string): string {
   if (pathname.startsWith('/users')) return 'users';
+  if (pathname.startsWith('/family-tier')) return 'family-tier';
   if (pathname.startsWith('/ai-settings')) return 'ai-settings';
   if (pathname.startsWith('/questionnaires')) return 'questionnaires';
   if (pathname.startsWith('/monitoring')) return 'monitoring';
@@ -113,6 +117,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={<ProtectedPage><AdminDashboard /></ProtectedPage>} />
       <Route path="/users" element={<ProtectedPage><UsersPage /></ProtectedPage>} />
+      <Route path="/family-tier" element={<ProtectedPage><FamilyTierPage /></ProtectedPage>} />
       <Route path="/ai-settings" element={<ProtectedPage><AiSettingsPage /></ProtectedPage>} />
       <Route path="/questionnaires" element={<ProtectedPage><QuestionnairesManagementPage /></ProtectedPage>} />
       <Route path="/monitoring" element={<ProtectedPage><MonitoringPage /></ProtectedPage>} />
