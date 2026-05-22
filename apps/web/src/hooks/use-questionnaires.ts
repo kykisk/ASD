@@ -81,7 +81,7 @@ export function useImportQuestionnaire(
       formData.append('file', file);
       formData.append('name', name);
       const { data } = await api.post<{ success: true; data: Questionnaire }>(
-        `/families/${familyId}/questionnaires/import/${format}`,
+         `/families/${familyId}/questionnaires/import/${format}`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -93,6 +93,18 @@ export function useImportQuestionnaire(
       queryClient.invalidateQueries({
         queryKey: ['questionnaires', familyId],
       });
+    },
+  });
+}
+
+export function useDeleteQuestionnaire(familyId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (questionnaireId: string) => {
+      await api.delete(`/questionnaires/${questionnaireId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questionnaires', familyId] });
     },
   });
 }
