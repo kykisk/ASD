@@ -1,12 +1,11 @@
 export interface AiConfigResponse {
   id: string;
+  name: string;
   provider: string;
   isActive: boolean;
   isDefault: boolean;
   maskedApiKey: string | null;
-  maskedRegion: string | null;
   maskedAccessKeyId: string | null;
-  maskedSecretKey: string | null;
   modelId: string | null;
   maxTokens: number;
   temperature: number;
@@ -14,10 +13,11 @@ export interface AiConfigResponse {
   lastTestedAt: Date | null;
   lastTestSuccess: boolean | null;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface DecryptedAiConfig {
+  id: string;
+  name: string;
   provider: string;
   isActive: boolean;
   isDefault: boolean;

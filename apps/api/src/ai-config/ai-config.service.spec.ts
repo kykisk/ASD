@@ -10,8 +10,10 @@ const mockPrismaService = {
   aiConfig: {
     findMany: vi.fn(),
     findUnique: vi.fn(),
-    upsert: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
     delete: vi.fn(),
   },
 };
@@ -35,9 +37,10 @@ describe('AiConfigService', () => {
     Object.defineProperty(service, 'encryption', { value: mockEncryptionService });
   });
 
-  describe('upsert', () => {
+  describe('create', () => {
     it('should encrypt API key when provided', async () => {
       const dto = {
+        name: 'OpenAI Config',
         provider: 'OPENAI' as const,
         isActive: true,
         isDefault: false,
@@ -47,7 +50,6 @@ describe('AiConfigService', () => {
         dailyBudgetLimit: 100,
       };
 
-      mockPrismaService.aiConfig.findUnique.mockResolvedValue(null);
       mockEncryptionService.encryptString.mockResolvedValue({
         ciphertext: 'encrypted-blob',
         iv: 'test-iv',
@@ -57,6 +59,7 @@ describe('AiConfigService', () => {
 
       const mockConfig = {
         id: 'config-1',
+        name: 'OpenAI Config',
         provider: 'OPENAI',
         isActive: true,
         isDefault: false,
@@ -77,12 +80,12 @@ describe('AiConfigService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.aiConfig.upsert.mockResolvedValue(mockConfig);
+      mockPrismaService.aiConfig.create.mockResolvedValue(mockConfig);
       mockEncryptionService.decryptString.mockResolvedValue(
         JSON.stringify({ apiKey: 'sk-test-1234567890abcdef' }),
       );
 
-      const result = await service.upsert(dto);
+      const result = await service.create(dto);
 
       expect(mockEncryptionService.encryptString).toHaveBeenCalledWith(
         JSON.stringify({ apiKey: 'sk-test-1234567890abcdef' }),
@@ -90,19 +93,13 @@ describe('AiConfigService', () => {
       expect(result.maskedApiKey).toBe('****cdef');
       expect(result).not.toHaveProperty('apiKey');
     });
+  });
 
+  describe('update', () => {
     it('should preserve existing key when apiKey not provided', async () => {
-      const dto = {
-        provider: 'OPENAI' as const,
-        isActive: true,
-        isDefault: false,
-        maxTokens: 8192,
-        temperature: 0.5,
-        dailyBudgetLimit: 200,
-      };
-
       const existingConfig = {
         id: 'config-1',
+        name: 'OpenAI Config',
         provider: 'OPENAI',
         isActive: false,
         isDefault: false,
@@ -126,17 +123,23 @@ describe('AiConfigService', () => {
       mockPrismaService.aiConfig.findUnique.mockResolvedValue(existingConfig);
 
       const updatedConfig = { ...existingConfig, maxTokens: 8192, temperature: 0.5, dailyBudgetLimit: 200, isActive: true };
-      mockPrismaService.aiConfig.upsert.mockResolvedValue(updatedConfig);
+      mockPrismaService.aiConfig.update.mockResolvedValue(updatedConfig);
       mockEncryptionService.decryptString.mockResolvedValue(
         JSON.stringify({ apiKey: 'sk-original-key-abcd' }),
       );
 
-      await service.upsert(dto);
+      await service.update('config-1', {
+        isActive: true,
+        maxTokens: 8192,
+        temperature: 0.5,
+        dailyBudgetLimit: 200,
+      });
 
       expect(mockEncryptionService.encryptString).not.toHaveBeenCalled();
-      expect(mockPrismaService.aiConfig.upsert).toHaveBeenCalledWith(
+      expect(mockPrismaService.aiConfig.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          where: { id: 'config-1' },
+          data: expect.objectContaining({
             encApiKey: 'existing-encrypted',
             encIv: 'existing-iv',
             encAuthTag: 'existing-auth',
@@ -152,6 +155,7 @@ describe('AiConfigService', () => {
       const configs = [
         {
           id: 'config-1',
+          name: 'OpenAI Config',
           provider: 'OPENAI',
           isActive: true,
           isDefault: true,
@@ -186,7 +190,7 @@ describe('AiConfigService', () => {
     });
   });
 
-  describe('testConnection', () => {
+  describe('testConnectionById', () => {
     it('should return success when credentials are configured', async () => {
       mockPrismaService.aiConfig.findUnique.mockResolvedValue({
         id: 'config-1',
@@ -199,7 +203,7 @@ describe('AiConfigService', () => {
       });
       mockPrismaService.aiConfig.update.mockResolvedValue({});
 
-      const result = await service.testConnection('OPENAI' as any);
+      const result = await service.testConnectionById('config-1');
 
       expect(result.success).toBe(true);
       expect(result).toHaveProperty('latencyMs');
@@ -217,7 +221,7 @@ describe('AiConfigService', () => {
       });
       mockPrismaService.aiConfig.update.mockResolvedValue({});
 
-      const result = await service.testConnection('OPENAI' as any);
+      const result = await service.testConnectionById('config-1');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('No credentials configured');
@@ -226,7 +230,7 @@ describe('AiConfigService', () => {
     it('should return failure when config not found', async () => {
       mockPrismaService.aiConfig.findUnique.mockResolvedValue(null);
 
-      const result = await service.testConnection('OPENAI' as any);
+      const result = await service.testConnectionById('nonexistent');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Configuration not found');

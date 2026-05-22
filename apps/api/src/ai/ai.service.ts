@@ -26,19 +26,17 @@ export class AIService {
       throw new ApiException(503, 'AI_001', '활성화된 AI 프로바이더가 없습니다');
     }
 
-    let targetProvider: string;
+    let targetConfig: { id: string; provider: string } | undefined;
     if (preferredProvider) {
-      targetProvider = preferredProvider;
-    } else {
-      const defaultConfig = activeConfigs.find((c) => c.isDefault);
-      targetProvider = defaultConfig?.provider ?? activeConfigs[0].provider;
+      targetConfig = activeConfigs.find((c) => c.provider === preferredProvider);
+    }
+    if (!targetConfig) {
+      targetConfig = activeConfigs.find((c) => c.isDefault) ?? activeConfigs[0];
     }
 
-    const decrypted = await this.aiConfigService.getDecryptedConfig(
-      targetProvider as Parameters<typeof this.aiConfigService.getDecryptedConfig>[0],
-    );
+    const decrypted = await this.aiConfigService.getDecryptedConfig(targetConfig.id);
 
-    return AIProviderFactory.create(targetProvider as AIProviderName, {
+    return AIProviderFactory.create(decrypted.provider as AIProviderName, {
       apiKey: decrypted.apiKey ?? undefined,
       region: decrypted.region ?? undefined,
       accessKeyId: decrypted.accessKeyId ?? undefined,
@@ -60,26 +58,24 @@ export class AIService {
       throw new ApiException(503, 'AI_001', '활성화된 AI 프로바이더가 없습니다');
     }
 
-    const orderedProviders = this.buildFallbackChain(activeConfigs, preferredProvider);
+    const orderedConfigs = this.buildFallbackChain(activeConfigs, preferredProvider);
     const errors: Array<{ provider: string; error: string }> = [];
 
-    for (const providerName of orderedProviders) {
+    for (const config of orderedConfigs) {
       try {
-        const decrypted = await this.aiConfigService.getDecryptedConfig(
-          providerName as Parameters<typeof this.aiConfigService.getDecryptedConfig>[0],
-        );
+        const decrypted = await this.aiConfigService.getDecryptedConfig(config.id);
 
         const withinBudget = await this.costTracker.checkBudgetLimit(
-          providerName,
+          config.provider,
           decrypted.dailyBudgetLimit,
         );
         if (!withinBudget) {
-          errors.push({ provider: providerName, error: '일일 예산 한도 초과' });
-          this.logger.warn(`Provider ${providerName} budget exceeded, falling back`);
+          errors.push({ provider: config.provider, error: '일일 예산 한도 초과' });
+          this.logger.warn(`Provider ${config.provider} (${config.id}) budget exceeded, falling back`);
           continue;
         }
 
-        const provider = await AIProviderFactory.create(providerName as AIProviderName, {
+        const provider = await AIProviderFactory.create(decrypted.provider as AIProviderName, {
           apiKey: decrypted.apiKey ?? undefined,
           region: decrypted.region ?? undefined,
           accessKeyId: decrypted.accessKeyId ?? undefined,
@@ -92,7 +88,7 @@ export class AIService {
         const response = await provider.generate(options);
 
         await this.costTracker.trackCall({
-          provider: providerName,
+          provider: config.provider,
           model: response.model,
           inputTokens: response.inputTokens,
           outputTokens: response.outputTokens,
@@ -103,9 +99,9 @@ export class AIService {
         return response;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
-        errors.push({ provider: providerName, error: errorMessage });
+        errors.push({ provider: config.provider, error: errorMessage });
         this.logger.warn(
-          `Provider ${providerName} failed: ${errorMessage}, trying next`,
+          `Provider ${config.provider} (${config.id}) failed: ${errorMessage}, trying next`,
         );
       }
     }
@@ -162,24 +158,30 @@ export class AIService {
   }
 
   private buildFallbackChain(
-    activeConfigs: Array<{ provider: string; isDefault: boolean }>,
+    activeConfigs: Array<{ id: string; provider: string; isDefault: boolean }>,
     preferredProvider?: string,
-  ): string[] {
-    const ordered: string[] = [];
+  ): Array<{ id: string; provider: string; isDefault: boolean }> {
+    const ordered: Array<{ id: string; provider: string; isDefault: boolean }> = [];
+    const added = new Set<string>();
 
     if (preferredProvider) {
-      const exists = activeConfigs.find((c) => c.provider === preferredProvider);
-      if (exists) ordered.push(preferredProvider);
+      const preferred = activeConfigs.find((c) => c.provider === preferredProvider);
+      if (preferred) {
+        ordered.push(preferred);
+        added.add(preferred.id);
+      }
     }
 
     const defaultConfig = activeConfigs.find((c) => c.isDefault);
-    if (defaultConfig && !ordered.includes(defaultConfig.provider)) {
-      ordered.push(defaultConfig.provider);
+    if (defaultConfig && !added.has(defaultConfig.id)) {
+      ordered.push(defaultConfig);
+      added.add(defaultConfig.id);
     }
 
     for (const config of activeConfigs) {
-      if (!ordered.includes(config.provider)) {
-        ordered.push(config.provider);
+      if (!added.has(config.id)) {
+        ordered.push(config);
+        added.add(config.id);
       }
     }
 

@@ -45,11 +45,13 @@ describe('AIService', () => {
   });
 
   const defaultConfigs = [
-    { provider: 'OPENAI', isActive: true, isDefault: true },
-    { provider: 'GEMINI', isActive: true, isDefault: false },
+    { id: 'cfg-1', provider: 'OPENAI', isActive: true, isDefault: true },
+    { id: 'cfg-2', provider: 'GEMINI', isActive: true, isDefault: false },
   ];
 
   const decryptedConfig = {
+    id: 'cfg-1',
+    name: 'OpenAI GPT-4',
     provider: 'OPENAI',
     isActive: true,
     isDefault: true,
@@ -96,7 +98,7 @@ describe('AIService', () => {
       mockAiConfigService.findAll.mockResolvedValue(defaultConfigs);
       mockAiConfigService.getDecryptedConfig
         .mockResolvedValueOnce(decryptedConfig)
-        .mockResolvedValueOnce({ ...decryptedConfig, provider: 'GEMINI' });
+        .mockResolvedValueOnce({ ...decryptedConfig, id: 'cfg-2', provider: 'GEMINI' });
       mockCostTracker.checkBudgetLimit.mockResolvedValue(true);
       mockProvider.generate
         .mockRejectedValueOnce(new Error('Rate limited'))
@@ -223,9 +225,9 @@ describe('AIService', () => {
   describe('getAvailableProviders', () => {
     it('should return active provider names', async () => {
       mockAiConfigService.findAll.mockResolvedValue([
-        { provider: 'OPENAI', isActive: true, isDefault: true },
-        { provider: 'GEMINI', isActive: true, isDefault: false },
-        { provider: 'CLAUDE_DIRECT', isActive: false, isDefault: false },
+        { id: 'cfg-1', provider: 'OPENAI', isActive: true, isDefault: true },
+        { id: 'cfg-2', provider: 'GEMINI', isActive: true, isDefault: false },
+        { id: 'cfg-3', provider: 'CLAUDE_DIRECT', isActive: false, isDefault: false },
       ]);
 
       const result = await service.getAvailableProviders();

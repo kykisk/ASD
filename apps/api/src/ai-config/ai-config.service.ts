@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@auticare/prisma-client';
 import { EncryptionService } from '@auticare/encryption';
-import type { EncryptedPayload } from '@auticare/encryption';
 import type { AiProvider } from '@auticare/prisma-client';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type {
-  UpsertAiConfigInput,
+  CreateAiConfigInput,
+  UpdateAiConfigInput,
   AiConfigResponse,
   DecryptedAiConfig,
 } from '@auticare/dto';
@@ -29,7 +29,7 @@ export class AiConfigService {
 
   async findAll(): Promise<AiConfigResponse[]> {
     const configs = await this.prisma.aiConfig.findMany({
-      orderBy: { provider: 'asc' },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
 
     return Promise.all(
@@ -37,72 +37,135 @@ export class AiConfigService {
     );
   }
 
-  async findOne(provider: AiProvider): Promise<AiConfigResponse> {
+  async findOne(id: string): Promise<AiConfigResponse> {
     const config = await this.prisma.aiConfig.findUnique({
-      where: { provider },
+      where: { id },
     });
 
     if (!config) {
       throw new ApiException(
         404,
         'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${provider}`,
+        `AI 설정을 찾을 수 없습니다: ${id}`,
       );
     }
 
     return this.toResponse(config);
   }
 
-  async upsert(dto: UpsertAiConfigInput): Promise<AiConfigResponse> {
-    const existing = await this.prisma.aiConfig.findUnique({
-      where: { provider: dto.provider as AiProvider },
+  async create(dto: CreateAiConfigInput): Promise<AiConfigResponse> {
+    const encryptedFields = await this.encryptCredentials(dto, null);
+
+    if (dto.isDefault) {
+      await this.prisma.aiConfig.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    const config = await this.prisma.aiConfig.create({
+      data: {
+        name: dto.name,
+        provider: dto.provider as AiProvider,
+        isActive: dto.isActive ?? false,
+        isDefault: dto.isDefault ?? false,
+        modelId: dto.modelId ?? null,
+        maxTokens: dto.maxTokens ?? 4096,
+        temperature: dto.temperature ?? 0.7,
+        dailyBudgetLimit: dto.dailyBudgetLimit ?? 100,
+        ...encryptedFields,
+      },
     });
+
+    return this.toResponse(config);
+  }
+
+  async update(id: string, dto: UpdateAiConfigInput): Promise<AiConfigResponse> {
+    const existing = await this.prisma.aiConfig.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new ApiException(
+        404,
+        'AI_CONFIG_NOT_FOUND',
+        `AI 설정을 찾을 수 없습니다: ${id}`,
+      );
+    }
 
     const encryptedFields = await this.encryptCredentials(dto, existing);
 
-    const data = {
-      isActive: dto.isActive ?? false,
-      isDefault: dto.isDefault ?? false,
-      modelId: dto.modelId ?? null,
-      maxTokens: dto.maxTokens ?? 4096,
-      temperature: dto.temperature ?? 0.7,
-      dailyBudgetLimit: dto.dailyBudgetLimit ?? 100,
-      ...encryptedFields,
-    };
+    if (dto.isDefault) {
+      await this.prisma.aiConfig.updateMany({
+        where: { isDefault: true, id: { not: id } },
+        data: { isDefault: false },
+      });
+    }
 
-    const config = await this.prisma.aiConfig.upsert({
-      where: { provider: dto.provider as AiProvider },
-      create: {
-        provider: dto.provider as AiProvider,
-        ...data,
-      },
-      update: data,
+    const data: Record<string, unknown> = { ...encryptedFields };
+    if (dto.name !== undefined) data['name'] = dto.name;
+    if (dto.isActive !== undefined) data['isActive'] = dto.isActive;
+    if (dto.isDefault !== undefined) data['isDefault'] = dto.isDefault;
+    if (dto.modelId !== undefined) data['modelId'] = dto.modelId;
+    if (dto.maxTokens !== undefined) data['maxTokens'] = dto.maxTokens;
+    if (dto.temperature !== undefined) data['temperature'] = dto.temperature;
+    if (dto.dailyBudgetLimit !== undefined) data['dailyBudgetLimit'] = dto.dailyBudgetLimit;
+
+    const config = await this.prisma.aiConfig.update({
+      where: { id },
+      data,
     });
 
     return this.toResponse(config);
   }
 
-  async remove(provider: AiProvider): Promise<void> {
+  async remove(id: string): Promise<void> {
     const config = await this.prisma.aiConfig.findUnique({
-      where: { provider },
+      where: { id },
     });
 
     if (!config) {
       throw new ApiException(
         404,
         'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${provider}`,
+        `AI 설정을 찾을 수 없습니다: ${id}`,
       );
     }
 
-    await this.prisma.aiConfig.delete({ where: { provider } });
+    await this.prisma.aiConfig.delete({ where: { id } });
   }
 
-  async testConnection(
-    provider: AiProvider,
+  async setDefault(id: string): Promise<AiConfigResponse> {
+    const config = await this.prisma.aiConfig.findUnique({
+      where: { id },
+    });
+
+    if (!config) {
+      throw new ApiException(
+        404,
+        'AI_CONFIG_NOT_FOUND',
+        `AI 설정을 찾을 수 없습니다: ${id}`,
+      );
+    }
+
+    await this.prisma.aiConfig.updateMany({
+      where: { isDefault: true },
+      data: { isDefault: false },
+    });
+
+    const updated = await this.prisma.aiConfig.update({
+      where: { id },
+      data: { isDefault: true },
+    });
+
+    return this.toResponse(updated);
+  }
+
+  async testConnectionById(
+    id: string,
   ): Promise<{ success: boolean; latencyMs: number; error?: string }> {
     const config = await this.prisma.aiConfig.findUnique({
-      where: { provider },
+      where: { id },
     });
 
     if (!config) {
@@ -116,7 +179,7 @@ export class AiConfigService {
 
     if (!hasCredentials) {
       await this.prisma.aiConfig.update({
-        where: { provider },
+        where: { id },
         data: { lastTestedAt: new Date(), lastTestSuccess: false },
       });
       return { success: false, latencyMs: 0, error: 'No credentials configured' };
@@ -125,23 +188,23 @@ export class AiConfigService {
     const latencyMs = Date.now() - start;
 
     await this.prisma.aiConfig.update({
-      where: { provider },
+      where: { id },
       data: { lastTestedAt: new Date(), lastTestSuccess: true },
     });
 
     return { success: true, latencyMs };
   }
 
-  async getDecryptedConfig(provider: AiProvider): Promise<DecryptedAiConfig> {
+  async getDecryptedConfig(id: string): Promise<DecryptedAiConfig> {
     const config = await this.prisma.aiConfig.findUnique({
-      where: { provider },
+      where: { id },
     });
 
     if (!config) {
       throw new ApiException(
         404,
         'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${provider}`,
+        `AI 설정을 찾을 수 없습니다: ${id}`,
       );
     }
 
@@ -151,42 +214,31 @@ export class AiConfigService {
     let secretKey: string | null = null;
 
     if (config.encApiKey && config.encIv && config.encAuthTag && config.encSalt) {
-      apiKey = await this.encryption.decryptString({
-        ciphertext: config.encApiKey,
-        iv: config.encIv,
-        authTag: config.encAuthTag,
-        salt: config.encSalt,
-      });
-    }
+      try {
+        const decrypted = await this.encryption.decryptString({
+          ciphertext: config.encApiKey,
+          iv: config.encIv,
+          authTag: config.encAuthTag,
+          salt: config.encSalt,
+        });
 
-    if (config.encRegion && config.encIv && config.encAuthTag && config.encSalt) {
-      region = await this.encryption.decryptString({
-        ciphertext: config.encRegion,
-        iv: config.encIv,
-        authTag: config.encAuthTag,
-        salt: config.encSalt,
-      });
-    }
-
-    if (config.encAccessKeyId && config.encIv && config.encAuthTag && config.encSalt) {
-      accessKeyId = await this.encryption.decryptString({
-        ciphertext: config.encAccessKeyId,
-        iv: config.encIv,
-        authTag: config.encAuthTag,
-        salt: config.encSalt,
-      });
-    }
-
-    if (config.encSecretKey && config.encIv && config.encAuthTag && config.encSalt) {
-      secretKey = await this.encryption.decryptString({
-        ciphertext: config.encSecretKey,
-        iv: config.encIv,
-        authTag: config.encAuthTag,
-        salt: config.encSalt,
-      });
+        try {
+          const parsed = JSON.parse(decrypted) as Record<string, string>;
+          apiKey = parsed['apiKey'] ?? null;
+          region = parsed['region'] ?? null;
+          accessKeyId = parsed['accessKeyId'] ?? null;
+          secretKey = parsed['secretKey'] ?? null;
+        } catch {
+          apiKey = decrypted;
+        }
+      } catch {
+        // intentionally left empty: decryption failure leaves values as null
+      }
     }
 
     return {
+      id: config.id,
+      name: config.name,
       provider: config.provider,
       isActive: config.isActive,
       isDefault: config.isDefault,
@@ -201,8 +253,28 @@ export class AiConfigService {
     };
   }
 
+  async getDecryptedDefaultConfig(): Promise<DecryptedAiConfig> {
+    const defaultConfig = await this.prisma.aiConfig.findFirst({
+      where: { isDefault: true, isActive: true },
+    });
+
+    if (defaultConfig) {
+      return this.getDecryptedConfig(defaultConfig.id);
+    }
+
+    const anyActive = await this.prisma.aiConfig.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!anyActive) {
+      throw new ApiException(503, 'AI_001', '활성화된 AI 프로바이더가 없습니다');
+    }
+
+    return this.getDecryptedConfig(anyActive.id);
+  }
+
   private async encryptCredentials(
-    dto: UpsertAiConfigInput,
+    dto: { apiKey?: string; region?: string; accessKeyId?: string; secretKey?: string },
     existing: { encApiKey: string | null; encRegion: string | null; encAccessKeyId: string | null; encSecretKey: string | null; encIv: string | null; encAuthTag: string | null; encSalt: string | null } | null,
   ): Promise<EncryptedFields> {
     const hasNewCredentials =
@@ -223,13 +295,17 @@ export class AiConfigService {
       };
     }
 
-    let encApiKey: string | null = existing?.encApiKey ?? null;
-    let encRegion: string | null = existing?.encRegion ?? null;
-    let encAccessKeyId: string | null = existing?.encAccessKeyId ?? null;
-    let encSecretKey: string | null = existing?.encSecretKey ?? null;
-    let encIv: string | null = existing?.encIv ?? null;
-    let encAuthTag: string | null = existing?.encAuthTag ?? null;
-    let encSalt: string | null = existing?.encSalt ?? null;
+    if (!hasNewCredentials) {
+      return {
+        encApiKey: null,
+        encRegion: null,
+        encAccessKeyId: null,
+        encSecretKey: null,
+        encIv: null,
+        encAuthTag: null,
+        encSalt: null,
+      };
+    }
 
     const payload: Record<string, string> = {};
     if (dto.apiKey !== undefined) payload['apiKey'] = dto.apiKey;
@@ -237,62 +313,24 @@ export class AiConfigService {
     if (dto.accessKeyId !== undefined) payload['accessKeyId'] = dto.accessKeyId;
     if (dto.secretKey !== undefined) payload['secretKey'] = dto.secretKey;
 
-    if (Object.keys(payload).length > 0) {
-      const encrypted = await this.encryption.encryptString(
-        JSON.stringify(payload),
-      );
-      encApiKey = encrypted.ciphertext;
-      encIv = encrypted.iv;
-      encAuthTag = encrypted.authTag;
-      encSalt = encrypted.salt;
-      encRegion = null;
-      encAccessKeyId = null;
-      encSecretKey = null;
-    }
+    const encrypted = await this.encryption.encryptString(
+      JSON.stringify(payload),
+    );
 
     return {
-      encApiKey,
-      encRegion,
-      encAccessKeyId,
-      encSecretKey,
-      encIv,
-      encAuthTag,
-      encSalt,
+      encApiKey: encrypted.ciphertext,
+      encRegion: null,
+      encAccessKeyId: null,
+      encSecretKey: null,
+      encIv: encrypted.iv,
+      encAuthTag: encrypted.authTag,
+      encSalt: encrypted.salt,
     };
-  }
-
-  private async maskCredential(encryptedCiphertext: string | null, iv: string | null, authTag: string | null, salt: string | null): Promise<string | null> {
-    if (!encryptedCiphertext || !iv || !authTag || !salt) return null;
-
-    try {
-      const decrypted = await this.encryption.decryptString({
-        ciphertext: encryptedCiphertext,
-        iv,
-        authTag,
-        salt,
-      });
-
-      try {
-        const parsed = JSON.parse(decrypted) as Record<string, string>;
-        if (parsed['apiKey']) {
-          const key = parsed['apiKey'];
-          return key.length > 4
-            ? `****${key.slice(-4)}`
-            : '****';
-        }
-        return '****[configured]';
-      } catch {
-        return decrypted.length > 4
-          ? `****${decrypted.slice(-4)}`
-          : '****';
-      }
-    } catch {
-      return '****[error]';
-    }
   }
 
   private async toResponse(config: {
     id: string;
+    name: string;
     provider: AiProvider;
     isActive: boolean;
     isDefault: boolean;
@@ -313,9 +351,7 @@ export class AiConfigService {
     updatedAt: Date;
   }): Promise<AiConfigResponse> {
     let maskedApiKey: string | null = null;
-    let maskedRegion: string | null = null;
     let maskedAccessKeyId: string | null = null;
-    let maskedSecretKey: string | null = null;
 
     if (config.encApiKey && config.encIv && config.encAuthTag && config.encSalt) {
       try {
@@ -332,17 +368,9 @@ export class AiConfigService {
             const k = parsed['apiKey'];
             maskedApiKey = k.length > 4 ? `****${k.slice(-4)}` : '****';
           }
-          if (parsed['region']) {
-            const r = parsed['region'];
-            maskedRegion = r.length > 4 ? `****${r.slice(-4)}` : '****';
-          }
           if (parsed['accessKeyId']) {
             const a = parsed['accessKeyId'];
             maskedAccessKeyId = a.length > 4 ? `****${a.slice(-4)}` : '****';
-          }
-          if (parsed['secretKey']) {
-            const s = parsed['secretKey'];
-            maskedSecretKey = s.length > 4 ? `****${s.slice(-4)}` : '****';
           }
         } catch {
           maskedApiKey = decrypted.length > 4
@@ -356,13 +384,12 @@ export class AiConfigService {
 
     return {
       id: config.id,
+      name: config.name,
       provider: config.provider,
       isActive: config.isActive,
       isDefault: config.isDefault,
       maskedApiKey,
-      maskedRegion,
       maskedAccessKeyId,
-      maskedSecretKey,
       modelId: config.modelId,
       maxTokens: config.maxTokens,
       temperature: config.temperature,
@@ -370,7 +397,6 @@ export class AiConfigService {
       lastTestedAt: config.lastTestedAt,
       lastTestSuccess: config.lastTestSuccess,
       createdAt: config.createdAt,
-      updatedAt: config.updatedAt,
     };
   }
 }

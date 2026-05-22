@@ -362,29 +362,33 @@ enum AiProvider {
 
 model AiConfig {
   id                String     @id @default(cuid())
-  provider          AiProvider @unique
+  name              String                            // 사용자 지정 이름 (예: "Bedrock Sonnet 4.5")
+  provider          AiProvider
   isActive          Boolean    @default(false)
   isDefault         Boolean    @default(false)
 
   // Encrypted credentials (same AES-256-GCM pattern as PII)
-  encApiKey         String?    // Encrypted API key
-  encRegion         String?    // Encrypted region (for Bedrock)
-  encAccessKeyId    String?    // Encrypted AWS access key (for Bedrock)
-  encSecretKey      String?    // Encrypted AWS secret key (for Bedrock)
+  encApiKey         String?
+  encRegion         String?
+  encAccessKeyId    String?
+  encSecretKey      String?
   encIv             String?
   encAuthTag        String?
   encSalt           String?
 
   // Non-sensitive config
-  modelId           String?    // e.g., "claude-sonnet-4-20250514"
+  modelId           String?
   maxTokens         Int        @default(4096)
   temperature       Float      @default(0.7)
-  dailyBudgetLimit  Int        @default(100)  // max API calls per day
+  dailyBudgetLimit  Int        @default(100)
 
   lastTestedAt      DateTime?
   lastTestSuccess   Boolean?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
+
+  @@index([provider])
+  @@index([isDefault])
 }
 
 // ─── CURRICULUM ─────────────────────────────────────────

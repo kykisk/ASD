@@ -3,21 +3,40 @@ import { adminApi } from '../services/api';
 
 export type AiProvider = 'CLAUDE_BEDROCK' | 'CLAUDE_DIRECT' | 'GEMINI' | 'OPENAI';
 
-export interface AiProviderConfig {
+export interface AiConfigItem {
+  id: string;
+  name: string;
   provider: AiProvider;
   isActive: boolean;
   isDefault: boolean;
-  lastTestedAt: string | null;
-  lastTestSuccess: boolean | null;
+  maskedApiKey: string | null;
+  maskedAccessKeyId: string | null;
   modelId: string | null;
   maxTokens: number;
   temperature: number;
   dailyBudgetLimit: number;
-  maskedApiKey?: string;
-  maskedAccessKeyId?: string;
+  lastTestedAt: string | null;
+  lastTestSuccess: boolean | null;
+  createdAt: string;
 }
 
-export interface UpsertAiConfigInput {
+export interface CreateAiConfigInput {
+  name: string;
+  provider: AiProvider;
+  isActive?: boolean;
+  isDefault?: boolean;
+  apiKey?: string;
+  region?: string;
+  accessKeyId?: string;
+  secretKey?: string;
+  modelId?: string;
+  maxTokens?: number;
+  temperature?: number;
+  dailyBudgetLimit?: number;
+}
+
+export interface UpdateAiConfigInput {
+  name?: string;
   isActive?: boolean;
   isDefault?: boolean;
   apiKey?: string;
@@ -34,7 +53,7 @@ export function useAiConfigs() {
   return useQuery({
     queryKey: ['ai-configs'],
     queryFn: async () => {
-      const { data } = await adminApi.get<{ success: true; data: AiProviderConfig[] }>(
+      const { data } = await adminApi.get<{ success: true; data: AiConfigItem[] }>(
         '/admin/ai-config',
       );
       return data.data;
@@ -43,16 +62,16 @@ export function useAiConfigs() {
   });
 }
 
-export function useUpsertAiConfig() {
+export function useCreateAiConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ provider, data }: { provider: AiProvider; data: UpsertAiConfigInput }) => {
-      const { data: response } = await adminApi.put<{ success: true; data: AiProviderConfig }>(
-        `/admin/ai-config/${provider}`,
-        { ...data, provider },
+    mutationFn: async (input: CreateAiConfigInput) => {
+      const { data } = await adminApi.post<{ success: true; data: AiConfigItem }>(
+        '/admin/ai-config',
+        input,
       );
-      return response.data;
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-configs'] });
@@ -60,13 +79,64 @@ export function useUpsertAiConfig() {
   });
 }
 
-export function useTestConnection() {
+export function useUpdateAiConfig() {
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async (provider: AiProvider) => {
+    mutationFn: async ({ id, data: input }: { id: string; data: UpdateAiConfigInput }) => {
+      const { data } = await adminApi.put<{ success: true; data: AiConfigItem }>(
+        `/admin/ai-config/${id}`,
+        input,
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-configs'] });
+    },
+  });
+}
+
+export function useDeleteAiConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await adminApi.delete(`/admin/ai-config/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-configs'] });
+    },
+  });
+}
+
+export function useSetDefaultAiConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await adminApi.post<{ success: true; data: AiConfigItem }>(
+        `/admin/ai-config/${id}/default`,
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-configs'] });
+    },
+  });
+}
+
+export function useTestAiConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
       const { data } = await adminApi.get<{ success: boolean; latencyMs: number; error?: string }>(
-        `/admin/ai-config/${provider}/test`,
+        `/admin/ai-config/${id}/test`,
       );
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-configs'] });
     },
   });
 }

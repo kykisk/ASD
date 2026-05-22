@@ -1,19 +1,16 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
   Delete,
   Param,
   Body,
 } from '@nestjs/common';
 import { UserRole } from '@auticare/prisma-client';
-import type { AiProvider } from '@auticare/prisma-client';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { AiConfigService } from './ai-config.service.js';
-import { UpsertAiConfigDto } from '@auticare/dto';
-import { ApiException } from '../common/exceptions/api.exception.js';
-
-const VALID_PROVIDERS = ['CLAUDE_BEDROCK', 'CLAUDE_DIRECT', 'GEMINI', 'OPENAI'];
+import { CreateAiConfigDto, UpdateAiConfigDto } from '@auticare/dto';
 
 @Controller('admin/ai-config')
 @Roles(UserRole.SYSTEM_ADMIN)
@@ -25,35 +22,34 @@ export class AiConfigController {
     return this.aiConfigService.findAll();
   }
 
-  @Put(':provider')
-  async upsert(
-    @Param('provider') provider: string,
-    @Body() dto: UpsertAiConfigDto,
-  ) {
-    this.validateProvider(provider);
-    return this.aiConfigService.upsert({ ...dto, provider: provider as UpsertAiConfigDto['provider'] });
+  @Post()
+  async create(@Body() dto: CreateAiConfigDto) {
+    return this.aiConfigService.create(dto);
   }
 
-  @Get(':provider/test')
-  async testConnection(@Param('provider') provider: string) {
-    this.validateProvider(provider);
-    return this.aiConfigService.testConnection(provider as AiProvider);
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.aiConfigService.findOne(id);
   }
 
-  @Delete(':provider')
-  async remove(@Param('provider') provider: string) {
-    this.validateProvider(provider);
-    await this.aiConfigService.remove(provider as AiProvider);
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateAiConfigDto) {
+    return this.aiConfigService.update(id, dto);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    await this.aiConfigService.remove(id);
     return { message: 'AI 설정이 삭제되었습니다' };
   }
 
-  private validateProvider(provider: string): void {
-    if (!VALID_PROVIDERS.includes(provider)) {
-      throw new ApiException(
-        400,
-        'INVALID_PROVIDER',
-        `유효하지 않은 AI 제공자입니다: ${provider}`,
-      );
-    }
+  @Post(':id/default')
+  async setDefault(@Param('id') id: string) {
+    return this.aiConfigService.setDefault(id);
+  }
+
+  @Get(':id/test')
+  async testConnection(@Param('id') id: string) {
+    return this.aiConfigService.testConnectionById(id);
   }
 }
