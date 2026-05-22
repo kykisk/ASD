@@ -55,11 +55,11 @@ export function useAiFilter() {
 export function useAiGenerate() {
   return useMutation({
     mutationFn: async (input: AiGenerateInput) => {
-      const { data } = await api.post<{ success: true; data: AiGenerateResult }>(
+      const { data } = await api.post<{ success: true; data: { generated: AiGenerateResult; questionnaire: unknown } }>(
         '/questionnaires/ai-generate',
         input,
       );
-      return data.data;
+      return data.data.generated;
     },
   });
 }
