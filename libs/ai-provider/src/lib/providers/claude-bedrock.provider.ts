@@ -33,10 +33,11 @@ export class ClaudeBedrockProvider implements AIProvider {
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role, content: m.content }));
 
+    const temp = options.temperature ?? this.temperature;
     const body = JSON.stringify({
       anthropic_version: 'bedrock-2023-05-31',
       max_tokens: options.maxTokens || this.maxTokens,
-      temperature: options.temperature ?? this.temperature,
+      ...(temp !== undefined && temp > 0 && { temperature: temp }),
       ...(system && { system }),
       messages,
     });
