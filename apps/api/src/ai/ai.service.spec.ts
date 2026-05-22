@@ -6,6 +6,12 @@ const mockAiConfigService = {
   getDecryptedConfig: vi.fn(),
 };
 
+const mockAiFeatureConfigService = {
+  getConfigIdForFeature: vi.fn().mockResolvedValue(null),
+  getAll: vi.fn(),
+  saveAll: vi.fn(),
+};
+
 const mockCostTracker = {
   trackCall: vi.fn(),
   checkBudgetLimit: vi.fn(),
@@ -55,6 +61,7 @@ describe('AIService', () => {
 
     service = new AIService(
       mockAiConfigService as any,
+      mockAiFeatureConfigService as any,
       mockCostTracker as any,
       mockPrismaService as any,
       mockConfigService as any,

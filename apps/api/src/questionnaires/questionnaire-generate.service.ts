@@ -62,6 +62,9 @@ JSON 형식으로만 응답하세요.
         ],
       },
       generatedQuestionnaireSchema,
+      undefined,
+      undefined,
+      'QUESTIONNAIRE_GENERATE',
     );
   }
 

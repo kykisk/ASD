@@ -98,6 +98,9 @@ describe('QuestionnaireGenerateService', () => {
           ],
         },
         generatedQuestionnaireSchema,
+        undefined,
+        undefined,
+        'QUESTIONNAIRE_GENERATE',
       );
     });
 
@@ -125,6 +128,9 @@ describe('QuestionnaireGenerateService', () => {
           ],
         },
         generatedQuestionnaireSchema,
+        undefined,
+        undefined,
+        'QUESTIONNAIRE_GENERATE',
       );
     });
   });

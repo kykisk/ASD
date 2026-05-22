@@ -151,6 +151,9 @@ export class InsightsService {
         ],
       },
       insightOutputSchema,
+      undefined,
+      undefined,
+      'INSIGHT',
     );
 
     return {

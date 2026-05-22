@@ -88,6 +88,9 @@ export class ScheduleSuggestionService {
         ],
       },
       scheduleSuggestionSchema,
+      undefined,
+      undefined,
+      'SCHEDULE_SUGGEST',
     );
   }
 

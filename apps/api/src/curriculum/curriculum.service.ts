@@ -107,6 +107,7 @@ export class CurriculumService {
         curriculumOutputSchema,
         undefined,
         child.familyId,
+        'CURRICULUM',
       );
 
       const curriculum = await this.prisma.curriculum.create({

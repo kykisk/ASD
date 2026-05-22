@@ -113,6 +113,9 @@ describe('ScheduleSuggestionService', () => {
           ]),
         }),
         expect.any(Object),
+        undefined,
+        undefined,
+        'SCHEDULE_SUGGEST',
       );
     });
 

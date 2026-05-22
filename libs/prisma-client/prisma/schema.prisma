@@ -501,3 +501,10 @@ model BatchJob {
   @@index([status])
   @@index([targetDate])
 }
+
+model AiFeatureConfig {
+  id        String   @id @default(cuid())
+  feature   String   @unique
+  configId  String
+  updatedAt DateTime @updatedAt
+}

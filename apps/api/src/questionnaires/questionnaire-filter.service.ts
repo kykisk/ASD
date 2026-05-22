@@ -39,6 +39,9 @@ ${items.map((item, idx) => `${idx}. [${item.domain}] ${item.text}`).join('\n')}`
         ],
       },
       filterResultSchema,
+      undefined,
+      undefined,
+      'QUESTIONNAIRE_FILTER',
     );
   }
 }

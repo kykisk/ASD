@@ -6,9 +6,11 @@ import type { AIProvider, AIRequestOptions, AIResponse } from '@auticare/ai-prov
 import type { AIProviderName } from '@auticare/ai-provider';
 import { PrismaService } from '@auticare/prisma-client';
 import { AiConfigService } from '../ai-config/ai-config.service.js';
+import { AiFeatureConfigService } from '../ai-config/ai-feature-config.service.js';
 import { AICostTrackingService } from './ai-cost-tracking.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { z } from 'zod';
+import type { DecryptedAiConfig } from '@auticare/dto';
 
 const MAX_STRUCTURED_RETRIES = 3;
 
@@ -19,6 +21,7 @@ export class AIService {
 
   constructor(
     private readonly aiConfigService: AiConfigService,
+    private readonly aiFeatureConfigService: AiFeatureConfigService,
     private readonly costTracker: AICostTrackingService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
@@ -29,6 +32,14 @@ export class AIService {
       password: this.configService.get('REDIS_PASSWORD', undefined),
       db: this.configService.get('REDIS_DB', 0),
     });
+  }
+
+  async getConfigForFeature(feature: string): Promise<DecryptedAiConfig> {
+    const configId = await this.aiFeatureConfigService.getConfigIdForFeature(feature);
+    if (configId) {
+      return this.aiConfigService.getDecryptedConfig(configId);
+    }
+    return this.aiConfigService.getDecryptedDefaultConfig();
   }
 
   async getProvider(preferredProvider?: string): Promise<AIProvider> {
@@ -64,9 +75,52 @@ export class AIService {
     options: AIRequestOptions,
     preferredProvider?: string,
     familyId?: string,
+    feature?: string,
   ): Promise<AIResponse> {
     if (familyId) {
       await this.checkAiAccess(familyId);
+    }
+
+    if (feature) {
+      const configId = await this.aiFeatureConfigService.getConfigIdForFeature(feature);
+      if (configId) {
+        try {
+          const decrypted = await this.aiConfigService.getDecryptedConfig(configId);
+
+          const withinBudget = await this.costTracker.checkBudgetLimit(
+            decrypted.provider,
+            decrypted.dailyBudgetLimit,
+          );
+          if (withinBudget) {
+            const provider = await AIProviderFactory.create(decrypted.provider as AIProviderName, {
+              apiKey: decrypted.apiKey ?? undefined,
+              region: decrypted.region ?? undefined,
+              accessKeyId: decrypted.accessKeyId ?? undefined,
+              secretKey: decrypted.secretKey ?? undefined,
+              modelId: decrypted.modelId ?? undefined,
+              maxTokens: decrypted.maxTokens,
+              temperature: decrypted.temperature,
+            });
+
+            const response = await provider.generate(options);
+
+            await this.costTracker.trackCall({
+              provider: decrypted.provider,
+              model: response.model,
+              inputTokens: response.inputTokens,
+              outputTokens: response.outputTokens,
+              latencyMs: response.latencyMs,
+              operation: 'generate',
+            });
+
+            return response;
+          }
+        } catch (err) {
+          this.logger.warn(
+            `Feature-specific config for ${feature} failed, falling back to default chain: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
     }
 
     const configs = await this.aiConfigService.findAll();
@@ -136,6 +190,7 @@ export class AIService {
     schema: z.ZodSchema<T>,
     preferredProvider?: string,
     familyId?: string,
+    feature?: string,
   ): Promise<T> {
     if (familyId) {
       await this.checkAiAccess(familyId);
@@ -153,7 +208,7 @@ export class AIService {
         });
       }
 
-      const response = await this.generate({ ...options, messages }, preferredProvider);
+      const response = await this.generate({ ...options, messages }, preferredProvider, undefined, feature);
       const jsonStr = this.extractJson(response.content);
 
       try {

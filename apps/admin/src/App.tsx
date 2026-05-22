@@ -13,6 +13,7 @@ import {
 import { LoginPage } from './pages/LoginPage';
 import { UsersPage } from './pages/UsersPage';
 import { AiSettingsPage } from './pages/AiSettingsPage';
+import { AiFeatureConfigPage } from './pages/AiFeatureConfigPage';
 import { FamilyTierPage } from './pages/FamilyTierPage';
 import { QuestionnairesManagementPage } from './pages/QuestionnairesManagementPage';
 import { MonitoringPage } from './pages/MonitoringPage';
@@ -26,7 +27,8 @@ const MENU_ITEMS = [
   { key: 'dashboard', icon: <DashboardOutlined />, label: '대시보드' },
   { key: 'users', icon: <UserOutlined />, label: '사용자 관리' },
   { key: 'family-tier', icon: <TeamOutlined />, label: '가족 AI 관리' },
-  { key: 'ai-settings', icon: <RobotOutlined />, label: 'AI 설정' },
+  { key: 'ai-settings', icon: <RobotOutlined />, label: 'AI 프로바이더 설정' },
+  { key: 'ai-feature-config', icon: <RobotOutlined />, label: '기능별 AI 설정' },
   { key: 'questionnaires', icon: <FileTextOutlined />, label: '질문지 관리' },
   { key: 'monitoring', icon: <MonitorOutlined />, label: '모니터링' },
   { key: 'audit-logs', icon: <AuditOutlined />, label: '감사 로그' },
@@ -35,6 +37,7 @@ const MENU_ITEMS = [
 function getSelectedKey(pathname: string): string {
   if (pathname.startsWith('/users')) return 'users';
   if (pathname.startsWith('/family-tier')) return 'family-tier';
+  if (pathname.startsWith('/ai-feature-config')) return 'ai-feature-config';
   if (pathname.startsWith('/ai-settings')) return 'ai-settings';
   if (pathname.startsWith('/questionnaires')) return 'questionnaires';
   if (pathname.startsWith('/monitoring')) return 'monitoring';
@@ -119,6 +122,7 @@ export default function App() {
       <Route path="/users" element={<ProtectedPage><UsersPage /></ProtectedPage>} />
       <Route path="/family-tier" element={<ProtectedPage><FamilyTierPage /></ProtectedPage>} />
       <Route path="/ai-settings" element={<ProtectedPage><AiSettingsPage /></ProtectedPage>} />
+      <Route path="/ai-feature-config" element={<ProtectedPage><AiFeatureConfigPage /></ProtectedPage>} />
       <Route path="/questionnaires" element={<ProtectedPage><QuestionnairesManagementPage /></ProtectedPage>} />
       <Route path="/monitoring" element={<ProtectedPage><MonitoringPage /></ProtectedPage>} />
       <Route path="/audit-logs" element={<ProtectedPage><AuditLogPage /></ProtectedPage>} />

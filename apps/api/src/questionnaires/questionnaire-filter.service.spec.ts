@@ -123,6 +123,9 @@ describe('QuestionnaireFilterService', () => {
           ],
         },
         filterResultSchema,
+        undefined,
+        undefined,
+        'QUESTIONNAIRE_FILTER',
       );
     });
   });

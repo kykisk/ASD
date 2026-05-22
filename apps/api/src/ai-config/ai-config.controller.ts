@@ -10,12 +10,16 @@ import {
 import { UserRole } from '@auticare/prisma-client';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { AiConfigService } from './ai-config.service.js';
+import { AiFeatureConfigService } from './ai-feature-config.service.js';
 import { CreateAiConfigDto, UpdateAiConfigDto } from '@auticare/dto';
 
 @Controller('admin/ai-config')
 @Roles(UserRole.SYSTEM_ADMIN)
 export class AiConfigController {
-  constructor(private readonly aiConfigService: AiConfigService) {}
+  constructor(
+    private readonly aiConfigService: AiConfigService,
+    private readonly aiFeatureConfigService: AiFeatureConfigService,
+  ) {}
 
   @Get()
   async findAll() {
@@ -25,6 +29,19 @@ export class AiConfigController {
   @Post()
   async create(@Body() dto: CreateAiConfigDto) {
     return this.aiConfigService.create(dto);
+  }
+
+  @Get('feature-config')
+  async getFeatureConfig() {
+    return this.aiFeatureConfigService.getAll();
+  }
+
+  @Put('feature-config')
+  async saveFeatureConfig(
+    @Body() body: { mappings: Array<{ feature: string; configId: string | null }> },
+  ) {
+    await this.aiFeatureConfigService.saveAll(body.mappings);
+    return { success: true };
   }
 
   @Get(':id')
