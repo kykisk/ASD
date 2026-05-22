@@ -76,7 +76,7 @@ export function QuestionnaireFormModal({
   const applyAiSuggestions = () => {
     if (!aiFilterResults) return;
     const newItems = items.map((item, idx) => {
-      const filterItem = aiFilterResults.find((r) => r.index === idx);
+      const filterItem = aiFilterResults.find((r) => r.originalIndex === idx);
       if (filterItem?.riskLevel === 'HIGH_RISK' && filterItem.suggestedRevision) {
         return { ...item, text: filterItem.suggestedRevision };
       }
@@ -89,7 +89,7 @@ export function QuestionnaireFormModal({
   };
 
   const getItemRisk = (index: number): AiFilterItemResult | undefined => {
-    return aiFilterResults?.find((r) => r.index === index);
+    return aiFilterResults?.find((r) => r.originalIndex === index);
   };
 
   const toggleDomain = (domain: Domain) => {

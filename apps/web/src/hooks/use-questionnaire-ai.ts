@@ -7,8 +7,8 @@ export type RiskLevel = 'SAFE' | 'CAUTION' | 'HIGH_RISK';
 export type OverallRisk = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface AiFilterItemResult {
-  index: number;
-  text: string;
+  originalIndex: number;
+  originalText: string;
   riskLevel: RiskLevel;
   reason?: string;
   suggestedRevision?: string;
