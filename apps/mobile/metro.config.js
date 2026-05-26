@@ -33,4 +33,16 @@ config.resolver.extraNodeModules = singletons.reduce((acc, name) => {
   return acc;
 }, {});
 
+const relativeProjectPath = path.relative(monorepoRoot, projectRoot);
+config.server = {
+  ...config.server,
+  rewriteRequestUrl: (url) => {
+    const prefix = `/${relativeProjectPath}`;
+    if (url.startsWith(prefix + '/')) {
+      return url.slice(prefix.length);
+    }
+    return url;
+  },
+};
+
 module.exports = config;
