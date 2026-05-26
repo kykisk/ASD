@@ -6,22 +6,20 @@ const monorepoRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch workspace packages (libs/)
+config.projectRoot = projectRoot;
+
 config.watchFolders = [
   path.resolve(monorepoRoot, 'libs'),
 ];
 
-// Enable symlink resolution (required for pnpm)
 config.resolver.unstable_enableSymlinks = true;
 config.resolver.unstable_enablePackageExports = true;
 
-// Resolution order: app node_modules first, then monorepo root
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
-// Pin singletons to prevent "Invalid hook call" errors
 const singletons = [
   'react',
   'react-native',
