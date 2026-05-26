@@ -1,0 +1,66 @@
+import { useEffect } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../lib/query-client.js';
+import { useAuthStore } from '../stores/auth.store.js';
+import { useChildStore } from '../stores/child.store.js';
+import { setOnRefreshFailed } from '../lib/api.js';
+import { useAppStateRefetch } from '../hooks/use-app-state-refetch.js';
+import { useOnlineManager } from '../hooks/use-online-manager.js';
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+  const fetchChildren = useChildStore((s) => s.fetchChildren);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, segments]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.familyId) {
+      fetchChildren(user.familyId);
+    }
+  }, [isAuthenticated, user?.familyId]);
+
+  if (isLoading) return null;
+
+  return <>{children}</>;
+}
+
+export default function RootLayout() {
+  const initialize = useAuthStore((s) => s.initialize);
+  const logout = useAuthStore((s) => s.logout);
+
+  useAppStateRefetch();
+  useOnlineManager();
+
+  useEffect(() => {
+    initialize();
+    setOnRefreshFailed(() => {
+      logout();
+    });
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthGate>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </AuthGate>
+      <StatusBar style="dark" />
+    </QueryClientProvider>
+  );
+}

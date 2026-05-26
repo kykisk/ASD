@@ -1,0 +1,69 @@
+{
+  "name": "@auticare/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild",
+    "lint": "eslint ."
+  },
+  "nx": {
+    "name": "mobile",
+    "tags": [
+      "scope:app",
+      "type:mobile"
+    ],
+    "targets": {
+      "start": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npx expo start",
+          "cwd": "apps/mobile"
+        }
+      },
+      "build": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npx eas build",
+          "cwd": "apps/mobile"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@auticare/api-client": "workspace:*",
+    "@auticare/shared-types": "workspace:*",
+    "@auticare/shared-constants": "workspace:*",
+    "@auticare/shared-utils": "workspace:*",
+    "@auticare/dto": "workspace:*",
+    "@expo/metro-runtime": "~55.0.11",
+    "@react-native-async-storage/async-storage": "^2.1.0",
+    "@tanstack/react-query": "^5.100.10",
+    "axios": "^1.6.0",
+    "date-fns": "^4.2.1",
+    "expo": "~55.0.26",
+    "expo-constants": "~55.0.16",
+    "expo-linking": "~55.0.15",
+    "expo-network": "~55.0.14",
+    "expo-router": "~55.0.16",
+    "expo-secure-store": "~55.0.14",
+    "expo-splash-screen": "~55.0.21",
+    "expo-status-bar": "~2.2.3",
+    "react": "19.0.0",
+    "react-native": "~0.79.7",
+    "react-native-gesture-handler": "^2.31.2",
+    "react-native-reanimated": "~3.19.5",
+    "react-native-safe-area-context": "^5.8.0",
+    "react-native-screens": "~4.10.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/react": "^19.0.0",
+    "typescript": "~5.7.2"
+  }
+}
