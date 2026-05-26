@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -12,7 +13,9 @@ import { useOnlineManager } from '../hooks/use-online-manager.js';
 import { usePushNotifications } from '../hooks/use-push-notifications.js';
 import { OfflineBanner } from '../components/OfflineBanner.js';
 
-SplashScreen.preventAutoHideAsync();
+if (Platform.OS !== 'web') {
+  SplashScreen.preventAutoHideAsync();
+}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -63,7 +66,9 @@ export default function RootLayout() {
           logout();
         });
       } finally {
-        SplashScreen.hideAsync();
+        if (Platform.OS !== 'web') {
+          SplashScreen.hideAsync();
+        }
       }
     };
     boot();

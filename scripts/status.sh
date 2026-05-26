@@ -17,9 +17,9 @@ echo "  Redis      (:6380) : $RD_STATUS"
 
 echo ""
 echo "🚀 서버 프로세스"
-for SVC in api web admin; do
+for SVC in api web admin mobile; do
   PID_FILE="$ROOT/logs/$SVC.pid"
-  PORT=$( [ "$SVC" = "api" ] && echo 3100 || ( [ "$SVC" = "web" ] && echo 4200 || echo 4300 ) )
+  PORT=$( [ "$SVC" = "api" ] && echo 3100 || ( [ "$SVC" = "web" ] && echo 4200 || ( [ "$SVC" = "admin" ] && echo 4300 || echo 8081 ) ) )
   if [ -f "$PID_FILE" ]; then
     PID=$(cat "$PID_FILE")
     if kill -0 "$PID" 2>/dev/null; then
