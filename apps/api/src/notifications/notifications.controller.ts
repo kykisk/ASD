@@ -1,10 +1,15 @@
-import { Controller, Get, Patch, Param, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Param, Query, Body } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { NotificationsService } from './notifications.service.js';
+import { PushService } from './push.service.js';
+import { RegisterDeviceTokenDto, UnregisterDeviceTokenDto } from './dto/device-token.dto.js';
 
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private notificationsService: NotificationsService) {}
+  constructor(
+    private notificationsService: NotificationsService,
+    private pushService: PushService,
+  ) {}
 
   @Get()
   async list(
@@ -31,11 +36,26 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  async markRead(
-    @Param('id') id: string,
-    @CurrentUser() user: { id: string },
-  ) {
+  async markRead(@Param('id') id: string, @CurrentUser() user: { id: string }) {
     await this.notificationsService.markRead(id, user.id);
+    return { success: true };
+  }
+
+  @Post('device-token')
+  async registerDeviceToken(
+    @CurrentUser() user: { id: string },
+    @Body() dto: RegisterDeviceTokenDto,
+  ) {
+    await this.pushService.registerToken(user.id, dto.token, dto.platform);
+    return { success: true };
+  }
+
+  @Delete('device-token')
+  async unregisterDeviceToken(
+    @CurrentUser() user: { id: string },
+    @Body() dto: UnregisterDeviceTokenDto,
+  ) {
+    await this.pushService.unregisterToken(user.id, dto.token);
     return { success: true };
   }
 }

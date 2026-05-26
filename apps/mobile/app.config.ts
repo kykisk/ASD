@@ -30,7 +30,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.auticare.app',
   },
 
-  plugins: ['expo-router', 'expo-secure-store'],
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    [
+      'expo-notifications',
+      {
+        icon: './assets/images/icon.png',
+        color: '#5B8A72',
+        sounds: [],
+      },
+    ],
+  ],
 
   experiments: {
     typedRoutes: true,

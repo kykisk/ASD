@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@auticare/prisma-client';
 import type { Notification, NotificationType } from '@prisma/client';
+import { PushService } from './push.service.js';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private pushService: PushService,
+  ) {}
 
   async create(params: {
     userId: string;
@@ -14,7 +18,7 @@ export class NotificationsService {
     body: string;
     data?: Record<string, unknown>;
   }): Promise<Notification> {
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         userId: params.userId,
         childId: params.childId ?? null,
@@ -24,6 +28,24 @@ export class NotificationsService {
         data: params.data ?? undefined,
       },
     });
+
+    const pushData = params.data
+      ? Object.fromEntries(
+          Object.entries(params.data)
+            .filter(([, v]) => v !== null && v !== undefined)
+            .map(([k, v]) => [k, String(v)]),
+        )
+      : undefined;
+
+    this.pushService
+      .sendToUser(params.userId, {
+        title: params.title,
+        body: params.body,
+        data: pushData,
+      })
+      .catch(() => {});
+
+    return notification;
   }
 
   async findForUser(

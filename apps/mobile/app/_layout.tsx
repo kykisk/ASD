@@ -8,6 +8,7 @@ import { useChildStore } from '../stores/child.store.js';
 import { setOnRefreshFailed } from '../lib/api.js';
 import { useAppStateRefetch } from '../hooks/use-app-state-refetch.js';
 import { useOnlineManager } from '../hooks/use-online-manager.js';
+import { usePushNotifications } from '../hooks/use-push-notifications.js';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -38,6 +39,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function PushNotificationSetup() {
+  usePushNotifications();
+  return null;
+}
+
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
   const logout = useAuthStore((s) => s.logout);
@@ -55,6 +61,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthGate>
+        <PushNotificationSetup />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
