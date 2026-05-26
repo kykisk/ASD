@@ -1,0 +1,23 @@
+appId: com.auticare.app
+---
+- runFlow: 01-login.yaml
+
+- tapOn: "더보기"
+- tapOn: "아이 프로필"
+- assertVisible: "아이 프로필"
+- tapOn:
+    id: "back"
+
+- tapOn: "가족 설정"
+- assertVisible: "가족 설정"
+- tapOn:
+    id: "back"
+
+- tapOn: "설정"
+- assertVisible: "설정"
+- tapOn:
+    id: "back"
+
+- tapOn: "보고서"
+- assertVisible: "보고서"
+- assertVisible: "월간 보고서 생성"

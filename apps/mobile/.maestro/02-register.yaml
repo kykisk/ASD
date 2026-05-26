@@ -1,0 +1,24 @@
+appId: com.auticare.app
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "계정이 없으신가요?"
+
+- assertVisible: "회원가입"
+
+- tapOn: "이름"
+- inputText: "테스트 부모"
+
+- tapOn: "이메일"
+- inputText: "newuser@auticare.com"
+
+- tapOn: "비밀번호 (8자 이상)"
+- inputText: "password123"
+
+- tapOn: "비밀번호 확인"
+- inputText: "password123"
+
+- tapOn: "가입하기"
+
+- assertVisible: "홈"

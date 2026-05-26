@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/auth.store.js';
 import { ChildSwitcher } from '../../components/ChildSwitcher.js';
 import { useChildStore } from '../../stores/child.store.js';
@@ -9,6 +10,7 @@ export default function MoreScreen() {
   const { user, logout } = useAuthStore();
   const selectedChild = useChildStore((s) => s.getSelectedChild());
   const [childSwitcherVisible, setChildSwitcherVisible] = useState(false);
+  const router = useRouter();
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
@@ -29,16 +31,26 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => setChildSwitcherVisible(true)}>
-          <Text style={styles.menuLabel}>아이 전환</Text>
-          <Text style={styles.menuValue}>{selectedChild?.name ?? '선택 없음'}</Text>
+      {selectedChild && (
+        <TouchableOpacity style={styles.childCard} onPress={() => setChildSwitcherVisible(true)}>
+          <View style={styles.childCardContent}>
+            <View style={styles.childAvatar}>
+              <Text style={styles.childAvatarText}>{selectedChild.name.charAt(0)}</Text>
+            </View>
+            <View>
+              <Text style={styles.childCardName}>{selectedChild.name}</Text>
+              <Text style={styles.childCardHint}>탭하여 아이 전환</Text>
+            </View>
+          </View>
+          <Text style={styles.switchArrow}>⇄</Text>
         </TouchableOpacity>
-        <MenuItem label="아이 프로필" />
-        <MenuItem label="일정 관리" />
-        <MenuItem label="가족 설정" />
-        <MenuItem label="보고서" />
-        <MenuItem label="설정" />
+      )}
+
+      <View style={styles.section}>
+        <MenuItem label="아이 프로필" icon="👤" onPress={() => router.push('/child-profile')} />
+        <MenuItem label="가족 설정" icon="👨‍👩‍👧" onPress={() => router.push('/family')} />
+        <MenuItem label="보고서" icon="📊" onPress={() => router.push('/reports')} />
+        <MenuItem label="설정" icon="⚙️" onPress={() => router.push('/settings')} />
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -53,24 +65,21 @@ export default function MoreScreen() {
   );
 }
 
-function MenuItem({ label }: { label: string }) {
+function MenuItem({ label, icon, onPress }: { label: string; icon: string; onPress: () => void }) {
   return (
-    <TouchableOpacity style={styles.menuItem}>
-      <Text style={styles.menuLabel}>{label}</Text>
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+      <View style={styles.menuLeft}>
+        <Text style={styles.menuIcon}>{icon}</Text>
+        <Text style={styles.menuLabel}>{label}</Text>
+      </View>
       <Text style={styles.menuArrow}>›</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.md,
-    gap: spacing.md,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.md, gap: spacing.md },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -89,24 +98,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.primary,
+  avatarText: { fontSize: fontSize.xl, fontWeight: '700', color: colors.primary },
+  profileInfo: { flex: 1 },
+  profileName: { fontSize: fontSize.lg, fontWeight: '600', color: colors.text },
+  profileEmail: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+  childCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    padding: spacing.md,
   },
-  profileInfo: {
-    flex: 1,
+  childCardContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  childAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  profileName: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  profileEmail: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
+  childAvatarText: { fontSize: fontSize.lg, fontWeight: '700', color: '#fff' },
+  childCardName: { fontSize: fontSize.md, fontWeight: '600', color: colors.primaryDark },
+  childCardHint: { fontSize: fontSize.xs, color: colors.primary },
+  switchArrow: { fontSize: fontSize.xl, color: colors.primary },
   section: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
@@ -123,19 +141,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
-  menuLabel: {
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  menuValue: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  menuArrow: {
-    fontSize: fontSize.xl,
-    color: colors.textMuted,
-  },
+  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  menuIcon: { fontSize: fontSize.xl, width: 28 },
+  menuLabel: { fontSize: fontSize.md, color: colors.text },
+  menuArrow: { fontSize: fontSize.xl, color: colors.textMuted },
   logoutButton: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
@@ -144,9 +153,5 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'center',
   },
-  logoutText: {
-    fontSize: fontSize.md,
-    color: colors.error,
-    fontWeight: '500',
-  },
+  logoutText: { fontSize: fontSize.md, color: colors.error, fontWeight: '500' },
 });

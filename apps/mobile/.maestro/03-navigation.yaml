@@ -1,0 +1,19 @@
+appId: com.auticare.app
+---
+- runFlow: 01-login.yaml
+
+- assertVisible: "홈"
+- assertVisible: "오늘의 일정"
+
+- tapOn: "커리큘럼"
+- assertVisible: "커리큘럼"
+
+- tapOn: "평가"
+- assertVisible: "평가하기"
+
+- tapOn: "성장"
+- assertVisible: "성장 기록"
+
+- tapOn: "더보기"
+- assertVisible: "아이 프로필"
+- assertVisible: "로그아웃"

@@ -1,0 +1,17 @@
+appId: com.auticare.app
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "AutiCare"
+- assertVisible: "우리 아이의 성장을 함께해요"
+
+- tapOn: "이메일"
+- inputText: "test@auticare.com"
+
+- tapOn: "비밀번호"
+- inputText: "testpass123"
+
+- tapOn: "로그인"
+
+- assertVisible: "홈"

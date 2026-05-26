@@ -1,0 +1,10 @@
+appId: com.auticare.app
+---
+- runFlow: 01-login.yaml
+
+- tapOn: "더보기"
+- tapOn: "로그아웃"
+- tapOn: "로그아웃"
+
+- assertVisible: "AutiCare"
+- assertVisible: "로그인"

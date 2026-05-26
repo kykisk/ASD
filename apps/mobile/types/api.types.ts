@@ -5,6 +5,8 @@ export interface Child {
   birthDate: string;
   gender: string | null;
   diagnosisName: string | null;
+  diagnosisDate: string | null;
+  notes: string | null;
   developmentalLevel: {
     language?: string;
     cognitive?: string;
@@ -13,6 +15,12 @@ export interface Child {
     social?: string;
     overall?: string;
   } | null;
+  centerInfo: Array<{
+    name: string;
+    type: string;
+    frequency: string;
+    currentGoal?: string;
+  }> | null;
   createdAt: string;
   updatedAt: string;
 }
