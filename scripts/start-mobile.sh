@@ -50,7 +50,7 @@ echo "  포트: $PORT"
 
 cd "$ROOT/apps/mobile"
 CI=1 EXPO_PUBLIC_API_URL="$EXPO_PUBLIC_API_URL" \
-  nohup npx expo start --web --port $PORT > "$LOG" 2>&1 &
+  nohup npx expo start --web --port $PORT --clear > "$LOG" 2>&1 &
 echo $! > "$PID_FILE"
 
 echo "  백그라운드 실행됨 (PID: $(cat $PID_FILE))"

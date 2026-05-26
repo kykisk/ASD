@@ -33,15 +33,17 @@ config.resolver.extraNodeModules = singletons.reduce((acc, name) => {
   return acc;
 }, {});
 
-const relativeProjectPath = path.relative(monorepoRoot, projectRoot);
+const urlPrefix = '/' + path.relative(monorepoRoot, projectRoot);
+
 config.server = {
   ...config.server,
-  rewriteRequestUrl: (url) => {
-    const prefix = `/${relativeProjectPath}`;
-    if (url.startsWith(prefix + '/')) {
-      return url.slice(prefix.length);
-    }
-    return url;
+  enhanceMiddleware: (metroMiddleware, _httpServer) => {
+    return (req, res, next) => {
+      if (req.url && req.url.startsWith(urlPrefix + '/')) {
+        req.url = req.url.slice(urlPrefix.length);
+      }
+      return metroMiddleware(req, res, next);
+    };
   },
 };
 
