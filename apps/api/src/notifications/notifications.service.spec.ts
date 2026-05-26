@@ -12,6 +12,11 @@ const mockPrismaService = {
   },
 };
 
+const mockPushService = {
+  sendToUser: vi.fn().mockResolvedValue(undefined),
+  isEnabled: false,
+};
+
 describe('NotificationsService', () => {
   let service: NotificationsService;
 
@@ -22,11 +27,13 @@ describe('NotificationsService', () => {
       providers: [
         NotificationsService,
         { provide: 'PrismaService', useValue: mockPrismaService },
+        { provide: 'PushService', useValue: mockPushService },
       ],
     }).compile();
 
     service = module.get<NotificationsService>(NotificationsService);
     Object.defineProperty(service, 'prisma', { value: mockPrismaService });
+    Object.defineProperty(service, 'pushService', { value: mockPushService });
   });
 
   describe('create', () => {
@@ -104,7 +111,10 @@ describe('NotificationsService', () => {
 
   describe('markRead', () => {
     it('should mark notification as read', async () => {
-      mockPrismaService.notification.findFirst.mockResolvedValue({ id: 'notif-1', userId: 'user-1' });
+      mockPrismaService.notification.findFirst.mockResolvedValue({
+        id: 'notif-1',
+        userId: 'user-1',
+      });
       mockPrismaService.notification.update.mockResolvedValue({});
 
       await service.markRead('notif-1', 'user-1');
