@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/auth.store.js';
 import { ChildSwitcher } from '../../components/ChildSwitcher.js';
@@ -13,10 +21,16 @@ export default function MoreScreen() {
   const router = useRouter();
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: logout },
-    ]);
+    if (Platform.OS === 'web') {
+      if (window.confirm('정말 로그아웃하시겠습니까?')) {
+        logout();
+      }
+    } else {
+      Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        { text: '로그아웃', style: 'destructive', onPress: logout },
+      ]);
+    }
   };
 
   return (
