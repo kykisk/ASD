@@ -46,19 +46,20 @@ export function useCreateAssessment() {
   });
 }
 
-export function useQuestionnaires() {
+export function useQuestionnaires(familyId: string | null | undefined) {
   return useQuery<Questionnaire[]>({
-    queryKey: ['questionnaires'],
+    queryKey: ['questionnaires', familyId],
     queryFn: async () => {
-      const { data } = await api.get('/questionnaires');
+      const { data } = await api.get(`/families/${familyId}/questionnaires`);
       return data.data as Questionnaire[];
     },
+    enabled: !!familyId,
   });
 }
 
 export function useQuestionnaireDetail(id: string | null) {
   return useQuery<Questionnaire>({
-    queryKey: ['questionnaires', id],
+    queryKey: ['questionnaires', 'detail', id],
     queryFn: async () => {
       const { data } = await api.get(`/questionnaires/${id}`);
       return data.data as Questionnaire;

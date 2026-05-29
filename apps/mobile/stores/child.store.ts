@@ -5,6 +5,7 @@ import type { Child } from '../types/api.types.js';
 interface ChildState {
   children: Child[];
   selectedChildId: string | null;
+  familyId: string | null;
   isLoading: boolean;
   error: string | null;
 
@@ -17,11 +18,12 @@ interface ChildState {
 export const useChildStore = create<ChildState>((set, get) => ({
   children: [],
   selectedChildId: null,
+  familyId: null,
   isLoading: false,
   error: null,
 
   fetchChildren: async (familyId: string) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, familyId });
     try {
       const { data } = await api.get(`/families/${familyId}/children`);
       const children = data.data as Child[];
@@ -46,6 +48,6 @@ export const useChildStore = create<ChildState>((set, get) => ({
   },
 
   reset: () => {
-    set({ children: [], selectedChildId: null, isLoading: false, error: null });
+    set({ children: [], selectedChildId: null, familyId: null, isLoading: false, error: null });
   },
 }));

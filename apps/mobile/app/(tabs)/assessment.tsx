@@ -43,7 +43,8 @@ const SCORE_COLORS = [colors.score1, colors.score2, colors.score3, colors.score4
 
 export default function AssessmentScreen() {
   const selectedChildId = useChildStore((s) => s.selectedChildId);
-  const { data: questionnaires, isLoading: loadingQ } = useQuestionnaires();
+  const familyId = useChildStore((s) => s.familyId);
+  const { data: questionnaires, isLoading: loadingQ } = useQuestionnaires(familyId);
   const { data: assessments, refetch: refetchAssessments } = useAssessments(selectedChildId);
   const createMutation = useCreateAssessment();
 
