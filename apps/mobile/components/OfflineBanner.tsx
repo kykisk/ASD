@@ -1,11 +1,11 @@
-import { Text, StyleSheet, Animated, useAnimatedValue } from 'react-native';
-import { useEffect } from 'react';
+import { Text, StyleSheet, Animated } from 'react-native';
+import { useEffect, useRef } from 'react';
 import { useNetworkStatus } from '../hooks/use-network-status.js';
 import { colors, spacing, fontSize } from '../constants/theme.js';
 
 export function OfflineBanner() {
   const { isOnline, isChecking } = useNetworkStatus();
-  const opacity = useAnimatedValue(0);
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isChecking) return;
