@@ -43,8 +43,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   ],
 
-  experiments: {
-    typedRoutes: true,
+  web: {
+    bundler: 'metro',
+    output: 'single',
   },
 
   extra: {
