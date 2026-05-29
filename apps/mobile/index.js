@@ -1,5 +1,5 @@
-import '@expo/metro-runtime';
-import { App } from 'expo-router/build/qualified-entry';
-import { renderRootComponent } from 'expo-router/build/renderRootComponent';
+require('@expo/metro-runtime');
+const { App } = require('expo-router/build/qualified-entry');
+const { renderRootComponent } = require('expo-router/build/renderRootComponent');
 
 renderRootComponent(App);
