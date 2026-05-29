@@ -13,6 +13,21 @@ export function useTodayCurriculum(childId: string | null) {
   });
 }
 
+export function useGenerateCurriculum() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (childId: string) => {
+      const { data } = await api.post(`/children/${childId}/curriculum/generate`);
+      return data.data as Curriculum;
+    },
+    onSuccess: (_data, childId) => {
+      queryClient.invalidateQueries({ queryKey: ['curriculum', 'today', childId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', childId] });
+    },
+  });
+}
+
 export function useConfirmCurriculum() {
   const queryClient = useQueryClient();
 

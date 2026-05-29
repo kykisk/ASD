@@ -14,6 +14,7 @@ import {
   useTodayCurriculum,
   useConfirmCurriculum,
   useLogActivity,
+  useGenerateCurriculum,
 } from '../../hooks/use-curricula.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
@@ -78,8 +79,19 @@ export default function CurriculumScreen() {
   const { data: curriculum, isLoading, error, refetch } = useTodayCurriculum(selectedChildId);
   const confirmMutation = useConfirmCurriculum();
   const logMutation = useLogActivity();
+  const generateMutation = useGenerateCurriculum();
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [loggedActivities, setLoggedActivities] = useState<Record<number, ActivityResult>>({});
+
+  const handleGenerate = async () => {
+    if (!selectedChildId) return;
+    try {
+      await generateMutation.mutateAsync(selectedChildId);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '생성에 실패했습니다';
+      Alert.alert('오류', message);
+    }
+  };
 
   const handleConfirm = async () => {
     if (!selectedChildId || !curriculum) return;
@@ -166,8 +178,24 @@ export default function CurriculumScreen() {
           <ChildSwitcherButton />
         </View>
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>오늘의 커리큘럼이 아직 없습니다</Text>
-          <Text style={styles.emptySubtext}>AI가 맞춤 커리큘럼을 생성할 예정입니다</Text>
+          <Text style={styles.emptyTitle}>오늘의 커리큘럼이 없습니다</Text>
+          <Text style={styles.emptySubtext}>
+            AI가 아이의 평가 데이터를 분석해{'\n'}맞춤 커리큘럼을 생성합니다
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.generateButton,
+              generateMutation.isPending && styles.generateButtonDisabled,
+            ]}
+            onPress={handleGenerate}
+            disabled={generateMutation.isPending}
+          >
+            {generateMutation.isPending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.generateButtonText}>✨ AI 커리큘럼 생성하기</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     );
@@ -534,6 +562,24 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.lg,
+  },
+  generateButton: {
+    height: 50,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  generateButtonDisabled: {
+    opacity: 0.6,
+  },
+  generateButtonText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.md,
+    fontWeight: '600',
   },
   errorText: {
     fontSize: fontSize.md,
