@@ -7,7 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { queryClient } from '../lib/query-client.js';
 import { useAuthStore } from '../stores/auth.store.js';
 import { useChildStore } from '../stores/child.store.js';
-import { setOnRefreshFailed } from '../lib/api.js';
+import { setOnRefreshFailed, api } from '../lib/api.js';
 import { useAppStateRefetch } from '../hooks/use-app-state-refetch.js';
 import { useOnlineManager } from '../hooks/use-online-manager.js';
 import { usePushNotifications } from '../hooks/use-push-notifications.js';
@@ -36,8 +36,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, isLoading, segments]);
 
   useEffect(() => {
-    if (isAuthenticated && user?.familyId) {
+    if (!isAuthenticated) return;
+
+    if (user?.familyId) {
       fetchChildren(user.familyId);
+    } else {
+      api
+        .get('/families/my')
+        .then(({ data }) => {
+          const families = data.data as Array<{ id: string }>;
+          if (families.length > 0) {
+            fetchChildren(families[0].id);
+          }
+        })
+        .catch(() => {});
     }
   }, [isAuthenticated, user?.familyId]);
 
