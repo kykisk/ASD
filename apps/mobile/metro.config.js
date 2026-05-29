@@ -13,7 +13,6 @@ config.watchFolders = [
 ];
 
 config.resolver.unstable_enableSymlinks = true;
-config.resolver.unstable_enablePackageExports = true;
 
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
