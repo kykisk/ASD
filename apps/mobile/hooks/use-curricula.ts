@@ -6,7 +6,7 @@ export function useTodayCurriculum(childId: string | null) {
   return useQuery<Curriculum | null>({
     queryKey: ['curriculum', 'today', childId],
     queryFn: async () => {
-      const { data } = await api.get(`/children/${childId}/curricula/today`);
+      const { data } = await api.get(`/children/${childId}/curriculum/today`);
       return (data.data as Curriculum | null) ?? null;
     },
     enabled: !!childId,
@@ -18,7 +18,7 @@ export function useConfirmCurriculum() {
 
   return useMutation({
     mutationFn: async ({ childId, curriculumId }: { childId: string; curriculumId: string }) => {
-      const { data } = await api.patch(`/children/${childId}/curricula/${curriculumId}/confirm`);
+      const { data } = await api.patch(`/curricula/${curriculumId}/confirm`);
       return data.data as Curriculum;
     },
     onSuccess: (_data, variables) => {
@@ -42,10 +42,7 @@ export function useLogActivity() {
       activityIndex: number;
       input: LogActivityInput;
     }) => {
-      const { data } = await api.post(
-        `/children/${childId}/curricula/${curriculumId}/activities/${activityIndex}/log`,
-        input,
-      );
+      const { data } = await api.post('/activities', input);
       return data.data;
     },
     onSuccess: (_data, variables) => {
