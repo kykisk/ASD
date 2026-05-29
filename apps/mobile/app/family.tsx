@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../stores/auth.store.js';
+import { useChildStore } from '../stores/child.store.js';
 import { useFamily } from '../hooks/use-family.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 
@@ -11,7 +12,9 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function FamilyScreen() {
   const user = useAuthStore((s) => s.user);
-  const { data: family, isLoading, error } = useFamily(user?.familyId);
+  const storeFamilyId = useChildStore((s) => s.familyId);
+  const familyId = user?.familyId ?? storeFamilyId;
+  const { data: family, isLoading, error } = useFamily(familyId);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
