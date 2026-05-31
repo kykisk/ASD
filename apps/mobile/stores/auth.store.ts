@@ -22,7 +22,7 @@ interface AuthState {
   setUser: (user: AuthUser | null) => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -51,6 +51,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data } = await api.post('/auth/login', { email, password });
     const { accessToken, refreshToken, user } = data.data;
     await tokenStorage.saveTokens(accessToken, refreshToken);
+    const { useChildStore } = await import('./child.store.js');
+    useChildStore.getState().reset();
     set({ user, isAuthenticated: true });
   },
 
@@ -58,6 +60,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data } = await api.post('/auth/register', { email, password, name });
     const { accessToken, refreshToken, user } = data.data;
     await tokenStorage.saveTokens(accessToken, refreshToken);
+    const { useChildStore } = await import('./child.store.js');
+    useChildStore.getState().reset();
     set({ user, isAuthenticated: true });
   },
 
@@ -66,6 +70,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await api.post('/auth/logout');
     } catch {}
     await tokenStorage.clearTokens();
+    const { useChildStore } = await import('./child.store.js');
+    useChildStore.getState().reset();
+    const { queryClient } = await import('../lib/query-client.js');
+    queryClient.clear();
     set({ user: null, isAuthenticated: false });
   },
 

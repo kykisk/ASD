@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { api } from '../services/api';
@@ -42,10 +42,7 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (input: LoginInput) => {
-      const { data } = await api.post<{ success: true; data: AuthResponse }>(
-        '/auth/login',
-        input,
-      );
+      const { data } = await api.post<{ success: true; data: AuthResponse }>('/auth/login', input);
       return data.data;
     },
     onSuccess: (data) => {
@@ -77,9 +74,11 @@ export function useRegister() {
 export function useLogout() {
   const { clearAuth } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const doLogout = () => {
     clearAuth();
+    queryClient.clear();
     navigate('/login');
   };
 
