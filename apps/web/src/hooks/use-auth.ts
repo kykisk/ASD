@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { api } from '../services/api';
 import { useAuthStore } from '../stores/auth.store';
+import { useChildStore } from '../stores/child.store';
 
 interface LoginInput {
   email: string;
@@ -73,11 +74,13 @@ export function useRegister() {
 
 export function useLogout() {
   const { clearAuth } = useAuthStore();
+  const { clearSelectedChild } = useChildStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const doLogout = () => {
     clearAuth();
+    clearSelectedChild();
     queryClient.clear();
     navigate('/login');
   };
