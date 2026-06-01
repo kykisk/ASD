@@ -22,7 +22,11 @@ export class CurriculumService {
     private notificationTrigger: NotificationTriggerService,
   ) {}
 
-  async generateForChild(childId: string, userId: string, targetDate?: string): Promise<Curriculum> {
+  async generateForChild(
+    childId: string,
+    userId: string,
+    targetDate?: string,
+  ): Promise<Curriculum> {
     const child = await this.prisma.child.findUnique({ where: { id: childId } });
     if (!child) {
       throw new ApiException(404, 'CHILD_404', '아이를 찾을 수 없습니다');
@@ -100,8 +104,22 @@ export class CurriculumService {
         recentAssessmentCount: aggregated.assessmentCount,
         targetDate: date,
         previousWeeklyGoal: previousCurriculum?.weeklyGoal ?? undefined,
-        developmentalLevel: (child.developmentalLevel as { language?: string; cognitive?: string; motor?: string; selfCare?: string; social?: string; overall?: string }) ?? undefined,
-        centerInfo: (child.centerInfo as Array<{ name: string; type: string; frequency: string; currentGoal?: string }>) ?? undefined,
+        developmentalLevel:
+          (child.developmentalLevel as {
+            language?: string;
+            cognitive?: string;
+            motor?: string;
+            selfCare?: string;
+            social?: string;
+            overall?: string;
+          }) ?? undefined,
+        centerInfo:
+          (child.centerInfo as Array<{
+            name: string;
+            type: string;
+            frequency: string;
+            currentGoal?: string;
+          }>) ?? undefined,
       });
 
       const result = await this.aiService.generateStructured(
@@ -127,7 +145,9 @@ export class CurriculumService {
         },
       });
 
-      this.notificationTrigger.triggerCurriculumReady(childId, child.familyId, userId).catch(() => {});
+      this.notificationTrigger
+        .triggerCurriculumReady(childId, child.familyId, userId)
+        .catch(() => {});
 
       return curriculum;
     } catch (error) {
@@ -147,7 +167,11 @@ export class CurriculumService {
       if (error instanceof ApiException) {
         throw error;
       }
-      throw new ApiException(500, 'CURRICULUM_001', `커리큘럼 생성에 실패했습니다: ${error instanceof Error ? error.message : String(error)}`);
+      throw new ApiException(
+        500,
+        'CURRICULUM_001',
+        `커리큘럼 생성에 실패했습니다: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -198,6 +222,20 @@ export class CurriculumService {
     return curriculum;
   }
 
+  async completeCurriculum(curriculumId: string, userId: string): Promise<Curriculum> {
+    const curriculum = await this.prisma.curriculum.findUnique({ where: { id: curriculumId } });
+    if (!curriculum) {
+      throw new ApiException(404, 'CURRICULUM_404', '커리큘럼을 찾을 수 없습니다');
+    }
+
+    await this.verifyFamilyMember(curriculum.familyId, userId);
+
+    return this.prisma.curriculum.update({
+      where: { id: curriculumId },
+      data: { status: 'COMPLETED' },
+    });
+  }
+
   async confirmCurriculum(curriculumId: string, userId: string): Promise<Curriculum> {
     const curriculum = await this.prisma.curriculum.findUnique({ where: { id: curriculumId } });
     if (!curriculum) {
@@ -222,9 +260,10 @@ export class CurriculumService {
 
     await this.prisma.curriculum.delete({ where: { id: curriculumId } });
 
-    const dateStr = curriculum.date instanceof Date
-      ? curriculum.date.toISOString().split('T')[0]
-      : String(curriculum.date).split('T')[0];
+    const dateStr =
+      curriculum.date instanceof Date
+        ? curriculum.date.toISOString().split('T')[0]
+        : String(curriculum.date).split('T')[0];
 
     return this.generateForChild(curriculum.childId, userId, dateStr);
   }

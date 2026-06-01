@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query } from '@nestjs/common';
 import { UserRole } from '@auticare/prisma-client';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
@@ -21,18 +13,12 @@ export class CurriculumController {
   ) {}
 
   @Post('children/:childId/curriculum/generate')
-  async generate(
-    @Param('childId') childId: string,
-    @CurrentUser() user: { id: string },
-  ) {
+  async generate(@Param('childId') childId: string, @CurrentUser() user: { id: string }) {
     return this.curriculumService.generateForChild(childId, user.id);
   }
 
   @Get('children/:childId/curriculum/today')
-  async getToday(
-    @Param('childId') childId: string,
-    @CurrentUser() user: { id: string },
-  ) {
+  async getToday(@Param('childId') childId: string, @CurrentUser() user: { id: string }) {
     return this.curriculumService.getTodayCurriculum(childId, user.id);
   }
 
@@ -47,19 +33,18 @@ export class CurriculumController {
   }
 
   @Get('curricula/:curriculumId')
-  async getOne(
-    @Param('curriculumId') curriculumId: string,
-    @CurrentUser() user: { id: string },
-  ) {
+  async getOne(@Param('curriculumId') curriculumId: string, @CurrentUser() user: { id: string }) {
     return this.curriculumService.getOneCurriculum(curriculumId, user.id);
   }
 
   @Patch('curricula/:curriculumId/confirm')
-  async confirm(
-    @Param('curriculumId') curriculumId: string,
-    @CurrentUser() user: { id: string },
-  ) {
+  async confirm(@Param('curriculumId') curriculumId: string, @CurrentUser() user: { id: string }) {
     return this.curriculumService.confirmCurriculum(curriculumId, user.id);
+  }
+
+  @Patch('curricula/:curriculumId/complete')
+  async complete(@Param('curriculumId') curriculumId: string, @CurrentUser() user: { id: string }) {
+    return this.curriculumService.completeCurriculum(curriculumId, user.id);
   }
 
   @Post('curricula/:curriculumId/regenerate')

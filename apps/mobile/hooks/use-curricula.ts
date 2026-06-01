@@ -13,6 +13,17 @@ export function useTodayCurriculum(childId: string | null) {
   });
 }
 
+export function useCurriculumHistory(childId: string | null, limit = 30) {
+  return useQuery<Curriculum[]>({
+    queryKey: ['curriculum', 'history', childId, limit],
+    queryFn: async () => {
+      const { data } = await api.get(`/children/${childId}/curricula?limit=${limit}`);
+      return data.data as Curriculum[];
+    },
+    enabled: !!childId,
+  });
+}
+
 export function useGenerateCurriculum() {
   const queryClient = useQueryClient();
 
@@ -23,6 +34,7 @@ export function useGenerateCurriculum() {
     },
     onSuccess: (_data, childId) => {
       queryClient.invalidateQueries({ queryKey: ['curriculum', 'today', childId] });
+      queryClient.invalidateQueries({ queryKey: ['curriculum', 'history', childId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', childId] });
     },
   });
@@ -38,6 +50,23 @@ export function useConfirmCurriculum() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['curriculum', 'today', variables.childId] });
+      queryClient.invalidateQueries({ queryKey: ['curriculum', 'history', variables.childId] });
+    },
+  });
+}
+
+export function useCompleteCurriculum() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ childId, curriculumId }: { childId: string; curriculumId: string }) => {
+      const { data } = await api.patch(`/curricula/${curriculumId}/complete`);
+      return data.data as Curriculum;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['curriculum', 'today', variables.childId] });
+      queryClient.invalidateQueries({ queryKey: ['curriculum', 'history', variables.childId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', variables.childId] });
     },
   });
 }

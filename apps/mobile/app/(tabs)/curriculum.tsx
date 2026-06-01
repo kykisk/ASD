@@ -8,17 +8,20 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useChildStore } from '../../stores/child.store.js';
 import {
   useTodayCurriculum,
   useConfirmCurriculum,
+  useCompleteCurriculum,
   useLogActivity,
   useGenerateCurriculum,
+  useCurriculumHistory,
 } from '../../hooks/use-curricula.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
-import type { CurriculumActivity, LogActivityInput } from '../../types/api.types.js';
+import type { Curriculum, CurriculumActivity, LogActivityInput } from '../../types/api.types.js';
 
 const DOMAIN_COLORS: Record<string, string> = {
   COMMUNICATION: '#7B9FD4',
@@ -77,11 +80,22 @@ const RESULT_COLORS: Record<ActivityResult, string> = {
 export default function CurriculumScreen() {
   const selectedChildId = useChildStore((s) => s.selectedChildId);
   const { data: curriculum, isLoading, error, refetch } = useTodayCurriculum(selectedChildId);
+  const { data: history, isLoading: historyLoading } = useCurriculumHistory(selectedChildId, 30);
   const confirmMutation = useConfirmCurriculum();
+  const completeMutation = useCompleteCurriculum();
   const logMutation = useLogActivity();
   const generateMutation = useGenerateCurriculum();
+  const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [loggedActivities, setLoggedActivities] = useState<Record<number, ActivityResult>>({});
+  const [selectedHistoryCurriculum, setSelectedHistoryCurriculum] = useState<Curriculum | null>(
+    null,
+  );
+
+  const allActivitiesLogged =
+    curriculum &&
+    curriculum.activities.length > 0 &&
+    curriculum.activities.every((_, idx) => loggedActivities[idx] !== undefined);
 
   const handleGenerate = async () => {
     if (!selectedChildId) return;
@@ -100,6 +114,27 @@ export default function CurriculumScreen() {
       Alert.alert('확인 완료', '커리큘럼이 확인되었습니다');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '확인에 실패했습니다';
+      Alert.alert('오류', message);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!selectedChildId || !curriculum) return;
+    const confirm =
+      Platform.OS === 'web'
+        ? window.confirm('오늘의 커리큘럼을 완료하시겠습니까?')
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert('커리큘럼 완료', '오늘의 커리큘럼을 완료하시겠습니까?', [
+              { text: '취소', style: 'cancel', onPress: () => resolve(false) },
+              { text: '완료', onPress: () => resolve(true) },
+            ]);
+          });
+    if (!confirm) return;
+    try {
+      await completeMutation.mutateAsync({ childId: selectedChildId, curriculumId: curriculum.id });
+      Alert.alert('완료! 🎉', '오늘의 커리큘럼을 모두 마쳤습니다');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '완료 처리에 실패했습니다';
       Alert.alert('오류', message);
     }
   };
@@ -202,52 +237,214 @@ export default function CurriculumScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={false} onRefresh={() => refetch()} tintColor={colors.primary} />
-      }
-    >
-      <View style={styles.headerRow}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.statusBadge, { backgroundColor: colors.primaryLight }]}>
-            <Text style={styles.statusText}>
-              {STATUS_LABELS[curriculum.status] ?? curriculum.status}
-            </Text>
-          </View>
-          {curriculum.weeklyGoal && (
-            <Text style={styles.weeklyGoal} numberOfLines={2}>
-              {curriculum.weeklyGoal}
-            </Text>
-          )}
-        </View>
-        <ChildSwitcherButton />
-      </View>
-
-      {curriculum.status === 'GENERATED' && (
+    <View style={styles.container}>
+      <View style={styles.tabRow}>
         <TouchableOpacity
-          style={styles.confirmButton}
-          onPress={handleConfirm}
-          disabled={confirmMutation.isPending}
+          style={[styles.tab, activeTab === 'today' && styles.tabActive]}
+          onPress={() => setActiveTab('today')}
         >
-          <Text style={styles.confirmButtonText}>
-            {confirmMutation.isPending ? '처리 중...' : '커리큘럼 확인'}
+          <Text style={[styles.tabText, activeTab === 'today' && styles.tabTextActive]}>오늘</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+          onPress={() => setActiveTab('history')}
+        >
+          <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
+            히스토리
           </Text>
         </TouchableOpacity>
-      )}
+      </View>
 
-      {curriculum.activities.map((activity, index) => (
-        <ActivityCard
-          key={index}
-          activity={activity}
-          index={index}
-          isExpanded={expandedIndex === index}
-          onToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
-          loggedResult={loggedActivities[index]}
-          onLogResult={(result) => handleLogActivity(index, result)}
-          isLogging={logMutation.isPending}
+      {activeTab === 'history' ? (
+        <HistoryView
+          history={history ?? []}
+          isLoading={historyLoading}
+          selectedCurriculum={selectedHistoryCurriculum}
+          onSelect={setSelectedHistoryCurriculum}
         />
+      ) : (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={() => refetch()}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <View style={[styles.statusBadge, { backgroundColor: colors.primaryLight }]}>
+                <Text style={styles.statusText}>
+                  {STATUS_LABELS[curriculum.status] ?? curriculum.status}
+                </Text>
+              </View>
+              {curriculum.weeklyGoal && (
+                <Text style={styles.weeklyGoal} numberOfLines={2}>
+                  {curriculum.weeklyGoal}
+                </Text>
+              )}
+            </View>
+            <ChildSwitcherButton />
+          </View>
+
+          {curriculum.status === 'GENERATED' && (
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleConfirm}
+              disabled={confirmMutation.isPending}
+            >
+              <Text style={styles.confirmButtonText}>
+                {confirmMutation.isPending ? '처리 중...' : '커리큘럼 확인'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {curriculum.activities.map((activity, index) => (
+            <ActivityCard
+              key={index}
+              activity={activity}
+              index={index}
+              isExpanded={expandedIndex === index}
+              onToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
+              loggedResult={loggedActivities[index]}
+              onLogResult={(result) => handleLogActivity(index, result)}
+              isLogging={logMutation.isPending}
+            />
+          ))}
+
+          {curriculum.status !== 'COMPLETED' && (
+            <TouchableOpacity
+              style={[
+                styles.completeButton,
+                (!allActivitiesLogged || completeMutation.isPending) &&
+                  styles.completeButtonDisabled,
+              ]}
+              onPress={handleComplete}
+              disabled={!allActivitiesLogged || completeMutation.isPending}
+            >
+              {completeMutation.isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.completeButtonText}>
+                  {allActivitiesLogged
+                    ? '✅ 오늘 커리큘럼 완료'
+                    : `활동을 모두 기록하면 완료할 수 있어요`}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {curriculum.status === 'COMPLETED' && (
+            <View style={styles.completedBanner}>
+              <Text style={styles.completedBannerText}>🎉 오늘 커리큘럼 완료!</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+function HistoryView({
+  history,
+  isLoading,
+  selectedCurriculum,
+  onSelect,
+}: {
+  history: Curriculum[];
+  isLoading: boolean;
+  selectedCurriculum: Curriculum | null;
+  onSelect: (c: Curriculum | null) => void;
+}) {
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (history.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.emptyTitle}>아직 커리큘럼 기록이 없습니다</Text>
+      </View>
+    );
+  }
+
+  if (selectedCurriculum) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <TouchableOpacity style={styles.backButton} onPress={() => onSelect(null)}>
+          <Text style={styles.backButtonText}>← 목록으로</Text>
+        </TouchableOpacity>
+        <View style={styles.historyDetailCard}>
+          <Text style={styles.historyDetailDate}>
+            {new Date(selectedCurriculum.date).toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: colors.primaryLight, alignSelf: 'flex-start' },
+            ]}
+          >
+            <Text style={styles.statusText}>
+              {STATUS_LABELS[selectedCurriculum.status] ?? selectedCurriculum.status}
+            </Text>
+          </View>
+          {selectedCurriculum.weeklyGoal && (
+            <Text style={styles.weeklyGoal}>{selectedCurriculum.weeklyGoal}</Text>
+          )}
+          {selectedCurriculum.activities.map((act, idx) => (
+            <View key={idx} style={styles.historyActivityItem}>
+              <Text style={styles.historyActivityTitle}>{act.title}</Text>
+              <Text style={styles.historyActivityMeta}>
+                {act.domain} · {act.durationMin}분
+              </Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {history.map((item) => (
+        <TouchableOpacity key={item.id} style={styles.historyItem} onPress={() => onSelect(item)}>
+          <View style={styles.historyItemLeft}>
+            <Text style={styles.historyItemDate}>
+              {new Date(item.date).toLocaleDateString('ko-KR', {
+                month: 'long',
+                day: 'numeric',
+                weekday: 'short',
+              })}
+            </Text>
+            <Text style={styles.historyItemCount}>활동 {item.activities.length}개</Text>
+          </View>
+          <View
+            style={[
+              styles.historyStatusBadge,
+              item.status === 'COMPLETED' && styles.historyStatusCompleted,
+            ]}
+          >
+            <Text
+              style={[
+                styles.historyStatusText,
+                item.status === 'COMPLETED' && styles.historyStatusTextCompleted,
+              ]}
+            >
+              {STATUS_LABELS[item.status] ?? item.status}
+            </Text>
+          </View>
+        </TouchableOpacity>
       ))}
     </ScrollView>
   );
@@ -597,4 +794,106 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  tabRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  completeButton: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.md,
+    height: 52,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completeButtonDisabled: {
+    backgroundColor: colors.cardBorder,
+  },
+  completeButtonText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  completedBanner: {
+    margin: spacing.md,
+    padding: spacing.md,
+    backgroundColor: '#E8F5EE',
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  completedBannerText: {
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  backButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  backButtonText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.md,
+  },
+  historyItemLeft: { gap: 4 },
+  historyItemDate: { fontSize: fontSize.md, fontWeight: '600', color: colors.text },
+  historyItemCount: { fontSize: fontSize.xs, color: colors.textSecondary },
+  historyStatusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.cardBorder,
+  },
+  historyStatusCompleted: { backgroundColor: colors.primaryLight },
+  historyStatusText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
+  historyStatusTextCompleted: { color: colors.primary },
+  historyDetailCard: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  historyDetailDate: { fontSize: fontSize.lg, fontWeight: '700', color: colors.text },
+  historyActivityItem: {
+    paddingVertical: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+  },
+  historyActivityTitle: { fontSize: fontSize.sm, fontWeight: '500', color: colors.text },
+  historyActivityMeta: { fontSize: fontSize.xs, color: colors.textSecondary },
 });
