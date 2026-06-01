@@ -177,65 +177,6 @@ export default function CurriculumScreen() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.errorText}>커리큘럼을 불러올 수 없습니다</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryText}>다시 시도</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (!curriculum) {
-    return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={false}
-            onRefresh={() => refetch()}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        <View style={styles.headerRow}>
-          <ChildSwitcherButton />
-        </View>
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>오늘의 커리큘럼이 없습니다</Text>
-          <Text style={styles.emptySubtext}>
-            AI가 아이의 평가 데이터를 분석해{'\n'}맞춤 커리큘럼을 생성합니다
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.generateButton,
-              generateMutation.isPending && styles.generateButtonDisabled,
-            ]}
-            onPress={handleGenerate}
-            disabled={generateMutation.isPending}
-          >
-            {generateMutation.isPending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.generateButtonText}>✨ AI 커리큘럼 생성하기</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.tabRow}>
@@ -262,6 +203,53 @@ export default function CurriculumScreen() {
           selectedCurriculum={selectedHistoryCurriculum}
           onSelect={setSelectedHistoryCurriculum}
         />
+      ) : isLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>커리큘럼을 불러올 수 없습니다</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+            <Text style={styles.retryText}>다시 시도</Text>
+          </TouchableOpacity>
+        </View>
+      ) : !curriculum ? (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={() => refetch()}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          <View style={styles.headerRow}>
+            <ChildSwitcherButton />
+          </View>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>오늘의 커리큘럼이 없습니다</Text>
+            <Text style={styles.emptySubtext}>
+              AI가 아이의 평가 데이터를 분석해{'\n'}맞춤 커리큘럼을 생성합니다
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.generateButton,
+                generateMutation.isPending && styles.generateButtonDisabled,
+              ]}
+              onPress={handleGenerate}
+              disabled={generateMutation.isPending}
+            >
+              {generateMutation.isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.generateButtonText}>✨ AI 커리큘럼 생성하기</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       ) : (
         <ScrollView
           style={styles.container}
