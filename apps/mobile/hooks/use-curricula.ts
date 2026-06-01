@@ -63,9 +63,19 @@ export function useCompleteCurriculum() {
       const { data } = await api.patch(`/curricula/${curriculumId}/complete`);
       return data.data as Curriculum;
     },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['curriculum', 'today', variables.childId] });
-      queryClient.invalidateQueries({ queryKey: ['curriculum', 'history', variables.childId] });
+    onSuccess: (updatedCurriculum, variables) => {
+      queryClient.setQueryData(['curriculum', 'today', variables.childId], updatedCurriculum);
+
+      queryClient.setQueriesData<Curriculum[]>(
+        { queryKey: ['curriculum', 'history', variables.childId] },
+        (old) => {
+          if (!old) return old;
+          return old.map((c) =>
+            c.id === variables.curriculumId ? { ...c, status: 'COMPLETED' as const } : c,
+          );
+        },
+      );
+
       queryClient.invalidateQueries({ queryKey: ['dashboard', variables.childId] });
     },
   });
