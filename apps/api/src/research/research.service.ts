@@ -170,7 +170,7 @@ export class ResearchService {
       }),
       this.prisma.child.findUnique({
         where: { id: childId },
-        select: { name: true, birthDate: true, diagnosisName: true, developmentalLevel: true },
+        select: { birthDate: true, diagnosisName: true, developmentalLevel: true },
       }),
       this.prisma.assessment.findFirst({
         where: { childId },
@@ -223,7 +223,7 @@ export class ResearchService {
       .join('\n\n');
 
     const childContext = [
-      child && `아이 이름: ${child.name}, 나이: ${ageMonths}개월`,
+      child && `아이 나이: ${ageMonths}개월`,
       child?.diagnosisName && `진단: ${child.diagnosisName}`,
       Object.keys(domainScores).length > 0 &&
         `최근 평가 점수: ${Object.entries(domainScores)
