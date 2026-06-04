@@ -14,6 +14,7 @@ export interface ResearchArticle {
 
 export interface ResearchMatch {
   id: string;
+  articleId: string;
   score: number;
   isBookmarked: boolean;
   isRead: boolean;

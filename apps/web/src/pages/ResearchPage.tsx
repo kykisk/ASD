@@ -29,7 +29,7 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={() => markRead.mutate(item.id)}
+            onClick={() => markRead.mutate(item.articleId)}
             className={`p-2 rounded-lg transition-colors ${
               item.isRead
                 ? 'text-primary-500 bg-primary-50'
@@ -57,7 +57,7 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
             </svg>
           </button>
           <button
-            onClick={() => bookmark.mutate(item.id)}
+            onClick={() => bookmark.mutate(item.articleId)}
             className={`p-2 rounded-lg transition-colors ${
               item.isBookmarked
                 ? 'text-amber-500 bg-amber-50'
