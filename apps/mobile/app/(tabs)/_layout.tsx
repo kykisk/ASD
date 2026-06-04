@@ -42,6 +42,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="schedule"
+        options={{
+          title: '일정',
+          tabBarIcon: ({ focused }) => <TabIcon label="📅" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="growth"
         options={{
           title: '성장',
