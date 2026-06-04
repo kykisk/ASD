@@ -17,7 +17,11 @@ export class PubmedService {
   private readonly logger = new Logger(PubmedService.name);
 
   async searchArticles(query: string, maxResults = 10): Promise<{ ids: string[] }> {
-    const url = `${BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=${maxResults}&retmode=json&sort=date`;
+    const currentYear = new Date().getFullYear();
+    const minDate = `${currentYear - 2}/01/01`;
+    const maxDate = `${currentYear}/12/31`;
+
+    const url = `${BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=${maxResults}&retmode=json&sort=date&datetype=pdat&mindate=${minDate}&maxdate=${maxDate}`;
 
     const response = await axios.get(url, { timeout: 15000 });
     const idList = response.data?.esearchresult?.idlist ?? [];

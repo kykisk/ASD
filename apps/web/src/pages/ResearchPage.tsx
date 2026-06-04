@@ -15,6 +15,11 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
   const bookmark = useBookmarkArticle();
   const markRead = useMarkAsRead();
 
+  const publishedDate = new Date(item.article.publishedAt);
+  const ageYears = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+  const dateLabel = publishedDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+  const isOld = ageYears > 1.5;
+
   return (
     <div
       className={`bg-white rounded-xl border border-[#E8E4DF] p-5 transition-all hover:shadow-sage-sm ${item.isRead ? 'opacity-75' : ''}`}
@@ -24,10 +29,17 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
           <h3 className="text-sm font-semibold text-neutral-800 line-clamp-2">
             {item.article.title}
           </h3>
-          <p className="text-xs text-neutral-500 mt-1">
-            {item.article.journal} ·{' '}
-            {new Date(item.article.publishedAt).toLocaleDateString('ko-KR')}
-          </p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-xs text-neutral-500">{item.article.journal}</p>
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                isOld ? 'bg-amber-50 text-amber-600' : 'bg-primary-50 text-primary-600'
+              }`}
+            >
+              📅 {dateLabel}
+              {isOld && ' · 1년 이상 전'}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
