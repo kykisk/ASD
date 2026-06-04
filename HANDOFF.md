@@ -6,123 +6,119 @@
 - "go" × 6 → Phase 2 전체 구현 완료 (6주)
 - Phase 2 검증: 다수 버그 발견 및 수정 완료
 - "이전에 하던 작업을 새 세션에서 이어하려고해" → Phase 3 (Mobile) 전체 구현 완료 (6주)
-- Phase 3 테스트 추가 (push.service, notifications.controller)
-- "AGENTS.md와 HANDOFF.md 업데이트해주고 Git에 올려줘"
+- Phase 3 검증: 테스트 + 버그 수정 + 누락 기능 추가 완료
+- "이제 Phase4를 진행해보자" → Phase 4 시작 예정
 
 ## GOAL
 
-Phase 4 (Expansion) 개발 시작.
+Phase 4 (Expansion) 구현 시작.
+P4-001 ~ P4-025 순서대로 진행.
 
 ## WORK COMPLETED
 
 Phase 1 전체 구현 + 검증 (8주, 154 테스트)
 Phase 2 전체 구현 + 검증 (6주, 218 테스트)
-Phase 3 전체 구현 + 검증 (6주, 244 테스트):
+Phase 3 전체 구현 (6주, 244 테스트)
+Phase 3 검증 및 버그 수정 완료 (121 커밋)
 
-[Phase 3 핵심 구현]
+[Phase 3 검증 중 수정된 주요 버그]
 
-Week 15 — Expo 스캐폴드:
+1. 일정 API 날짜 형식 오류
+   - 원인: QueryScheduleDto가 ISO 8601 datetime 필요, YYYY-MM-DD 전달
+   - 수정: use-schedules.ts에서 T00:00:00.000Z / T23:59:59.999Z 변환
 
-- Expo SDK 55 + expo-router 4 + Zustand + TanStack Query 5
-- metro.config.js: pnpm 모노레포 심링크 해석 + singleton 고정
-- lib/token-storage.ts: expo-secure-store (iOS Keychain / Android Keystore)
-- lib/api.ts: createApiClient with clientType='mobile', 자동 토큰 갱신
-- stores/auth.store.ts + stores/child.store.ts
-- 인증 화면 (login, register) + 5탭 레이아웃
+2. 로그아웃 후 이전 사용자 데이터 노출
+   - 원인: Zustand store + React Query 캐시 미초기화
+   - 수정: auth.store logout에서 childStore.reset() + queryClient.clear()
+   - 웹: use-auth.ts logout에서 clearSelectedChild() + queryClient.clear()
 
-Week 16-18 — 주요 기능 화면:
+3. 질문지 API 엔드포인트 불일치
+   - 원인: /questionnaires → 실제: /families/:id/questionnaires
+   - 수정: useQuestionnaires(familyId) 파라미터 추가, child.store에 familyId 저장
 
-- 홈 대시보드 (실API: /children/:id/dashboard)
-- 커리큘럼 (useTodayCurriculum, useConfirmCurriculum, useLogActivity)
-- 평가 (useQuestionnaires, useQuestionnaireDetail, useCreateAssessment)
-- 성장 (useGrowth + useAggregatedAssessment → progress bar + 트렌드)
-- 일정 (useSchedules, useCreateSchedule — recurring ID 처리 포함)
-- 아이 전환 모달 (ChildSwitcher)
-- types/api.types.ts: 모든 백엔드 응답 타입 정의
+4. familyId JWT null 이슈
+   - 원인: 가족 생성 후 재로그인 전까지 JWT familyId=null
+   - 수정: child.store.familyId (fetchChildren 시 저장) fallback 사용
 
-Week 19 — FCM 푸시 알림:
+5. 커리큘럼 엔드포인트 오류
+   - /curricula/today → /curriculum/today (단수)
+   - /children/:id/curricula/:id/confirm → /curricula/:id/confirm
 
-- Prisma: DeviceToken 모델 추가 (migration 완료)
-- firebase-admin 의존성 추가
-- PushService: graceful fallback, multicast, 만료토큰 자동삭제
-- NotificationsService.create() → fire-and-forget 푸시 연결
-- POST/DELETE /v1/notifications/device-token 엔드포인트
-- 모바일: use-push-notifications.ts (권한요청 → 토큰등록 → 탭핸들러)
+6. Alert.alert 웹 무반응
+   - 수정: 모든 Alert.alert를 Platform.OS 분기로 교체 (로그아웃, 삭제, 보고서 등)
 
-Week 20 — 완성:
+7. 저장 후 화면 미갱신
+   - 원인: React Query invalidation이 Zustand store 미갱신
+   - 수정: mutation onSuccess에서 fetchChildren(familyId) 직접 호출
 
-- More 하위 화면 4개 (child-profile, family, settings, reports)
-- 실API 훅: use-profile.ts, use-family.ts, use-reports.ts
-- 오프라인: OfflineBanner + networkMode='offlineFirst'
-- EAS Build: eas.json (dev/preview/production 3개 프로파일)
-- Maestro E2E: .maestro/ 5개 flow
-- SplashScreen: Platform.OS !== 'web' 분기
+[Phase 3 검증 중 추가된 기능]
 
-[Phase 3 테스트 추가]
+- 커리큘럼 완료 액션 (PATCH /curricula/:id/complete + 완료 버튼 UI)
+- 커리큘럼 히스토리 탭 (오늘/히스토리 탭, setQueriesData 즉시 갱신)
+- AI 커리큘럼 생성 버튼 (POST /children/:id/curriculum/generate)
+- 일정 탭 추가 (P3-010 누락 - schedule.tsx + 탭 레이아웃)
+- 아이 프로필 편집 (useUpdateChild - 이름/성별/진단명/발달수준)
+- 아이 삭제 (useDeleteChild)
+- 가족 편집 (useUpdateFamily/InviteMember/UpdateMemberRole/RemoveMember)
+- 보고서 DB 저장 (P2-039 누락 - Report 모델 + listReports + getReport)
 
-- push.service.spec.ts: FCM 11개 시나리오
-- notifications.controller.spec.ts: 10개 시나리오
-- 218 → 244 테스트 (전체 통과)
+[Phase 3 이연 항목 처리]
 
-[Phase 3 스크립트 추가]
-
-- scripts/start-mobile.sh: expo export → Node 정적 서버 (8081)
-- scripts/restart-mobile.sh: kill + 재빌드
-- scripts/status.sh: mobile(:8081) 항목 추가
-- scripts/stop-servers.sh: mobile 포함
+- 보고서 DB 저장 → ✅ 완료 (Report Prisma 모델 + upsert)
+- GDPR 내보내기 모바일 → 🔄 Phase 4 (settings.tsx 배지)
+- 아이 추가 모바일 → 🔄 Phase 4
 
 ## CURRENT STATE
 
 - Phase 1 + 2 + 3: 완료 + 검증 완료
 - 빌드: api ✅ web ✅ admin ✅ mobile(export) ✅
 - 테스트: 244개 통과 (36개 파일)
-- Git: master 브랜치 push 완료
+- Git: 121 커밋, master 브랜치 push 완료
 - 모바일 웹 접속: http://3.35.36.62:8081 (start-mobile.sh 실행 후)
+- PHASE3_TEST_CHECKLIST.md: 백엔드 5개 완료, 모바일 주요 기능 검증 완료
 
 ## PENDING TASKS
 
-1. Phase 4: Expansion (SPEC/IMPLEMENTATION_PLAN.md 참조)
-   - 부모 웰빙 추적
-   - 비상 가이드
-   - 감각 프로파일
-   - 연구 데이터 수집
-   - 가족 협업 기능
+1. Phase 4 구현 (SPEC/IMPLEMENTATION_PLAN.md 11절):
+   - P4-001~004: 부모 웰빙 (무드 체크인, 번아웃 감지, AI 격려)
+   - P4-005~008: 비상 가이드 (단계별 가이드, 진정 타이머, 패턴 분석)
+   - P4-009~011: 감각 프로파일 (6채널, 레이더 차트)
+   - P4-012~018: 연구 자동 수집 (PubMed, AI 요약, 개인화)
+   - P4-019~021: 가족 협업 (역할 분담, 활동 로그 댓글)
+   - P4-022~025: AI 프롬프트 고도화 (감각+마일스톤+구조화 발달수준)
 
-2. Phase 3에서 Phase 4로 이연된 항목 (AGENTS.md 11.1 참조):
-   - 보고서 DB 저장/목록/다운로드 (현재: 생성만 하고 저장 안 함)
-   - GDPR 데이터 내보내기 모바일 (현재: 백엔드 OK, 모바일 파일 처리 미구현)
-   - 아이 추가 모바일 (현재: 웹에서만 가능)
+2. Phase 4로 이연된 항목:
+   - GDPR 데이터 내보내기 (모바일 파일 처리)
+   - 아이 추가 (모바일)
 
-3. 모바일 수동 QA 미완료 항목:
-   - 오프라인 모드 동작 검증
-   - 푸시 알림 (.env FCM 설정 필요)
-   - EAS Build 실제 iOS/Android 빌드 검증
+3. 모바일 미완료 QA:
+   - 오프라인 모드 (비행기 모드 테스트)
+   - 푸시 알림 (.env FCM_PROJECT_ID 등 설정 필요)
+   - EAS Build 실제 iOS/Android 빌드
 
 ## KEY FILES
 
-- ASD/SPEC/IMPLEMENTATION_PLAN.md - Phase 4 상세 태스크
-- ASD/auticare/AGENTS.md - 개발 필수 참조 (Phase 3 이슈 포함)
+- ASD/SPEC/IMPLEMENTATION_PLAN.md - Phase 4 상세 태스크 (11절)
+- ASD/auticare/AGENTS.md - 개발 필수 참조 (버그 패턴 10.7, Phase 4 계획 11절)
+- ASD/auticare/PHASE3_TEST_CHECKLIST.md - Phase 3 수동 테스트 체크리스트
 - ASD/auticare/apps/mobile/ - React Native 앱 전체
-- ASD/auticare/apps/mobile/metro.config.js - 모노레포 Metro 설정
-- ASD/auticare/apps/mobile/app/\_layout.tsx - Root layout (AuthGate, SplashScreen)
-- ASD/auticare/apps/mobile/stores/ - auth.store.ts, child.store.ts
-- ASD/auticare/apps/mobile/hooks/ - 8개 실API 훅
-- ASD/auticare/apps/mobile/types/api.types.ts - 백엔드 응답 타입 전체
-- ASD/auticare/apps/api/src/notifications/push.service.ts - FCM 서비스
-- ASD/auticare/scripts/start-mobile.sh - 모바일 웹 빌드+실행
+- ASD/auticare/apps/mobile/hooks/ - 실API 훅 (use-schedules, use-curricula 등)
+- ASD/auticare/apps/mobile/app/(tabs)/schedule.tsx - 일정 화면
+- ASD/auticare/apps/mobile/app/(tabs)/curriculum.tsx - 커리큘럼 (완료/히스토리)
+- ASD/auticare/apps/api/src/reports/report.service.ts - 보고서 서비스 (DB 저장 포함)
+- ASD/auticare/libs/prisma-client/prisma/schema.prisma - DB 스키마
+- ASD/auticare/scripts/restart-mobile.sh - 모바일 재빌드+서버 재시작 (all-in-one)
 
 ## IMPORTANT DECISIONS
 
-- 모바일 웹 서빙: expo start --web (dev server) 불가 → expo export --platform web + 정적 서버
-  이유: Expo SDK 55가 Metro 미들웨어 체인 우회 (번들 경로 /apps/mobile/... 문제)
-- FCM: .env 미설정 시 graceful skip (나머지 기능 정상 동작)
-- 모바일 API URL: EXPO_PUBLIC_API_URL 환경변수 (기본값: http://3.35.36.62:3100/v1)
-- 토큰 저장: expo-secure-store (web에서는 null 반환 → 로그인 화면으로)
-- SplashScreen: Platform.OS !== 'web' 분기 필수 (웹에서 흰 화면 방지)
-- AI 모델: Quality(Sonnet)=커리큘럼/인사이트/필터, Fast(Haiku)=스케줄제안/질문지생성
-- Family AI Tier: STANDARD(20회/일) 기본값
-- 알림 본인 제외: 사용자 행동 트리거는 자신 제외, 배치 작업은 전체
-- temperature: 최신 Claude 모델(Sonnet 4.5+)에서 temperature 파라미터 제거 필요
+- 모바일 웹 서빙: expo start --web 불가 → expo export + 정적 서버 (scripts/serve-mobile.js)
+- FCM: .env 미설정 시 graceful skip
+- familyId: JWT 대신 child.store.familyId 사용 (JWT는 재로그인 전 null)
+- 일정 날짜: 반드시 ISO 8601 datetime 형식 (T00:00:00.000Z)
+- Alert/Confirm: Platform.OS === 'web' ? window.alert/confirm : Alert.alert
+- 보고서: 생성 시 DB upsert, 조회는 GET /children/:id/reports
+- 커리큘럼 완료: PATCH /curricula/:id/complete (GENERATED→CONFIRMED→COMPLETED)
+- 즉시 UI 갱신: invalidateQueries 대신 setQueriesData 사용 (탭 전환 시 캐시 즉시 반영)
 
 ## EXPLICIT CONSTRAINTS
 
@@ -130,18 +126,18 @@ Week 20 — 완성:
 - 충돌 금지 포트: 3000, 4173, 5432
 - ESM: 상대 임포트에 .js 확장자 필수 (모바일도 동일)
 - as any, @ts-ignore 금지
-- Mock 훅 패턴 절대 금지 → 반드시 실제 API 호출
-- 새 훅/컴포넌트 작성 시 백엔드 service interface 먼저 확인 (타입 불일치 주의)
-- AI 기능: 반드시 .catch(() => {}) — 알림/AI 실패가 주 기능 차단하면 안 됨
-- orderIndex: items 배열 저장 시 항상 idx 값 포함
-- 모바일 Platform.OS 분기: SecureStore, SplashScreen, Notifications는 웹에서 동작 다름
+- Mock 훅 절대 금지 → 반드시 실제 API 호출
+- 새 API 훅 작성 전 컨트롤러 경로 반드시 확인 (URL 불일치 버그 다수 발생)
+- AI 기능: .catch(() => {}) 필수 — AI 실패가 주 기능 차단하면 안 됨
+- 모바일 Platform.OS 분기: Alert, SecureStore, SplashScreen, Notifications
 
 ## CONTEXT FOR CONTINUATION
 
 Phase 4 시작 시:
 
-1. SPEC/IMPLEMENTATION_PLAN.md Phase 4 섹션 읽기
-2. 백엔드 API 우선 구현 (모바일은 기존 API 그대로 사용)
-3. 모바일 앱은 새 API 엔드포인트 추가 시 hooks/ 에 훅 추가
-4. 스키마 변경 시 반드시 8.4 순서 준수
-5. 모바일 웹 테스트: ./scripts/restart-mobile.sh (2~3분 빌드 소요)
+1. SPEC/IMPLEMENTATION_PLAN.md 11절 (Phase 4) 읽기
+2. Prisma 스키마 변경 순서: migrate dev → generate → build api → restart-api
+3. 백엔드 API 우선 → 웹 → 모바일 순서로 구현
+4. 새 모바일 훅 작성 전 컨트롤러 경로 확인 (AGENTS.md 10.7 참고)
+5. 모바일 웹 테스트: ./scripts/restart-mobile.sh (2~3분 빌드)
+6. Phase 4 배지 패턴: settings.tsx의 phase4Row/phase4Badge 스타일 재사용

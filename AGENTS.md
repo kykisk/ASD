@@ -3,12 +3,12 @@
 > AI 에이전트가 이 프로젝트에서 작업할 때 반드시 읽어야 하는 문서입니다.
 > 이 프로젝트는 자폐 아동 가정치료 지원 시스템입니다.
 
-| 항목          | 내용                                          |
-| ------------- | --------------------------------------------- |
-| 현재 Phase    | **Phase 3 완료 + 검증 완료. Phase 4 시작 전** |
-| 최종 업데이트 | 2026-05-28                                    |
-| 총 커밋       | 90개                                          |
-| 테스트        | 244개 통과                                    |
+| 항목          | 내용                                |
+| ------------- | ----------------------------------- |
+| 현재 Phase    | **Phase 3 검증 완료. Phase 4 시작** |
+| 최종 업데이트 | 2026-06-04                          |
+| 총 커밋       | 121개                               |
+| 테스트        | 244개 통과                          |
 
 ---
 
@@ -490,38 +490,75 @@ Phase 4 추가:  감각프로필(P4-022) + 마일스톤(P4-023) + 구조화 체�
 Phase 5 추가:  라이선스 도구 점수(P5-017) + 자동 발달 수준 업데이트(P5-018)
 ```
 
+### 10.7 Phase 3 검증 중 발견된 버그 및 수정 이슈 (CRITICAL)
+
+다음 패턴은 Phase 4에서 새 기능 개발 시 반드시 참고:
+
+| #   | 버그                                         | 원인                                                                     | 수정 패턴                                                                       |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| 1   | **일정 API 400**                             | `QueryScheduleDto`가 `z.string().datetime()` 필요한데 `YYYY-MM-DD` 전달  | 반드시 `new Date(date + 'T00:00:00.000Z').toISOString()` 변환 후 전달           |
+| 2   | **로그아웃 후 다른 계정에 이전 데이터 표시** | Zustand child.store + TanStack Query 캐시 미초기화                       | logout 시 `childStore.reset()` + `queryClient.clear()` + `clearSelectedChild()` |
+| 3   | **질문지 드롭다운 비어있음**                 | `/questionnaires` 엔드포인트 없음, 실제는 `/families/:id/questionnaires` | 새 API 훅 작성 전 컨트롤러 경로 반드시 확인                                     |
+| 4   | **familyId가 JWT에 null**                    | 가족 생성 후 재로그인 전까지 JWT에 familyId=null                         | JWT 대신 `child.store.familyId` (fetchChildren 시 저장) 사용                    |
+| 5   | **커리큘럼 엔드포인트 404**                  | `/curricula/today` (복수) vs `/curriculum/today` (단수)                  | 컨트롤러 실제 경로 확인 필수                                                    |
+| 6   | **확인 다이얼로그 웹 무반응**                | `Alert.alert`은 웹에서 no-op                                             | 반드시 `Platform.OS === 'web' ? window.confirm() : Alert.alert()` 분기          |
+| 7   | **저장 후 화면 미갱신**                      | React Query 캐시 invalidation만으로는 Zustand store 미갱신               | mutation `onSuccess`에서 `fetchChildren(familyId)` 직접 호출                    |
+| 8   | **보고서 목록 빈 배열**                      | Phase 2에서 Report DB 저장 누락 (P2-039 미완)                            | `Report` Prisma 모델 추가 + upsert 구현으로 수정 완료                           |
+| 9   | **일정 탭 없음**                             | P3-010 구현 누락                                                         | `schedule.tsx` + `_layout.tsx` 탭 추가로 수정 완료                              |
+| 10  | **커리큘럼 완료 후 히스토리 미반영**         | `invalidateQueries` 비동기 → 탭 전환 시 구버전 캐시 표시                 | `setQueriesData`로 즉시 캐시 업데이트 후 invalidate                             |
+
+### 10.8 모바일 웹 (브라우저) 주의사항
+
+웹 브라우저에서 테스트 시 동작 불가 기능:
+
+- `Alert.alert` → `window.alert/confirm` 으로 교체 필요
+- `expo-secure-store` → `localStorage` fallback 필요 (token-storage.ts 구현됨)
+- `SplashScreen` → `Platform.OS !== 'web'` 분기 필수
+- Pull to Refresh → 웹에서 불가 (모바일 전용)
+- 푸시 알림 → 웹에서 불가
+
 ---
 
 ## 11. Phase 4 작업 계획 (Expansion)
 
-SPEC/IMPLEMENTATION_PLAN.md 참조. 주요 내용:
+SPEC/IMPLEMENTATION_PLAN.md 11절 참조.
 
-- 부모 웰빙 추적
-- 비상 가이드
-- 감각 프로파일
-- 연구 데이터 자동 수집
-- 가족 협업 기능 강화
-- 마일스톤 트래킹
+### 11.0 Phase 3 이연 항목 처리 현황
 
-### 11.1 Phase 3에서 이연된 항목 (CRITICAL — Phase 4 구현 필수)
+| 항목                  | 이전 상태 | 현재 상태                                                    |
+| --------------------- | --------- | ------------------------------------------------------------ |
+| 보고서 DB 저장        | ❌ 미구현 | ✅ **완료** (Report 모델 + upsert + listReports + getReport) |
+| 일정 탭 모바일        | ❌ 누락   | ✅ **완료** (schedule.tsx 추가)                              |
+| 아이 삭제 모바일      | ❌ 없음   | ✅ **완료** (child-profile 삭제 버튼)                        |
+| 아이 정보 편집 모바일 | ❌ 없음   | ✅ **완료** (useUpdateChild 훅)                              |
+| 가족 편집 모바일      | ❌ 없음   | ✅ **완료** (useUpdateFamily/InviteMember 등)                |
+| 커리큘럼 완료 액션    | ❌ 없음   | ✅ **완료** (PATCH /curricula/:id/complete)                  |
+| 커리큘럼 히스토리 탭  | ❌ 없음   | ✅ **완료** (오늘/히스토리 탭 추가)                          |
+| GDPR 내보내기 모바일  | ❌ 미구현 | 🔄 **Phase 4** (settings.tsx에 Phase 4 배지)                 |
+| 아이 추가 모바일      | ❌ 미구현 | 🔄 **Phase 4**                                               |
 
-| 항목                              | 현재 상태                                                                                                                            | Phase 4 작업 내용                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| **보고서 DB 저장**                | `POST /reports/monthly`는 HTML 반환만 하고 저장 안 함. `GET /children/:id/reports`는 빈 배열 반환. `GET /reports/:id/download`는 404 | Report 모델 추가 (Prisma), reportService.save(), listReports(), downloadReport() 구현 |
-| **GDPR 데이터 내보내기 (모바일)** | 백엔드는 `GET /users/me/export`로 파일 다운로드 정상 동작. 모바일 앱에서 파일 저장/공유 불가                                         | expo-file-system + expo-sharing 또는 웹뷰로 파일 다운로드 처리                        |
-| **아이 추가 (모바일)**            | 웹에서만 아이 등록 가능. 모바일 child-profile 화면에 "아이 추가" 버튼 없음                                                           | More 탭에 아이 추가 폼 또는 별도 화면 구현                                            |
+### 11.1 Phase 4 기능 영역 (P4-001~025)
 
-### 11.2 현재 UI 처리 방식
+| 영역                   | 태스크     | 핵심 내용                                                         |
+| ---------------------- | ---------- | ----------------------------------------------------------------- |
+| **부모 웰빙**          | P4-001~004 | `ParentWellbeing` 모델, 무드 체크인, 번아웃 감지, AI 격려 메시지  |
+| **비상 가이드**        | P4-005~008 | `EmergencyEvent` 모델, 단계별 대응 가이드, 진정 타이머, 패턴 분석 |
+| **감각 프로파일**      | P4-009~011 | `SensoryProfile` 모델, 6채널 평가, 레이더 차트                    |
+| **연구 자동 수집**     | P4-012~018 | PubMed API, AI 한국어 요약, 아이 프로파일 매칭, 주간 배치         |
+| **가족 협업**          | P4-019~021 | 역할 분담, 활동 로그 댓글                                         |
+| **AI 프롬프트 고도화** | P4-022~025 | 감각프로필+마일스톤 반영, 발달수준 구조화                         |
 
-모바일 앱에서 미구현 Phase 4 기능은 **"Phase 4" 배지**로 표시:
+### 11.2 Phase 4 이연된 항목 (여전히 미구현)
 
-```
-[내 데이터 내보내기 (GDPR)]  [Phase 4]  ← 비활성, 회색
-```
+| 항목                              | 현재 상태                        | Phase 4 작업 내용                    |
+| --------------------------------- | -------------------------------- | ------------------------------------ |
+| **GDPR 데이터 내보내기 (모바일)** | settings.tsx에 Phase 4 배지 표시 | expo-file-system + expo-sharing 구현 |
+| **아이 추가 (모바일)**            | 웹에서만 가능                    | More 탭 또는 child-profile에 추가 폼 |
 
-새 Phase 4 기능 추가 시 동일 패턴 사용:
+### 11.3 현재 UI 처리 방식 (Phase 4 미구현 기능 표시)
 
 ```tsx
+// 미구현 기능은 Phase 4 배지로 표시 (apps/mobile/app/settings.tsx 스타일 재사용)
 <View style={styles.phase4Row}>
   <Text style={styles.actionLabel}>기능명</Text>
   <View style={styles.phase4Badge}>
@@ -529,8 +566,6 @@ SPEC/IMPLEMENTATION_PLAN.md 참조. 주요 내용:
   </View>
 </View>
 ```
-
-`styles.phase4Row/phase4Badge/phase4BadgeText`는 `apps/mobile/app/settings.tsx`에 정의됨.
 
 ---
 
