@@ -64,7 +64,32 @@ export class ReportService {
       this.logger.warn('PDF rendering failed, returning HTML only', err);
     }
 
+    await this.prisma.report.upsert({
+      where: { childId_year_month: { childId, year, month } },
+      create: { childId, familyId: child.familyId, year, month, htmlContent: html },
+      update: { htmlContent: html },
+    });
+
     return { html, pdfBuffer };
+  }
+
+  async listReports(childId: string, userId: string) {
+    const child = await this.prisma.child.findUnique({ where: { id: childId } });
+    if (!child) throw new ApiException(404, 'CHILD_404', '아이를 찾을 수 없습니다');
+    await this.verifyFamilyMember(child.familyId, userId);
+
+    return this.prisma.report.findMany({
+      where: { childId },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      select: { id: true, year: true, month: true, createdAt: true },
+    });
+  }
+
+  async getReport(reportId: string, userId: string) {
+    const report = await this.prisma.report.findUnique({ where: { id: reportId } });
+    if (!report) throw new ApiException(404, 'REPORT_404', '보고서를 찾을 수 없습니다');
+    await this.verifyFamilyMember(report.familyId, userId);
+    return report;
   }
 
   async buildReportData(childId: string, year: number, month: number): Promise<ReportData> {
@@ -82,8 +107,8 @@ export class ReportService {
 
     const birthDate = new Date(pii.birthDate);
     const now = new Date();
-    const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12
-      + (now.getMonth() - birthDate.getMonth());
+    const ageMonths =
+      (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth());
 
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);
@@ -98,9 +123,7 @@ export class ReportService {
       include: { scores: true },
     });
 
-    const assessmentDates = assessments.map((a) =>
-      a.createdAt.toISOString().split('T')[0],
-    );
+    const assessmentDates = assessments.map((a) => a.createdAt.toISOString().split('T')[0]);
 
     const curricula = await this.prisma.curriculum.findMany({
       where: {
@@ -111,9 +134,8 @@ export class ReportService {
 
     const curriculumCount = curricula.length;
     const completedCurricula = curricula.filter((c) => c.status === 'COMPLETED');
-    const curriculumCompletionRate = curriculumCount > 0
-      ? Math.round((completedCurricula.length / curriculumCount) * 100)
-      : 0;
+    const curriculumCompletionRate =
+      curriculumCount > 0 ? Math.round((completedCurricula.length / curriculumCount) * 100) : 0;
 
     const itemWeights = new Map<string, number>();
     for (const a of assessments) {
@@ -163,7 +185,9 @@ export class ReportService {
   }
 
   buildHtmlTemplate(data: ReportData): string {
-    const domainBars = data.domainScores.map((d) => `
+    const domainBars = data.domainScores
+      .map(
+        (d) => `
       <div class="domain-row">
         <div class="domain-label">${d.label}</div>
         <div class="domain-bar-container">
@@ -174,16 +198,24 @@ export class ReportService {
           ${d.trend === 'UP' ? '↑' : d.trend === 'DOWN' ? '↓' : '→'}
         </div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
 
-    const assessmentChart = data.assessmentDates.length > 0
-      ? data.assessmentDates.slice(0, 10).map((date) => `
+    const assessmentChart =
+      data.assessmentDates.length > 0
+        ? data.assessmentDates
+            .slice(0, 10)
+            .map(
+              (date) => `
         <div class="chart-bar">
           <div class="chart-bar-fill"></div>
           <div class="chart-bar-label">${date.slice(5)}</div>
         </div>
-      `).join('')
-      : '<p class="no-data">이 기간에 평가 기록이 없습니다.</p>';
+      `,
+            )
+            .join('')
+        : '<p class="no-data">이 기간에 평가 기록이 없습니다.</p>';
 
     return `<!DOCTYPE html>
 <html lang="ko">
@@ -451,17 +483,19 @@ export class ReportService {
 
     <div class="section">
       <div class="section-title">강점 영역</div>
-      ${data.topStrengths.length > 0
-        ? `<ul class="strengths-list">${data.topStrengths.map((s) => `<li>${s}</li>`).join('')}</ul>`
-        : '<p class="no-data">데이터가 충분하지 않습니다.</p>'
+      ${
+        data.topStrengths.length > 0
+          ? `<ul class="strengths-list">${data.topStrengths.map((s) => `<li>${s}</li>`).join('')}</ul>`
+          : '<p class="no-data">데이터가 충분하지 않습니다.</p>'
       }
     </div>
 
     <div class="section">
       <div class="section-title">집중 필요 영역</div>
-      ${data.focusAreas.length > 0
-        ? `<ul class="focus-list">${data.focusAreas.map((s) => `<li>${s}</li>`).join('')}</ul>`
-        : '<p class="no-data">모든 영역이 잘 진행되고 있어요!</p>'
+      ${
+        data.focusAreas.length > 0
+          ? `<ul class="focus-list">${data.focusAreas.map((s) => `<li>${s}</li>`).join('')}</ul>`
+          : '<p class="no-data">모든 영역이 잘 진행되고 있어요!</p>'
       }
     </div>
 

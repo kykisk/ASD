@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Param,
-  Body,
-  Res,
-  Header,
-} from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Res, Header } from '@nestjs/common';
 import { Response } from 'express';
 import { ReportService } from './report.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
@@ -44,23 +36,18 @@ export class ReportController {
   }
 
   @Get('children/:childId/reports')
-  async listReports(
-    @CurrentUser() user: { id: string },
-    @Param('childId') childId: string,
-  ) {
-    return [];
+  async listReports(@CurrentUser() user: { id: string }, @Param('childId') childId: string) {
+    return this.reportService.listReports(childId, user.id);
   }
 
-  @Get('reports/:reportId/download')
-  @Header('Content-Type', 'text/html; charset=utf-8')
-  async downloadReport(
+  @Get('reports/:reportId')
+  async getReport(
     @CurrentUser() user: { id: string },
     @Param('reportId') reportId: string,
     @Res() res: Response,
   ) {
-    res.status(404).json({
-      success: false,
-      error: { code: 'REPORT_404', message: '보고서를 찾을 수 없습니다' },
-    });
+    const report = await this.reportService.getReport(reportId, user.id);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(report.htmlContent);
   }
 }

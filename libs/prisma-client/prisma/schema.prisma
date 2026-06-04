@@ -167,6 +167,7 @@ model Family {
   questionnaires Questionnaire[]
   assessments    Assessment[]
   curricula      Curriculum[]
+  reports        Report[]
 }
 
 model FamilyMember {
@@ -216,6 +217,7 @@ model Child {
   assessments    Assessment[]
   curricula      Curriculum[]
   activityLogs   ActivityLog[]
+  reports        Report[]
 
   @@index([familyId])
 }
@@ -495,6 +497,23 @@ model DeviceToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+ }
+
+model Report {
+  id          String   @id @default(cuid())
+  childId     String
+  familyId    String
+  year        Int
+  month       Int
+  htmlContent String   @db.Text
+  createdAt   DateTime @default(now())
+
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family      Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, year, month])
+  @@index([childId])
+  @@index([familyId])
 }
 
 model BatchJob {
