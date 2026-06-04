@@ -503,6 +503,35 @@ SPEC/IMPLEMENTATION_PLAN.md 참조. 주요 내용:
 - 가족 협업 기능 강화
 - 마일스톤 트래킹
 
+### 11.1 Phase 3에서 이연된 항목 (CRITICAL — Phase 4 구현 필수)
+
+| 항목                              | 현재 상태                                                                                                                            | Phase 4 작업 내용                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **보고서 DB 저장**                | `POST /reports/monthly`는 HTML 반환만 하고 저장 안 함. `GET /children/:id/reports`는 빈 배열 반환. `GET /reports/:id/download`는 404 | Report 모델 추가 (Prisma), reportService.save(), listReports(), downloadReport() 구현 |
+| **GDPR 데이터 내보내기 (모바일)** | 백엔드는 `GET /users/me/export`로 파일 다운로드 정상 동작. 모바일 앱에서 파일 저장/공유 불가                                         | expo-file-system + expo-sharing 또는 웹뷰로 파일 다운로드 처리                        |
+| **아이 추가 (모바일)**            | 웹에서만 아이 등록 가능. 모바일 child-profile 화면에 "아이 추가" 버튼 없음                                                           | More 탭에 아이 추가 폼 또는 별도 화면 구현                                            |
+
+### 11.2 현재 UI 처리 방식
+
+모바일 앱에서 미구현 Phase 4 기능은 **"Phase 4" 배지**로 표시:
+
+```
+[내 데이터 내보내기 (GDPR)]  [Phase 4]  ← 비활성, 회색
+```
+
+새 Phase 4 기능 추가 시 동일 패턴 사용:
+
+```tsx
+<View style={styles.phase4Row}>
+  <Text style={styles.actionLabel}>기능명</Text>
+  <View style={styles.phase4Badge}>
+    <Text style={styles.phase4BadgeText}>Phase 4</Text>
+  </View>
+</View>
+```
+
+`styles.phase4Row/phase4Badge/phase4BadgeText`는 `apps/mobile/app/settings.tsx`에 정의됨.
+
 ---
 
 ## 12. 커밋 컨벤션

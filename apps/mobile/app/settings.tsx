@@ -12,14 +12,13 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../stores/auth.store.js';
-import { useProfile, useUpdateProfile, useDataExport } from '../hooks/use-profile.js';
+import { useProfile, useUpdateProfile } from '../hooks/use-profile.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 
 export default function SettingsScreen() {
   const { user } = useAuthStore();
   const { data: profile, isLoading } = useProfile();
   const updateMutation = useUpdateProfile();
-  const exportMutation = useDataExport();
 
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState('');
@@ -68,27 +67,6 @@ export default function SettingsScreen() {
     } catch {
       Alert.alert('오류', '전화번호 변경에 실패했습니다');
     }
-  };
-
-  const handleDataExport = async () => {
-    Alert.alert(
-      '내 데이터 내보내기',
-      '모든 개인 데이터를 JSON 형식으로 다운로드합니다. 계속하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '내보내기',
-          onPress: async () => {
-            try {
-              await exportMutation.mutateAsync();
-              Alert.alert('완료', '데이터 내보내기가 완료되었습니다');
-            } catch {
-              Alert.alert('오류', '데이터 내보내기에 실패했습니다');
-            }
-          },
-        },
-      ],
-    );
   };
 
   if (isLoading) {
@@ -176,16 +154,12 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>개인정보</Text>
-        <TouchableOpacity style={styles.actionRow} onPress={handleDataExport}>
-          {exportMutation.isPending ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <>
-              <Text style={styles.actionLabel}>내 데이터 내보내기 (GDPR)</Text>
-              <Text style={styles.actionArrow}>›</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <View style={styles.phase4Row}>
+          <Text style={styles.actionLabel}>내 데이터 내보내기 (GDPR)</Text>
+          <View style={styles.phase4Badge}>
+            <Text style={styles.phase4BadgeText}>Phase 4</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -257,6 +231,20 @@ const styles = StyleSheet.create({
   },
   actionLabel: { fontSize: fontSize.md, color: colors.text },
   actionArrow: { fontSize: fontSize.xl, color: colors.textMuted },
+  phase4Row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    opacity: 0.5,
+  },
+  phase4Badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    backgroundColor: '#E0E0E0',
+    borderRadius: borderRadius.full,
+  },
+  phase4BadgeText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '600' },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
