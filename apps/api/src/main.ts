@@ -9,24 +9,35 @@ async function bootstrap() {
 
   app.setGlobalPrefix('v1');
 
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "https:"],
-        scriptSrc: ["'self'"],
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.getInstance().set('etag', false);
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          scriptSrc: ["'self'"],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false,
-  }));
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
   app.use(cookieParser());
 
   app.enableCors({
     origin: process.env['CORS_ORIGINS']?.split(',') ?? [],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Client-Type', 'X-Device-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Request-ID',
+      'X-Client-Type',
+      'X-Device-Id',
+    ],
     exposedHeaders: ['X-Request-ID'],
     maxAge: 86400,
   });
