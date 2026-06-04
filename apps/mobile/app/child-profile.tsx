@@ -13,7 +13,7 @@ import {
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { useChildStore } from '../stores/child.store.js';
-import { useUpdateChild } from '../hooks/use-child-edit.js';
+import { useUpdateChild, useDeleteChild } from '../hooks/use-child-edit.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -47,11 +47,45 @@ export default function ChildProfileScreen() {
   const { getSelectedChild, selectedChildId, familyId } = useChildStore();
   const child = getSelectedChild();
   const updateMutation = useUpdateChild(familyId);
+  const deleteMutation = useDeleteChild(familyId);
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [editingDev, setEditingDev] = useState(false);
   const [devValues, setDevValues] = useState<Record<string, string>>({});
+
+  const handleDelete = () => {
+    if (!selectedChildId || !child) return;
+    const doDelete = async () => {
+      try {
+        await deleteMutation.mutateAsync(selectedChildId);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : '삭제에 실패했습니다';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('오류', msg);
+        }
+      }
+    };
+    if (Platform.OS === 'web') {
+      if (
+        window.confirm(
+          `"${child.name}" 아이를 삭제하시겠습니까?\n삭제 시 모든 평가, 커리큘럼, 일정 데이터가 함께 삭제됩니다.`,
+        )
+      )
+        doDelete();
+    } else {
+      Alert.alert(
+        '아이 삭제',
+        `"${child.name}" 아이를 삭제하시겠습니까?\n삭제 시 모든 평가, 커리큘럼, 일정 데이터가 함께 삭제됩니다.`,
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '삭제', style: 'destructive', onPress: doDelete },
+        ],
+      );
+    }
+  };
 
   const handleSave = async () => {
     if (!selectedChildId || !editingField) return;
@@ -203,6 +237,18 @@ export default function ChildProfileScreen() {
           <Text style={styles.emptyText}>미입력</Text>
         )}
       </View>
+
+      <TouchableOpacity
+        style={styles.deleteChildBtn}
+        onPress={handleDelete}
+        disabled={deleteMutation.isPending}
+      >
+        {deleteMutation.isPending ? (
+          <ActivityIndicator color={colors.error} size="small" />
+        ) : (
+          <Text style={styles.deleteChildBtnText}>아이 삭제</Text>
+        )}
+      </TouchableOpacity>
 
       <Modal visible={!!editingField} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -443,4 +489,14 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { fontSize: fontSize.md, color: '#fff', fontWeight: '600' },
+  deleteChildBtn: {
+    marginTop: spacing.sm,
+    height: 48,
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteChildBtnText: { fontSize: fontSize.md, color: colors.error, fontWeight: '500' },
 });

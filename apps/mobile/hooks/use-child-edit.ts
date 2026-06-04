@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { api } from '../lib/api.js';
 import { useChildStore } from '../stores/child.store.js';
+import { api } from '../lib/api.js';
 import type { Child } from '../types/api.types.js';
 
 interface UpdateChildInput {
@@ -36,6 +36,31 @@ export function useUpdateChild(familyId: string | null) {
     onSuccess: () => {
       if (familyId) {
         fetchChildren(familyId);
+      }
+    },
+  });
+}
+
+export function useDeleteChild(familyId: string | null) {
+  const fetchChildren = useChildStore((s) => s.fetchChildren);
+  const selectedChildId = useChildStore((s) => s.selectedChildId);
+  const selectChild = useChildStore((s) => s.selectChild);
+  const children = useChildStore((s) => s.children);
+
+  return useMutation({
+    mutationFn: async (childId: string) => {
+      await api.delete(`/children/${childId}`);
+    },
+    onSuccess: (_data, deletedChildId) => {
+      if (familyId) {
+        fetchChildren(familyId).then(() => {
+          if (selectedChildId === deletedChildId) {
+            const remaining = children.filter((c) => c.id !== deletedChildId);
+            if (remaining.length > 0) {
+              selectChild(remaining[0].id);
+            }
+          }
+        });
       }
     },
   });
