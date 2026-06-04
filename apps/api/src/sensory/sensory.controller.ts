@@ -1,14 +1,18 @@
 import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { SensoryService } from './sensory.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import { FamilyResolverService } from '../common/services/family-resolver.service.js';
 
 @Controller()
 export class SensoryController {
-  constructor(private readonly sensoryService: SensoryService) {}
+  constructor(
+    private readonly sensoryService: SensoryService,
+    private readonly familyResolver: FamilyResolverService,
+  ) {}
 
   @Post('children/:childId/sensory-profiles')
   async createProfile(
-    @CurrentUser() user: { id: string; familyId: string },
+    @CurrentUser() user: { id: string; familyId: string | null },
     @Param('childId') childId: string,
     @Body()
     body: {
@@ -21,7 +25,9 @@ export class SensoryController {
       notes?: string;
     },
   ) {
-    return this.sensoryService.createProfile(childId, user.familyId, body);
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId) return { error: 'No family found' };
+    return this.sensoryService.createProfile(childId, familyId, body);
   }
 
   @Get('children/:childId/sensory-profiles')

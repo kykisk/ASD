@@ -2,10 +2,14 @@ import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { EmergencyService } from './emergency.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
+import { FamilyResolverService } from '../common/services/family-resolver.service.js';
 
 @Controller()
 export class EmergencyController {
-  constructor(private readonly emergencyService: EmergencyService) {}
+  constructor(
+    private readonly emergencyService: EmergencyService,
+    private readonly familyResolver: FamilyResolverService,
+  ) {}
 
   @Public()
   @Get('emergency/guides')
@@ -21,7 +25,7 @@ export class EmergencyController {
 
   @Post('emergency/children/:childId/events')
   async logEvent(
-    @CurrentUser() user: { id: string; familyId: string },
+    @CurrentUser() user: { id: string; familyId: string | null },
     @Param('childId') childId: string,
     @Body()
     body: {
@@ -34,7 +38,9 @@ export class EmergencyController {
       notes?: string;
     },
   ) {
-    return this.emergencyService.logEvent(user.id, childId, user.familyId, body);
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId) return { error: 'No family found' };
+    return this.emergencyService.logEvent(user.id, childId, familyId, body);
   }
 
   @Get('emergency/children/:childId/events')

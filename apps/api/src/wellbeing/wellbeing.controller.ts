@@ -1,18 +1,24 @@
 import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { WellbeingService } from './wellbeing.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import { FamilyResolverService } from '../common/services/family-resolver.service.js';
 
 @Controller()
 export class WellbeingController {
-  constructor(private readonly wellbeingService: WellbeingService) {}
+  constructor(
+    private readonly wellbeingService: WellbeingService,
+    private readonly familyResolver: FamilyResolverService,
+  ) {}
 
   @Post('wellbeing/children/:childId')
   async createCheckin(
-    @CurrentUser() user: { id: string; familyId: string },
+    @CurrentUser() user: { id: string; familyId: string | null },
     @Param('childId') childId: string,
     @Body() body: { mood: number; stressLevel: number; notes?: string },
   ) {
-    return this.wellbeingService.createCheckin(user.id, childId, user.familyId, body);
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId) return { error: 'No family found' };
+    return this.wellbeingService.createCheckin(user.id, childId, familyId, body);
   }
 
   @Get('wellbeing/children/:childId')
