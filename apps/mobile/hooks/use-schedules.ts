@@ -11,11 +11,14 @@ function extractRealId(id: string): string {
 }
 
 export function useSchedules(childId: string | null, startDate: string, endDate: string) {
+  const startISO = startDate ? new Date(`${startDate}T00:00:00.000Z`).toISOString() : '';
+  const endISO = endDate ? new Date(`${endDate}T23:59:59.999Z`).toISOString() : '';
+
   return useQuery<ScheduleOccurrence[]>({
     queryKey: ['schedules', childId, startDate, endDate],
     queryFn: async () => {
       const { data } = await api.get(
-        `/children/${childId}/schedules?startDate=${startDate}&endDate=${endDate}`,
+        `/children/${childId}/schedules?startDate=${startISO}&endDate=${endISO}`,
       );
       return data.data as ScheduleOccurrence[];
     },
