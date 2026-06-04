@@ -243,36 +243,46 @@ ${childContext}
 === 북마크된 논문 (${bookmarks.length}편) ===
 ${articlesContext}
 
-위 정보를 바탕으로 다음을 작성해주세요:
+위 정보를 바탕으로 다음 형식으로 작성해주세요 (반드시 한국어):
 
-1. **아이 상태 분석** (2-3문장): 현재 아이에게 가장 중요한 영역은?
-2. **TOP 3 추천 논문**: 이 아이에게 지금 가장 도움될 논문 3편을 골라 번호와 이유(1-2문장)를 적어주세요
-3. **실천 팁** (2-3가지): 선택한 논문들에서 지금 당장 집에서 해볼 수 있는 구체적인 활동
+**아이 상태 분석**: (2-3문장으로 현재 아이에게 가장 중요한 영역 설명)
 
-반드시 한국어로 작성하고, 따뜻하고 격려하는 톤을 유지해주세요.
+**TOP 3 추천 논문**:
+1. [논문번호] 논문제목 - 추천 이유 한 문장
+2. [논문번호] 논문제목 - 추천 이유 한 문장
+3. [논문번호] 논문제목 - 추천 이유 한 문장
 
-JSON으로 응답해주세요:
-{
-  "digest": "전체 요약 (마크다운 허용)",
-  "topArticles": [
-    { "pubmedId": "논문번호", "title": "영문제목", "reason": "추천 이유 한 문장" }
-  ]
-}`;
+**실천 팁**:
+- 팁 1 (구체적인 활동)
+- 팁 2 (구체적인 활동)
+- 팁 3 (구체적인 활동)
+
+따뜻하고 격려하는 톤으로 작성해주세요. JSON 형식은 사용하지 마세요.`;
 
     try {
       const result = await this.aiService.generate({
         messages: [{ role: 'user', content: prompt }],
-        maxTokens: 1500,
+        maxTokens: 1200,
       });
 
-      const text = result.content ?? '';
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('AI response is not valid JSON');
+      const text = (result.content ?? '').trim();
+      if (!text) throw new Error('Empty AI response');
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      const topArticles: { pubmedId: string; title: string; reason: string }[] = [];
+      const topRegex = /\d+\.\s*\[([^\]]+)\]\s*([^-\n]+)\s*-\s*([^\n]+)/g;
+      let match;
+      while ((match = topRegex.exec(text)) !== null && topArticles.length < 3) {
+        const matchedArticle = bookmarks.find((b) => b.article.pubmedId === match[1].trim());
+        topArticles.push({
+          pubmedId: match[1].trim(),
+          title: matchedArticle?.article.title ?? match[2].trim(),
+          reason: match[3].trim(),
+        });
+      }
+
       return {
-        digest: parsed.digest ?? '',
-        topArticles: parsed.topArticles ?? [],
+        digest: text,
+        topArticles,
         generatedAt: new Date().toISOString(),
       };
     } catch (err) {
