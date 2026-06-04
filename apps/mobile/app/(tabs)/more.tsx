@@ -60,18 +60,24 @@ export default function MoreScreen() {
         </TouchableOpacity>
       )}
 
+      <Text style={styles.sectionLabel}>치료 도구</Text>
       <View style={styles.section}>
         <MenuItem label="아이 프로필" icon="👤" onPress={() => router.push('/child-profile')} />
-        <MenuItem label="가족 설정" icon="👨‍👩‍👧" onPress={() => router.push('/family')} />
         <MenuItem label="보고서" icon="📊" onPress={() => router.push('/reports')} />
-        <MenuItem label="설정" icon="⚙️" onPress={() => router.push('/settings')} />
       </View>
 
+      <Text style={styles.sectionLabel}>부모 지원</Text>
       <View style={styles.section}>
         <MenuItem label="웰빙 체크인" icon="💚" onPress={() => router.push('/wellbeing')} />
         <MenuItem label="비상 가이드" icon="🆘" onPress={() => router.push('/emergency-guide')} />
         <MenuItem label="감각 프로파일" icon="🎯" onPress={() => router.push('/sensory-profile')} />
         <MenuItem label="연구 브리핑" icon="📰" onPress={() => router.push('/research')} />
+      </View>
+
+      <Text style={styles.sectionLabel}>가족</Text>
+      <View style={styles.section}>
+        <MenuItem label="가족 설정" icon="👨‍👩‍👧" onPress={() => router.push('/family')} />
+        <MenuItem label="설정" icon="⚙️" onPress={() => router.push('/settings')} />
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -152,6 +158,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     overflow: 'hidden',
+  },
+  sectionLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    paddingHorizontal: spacing.xs,
   },
   menuItem: {
     flexDirection: 'row',
