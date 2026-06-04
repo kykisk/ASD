@@ -102,7 +102,7 @@ export class ResearchService {
     return this.prisma.researchUserMatch.findMany({
       where: {
         familyId,
-        ...(childId ? { childId } : {}),
+        ...(childId ? { OR: [{ childId }, { childId: null }] } : {}),
       },
       include: { article: true },
       orderBy: [{ isRead: 'asc' }, { score: 'desc' }],

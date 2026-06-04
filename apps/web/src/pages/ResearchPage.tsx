@@ -124,7 +124,7 @@ export function ResearchPage() {
     isLoading: feedLoading,
     isError: feedError,
     refetch: refetchFeed,
-  } = useResearchFeed(selectedChildId);
+  } = useResearchFeed();
   const {
     data: bookmarks,
     isLoading: bmLoading,
