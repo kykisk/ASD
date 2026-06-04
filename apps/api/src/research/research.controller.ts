@@ -51,4 +51,20 @@ export class ResearchController {
     if (!familyId) return [];
     return this.researchService.getBookmarks(familyId);
   }
+
+  @Post('research/ai-digest')
+  async generateAiDigest(
+    @CurrentUser() user: { id: string; familyId: string | null },
+    @Query('childId') childId: string,
+  ) {
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId || !childId) {
+      return {
+        digest: '아이를 선택해주세요.',
+        topArticles: [],
+        generatedAt: new Date().toISOString(),
+      };
+    }
+    return this.researchService.generateAiDigest(familyId, childId);
+  }
 }

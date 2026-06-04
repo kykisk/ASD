@@ -21,6 +21,12 @@ export interface ResearchMatch {
   article: ResearchArticle;
 }
 
+export interface AiDigestResult {
+  digest: string;
+  topArticles: { pubmedId: string; title: string; reason: string }[];
+  generatedAt: string;
+}
+
 export function useResearchFeed(childId?: string | null) {
   return useQuery({
     queryKey: ['research', 'feed', childId],
@@ -50,7 +56,6 @@ export function useBookmarks() {
 
 export function useBookmarkArticle() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (articleId: string) => {
       await api.post(`/research/${articleId}/bookmark`);
@@ -63,13 +68,23 @@ export function useBookmarkArticle() {
 
 export function useMarkAsRead() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (articleId: string) => {
       await api.post(`/research/${articleId}/read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['research'] });
+    },
+  });
+}
+
+export function useGenerateAiDigest() {
+  return useMutation({
+    mutationFn: async (childId: string) => {
+      const { data } = await api.post<{ success: true; data: AiDigestResult }>(
+        `/research/ai-digest?childId=${childId}`,
+      );
+      return data.data;
     },
   });
 }

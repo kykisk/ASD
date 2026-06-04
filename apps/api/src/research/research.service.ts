@@ -144,6 +144,151 @@ export class ResearchService {
     });
   }
 
+  async generateAiDigest(
+    familyId: string,
+    childId: string,
+  ): Promise<{
+    digest: string;
+    topArticles: { pubmedId: string; title: string; reason: string }[];
+    generatedAt: string;
+  }> {
+    const [bookmarks, child, latestAssessment, latestSensory] = await Promise.all([
+      this.prisma.researchUserMatch.findMany({
+        where: { familyId, isBookmarked: true },
+        include: {
+          article: {
+            select: {
+              pubmedId: true,
+              title: true,
+              koreanSummary: true,
+              tags: true,
+              keyFindings: true,
+            },
+          },
+        },
+        take: 30,
+      }),
+      this.prisma.child.findUnique({
+        where: { id: childId },
+        select: { name: true, birthDate: true, diagnosisName: true, developmentalLevel: true },
+      }),
+      this.prisma.assessment.findFirst({
+        where: { childId },
+        orderBy: { createdAt: 'desc' },
+        include: { scores: { select: { domain: true, score: true } } },
+      }),
+      this.prisma.sensoryProfile.findFirst({
+        where: { childId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          visual: true,
+          auditory: true,
+          tactile: true,
+          vestibular: true,
+          proprioception: true,
+          olfactory: true,
+        },
+      }),
+    ]);
+
+    if (bookmarks.length === 0) {
+      return {
+        digest:
+          '북마크된 논문이 없습니다. 연구 피드에서 관심 있는 논문을 북마크한 후 다시 시도해주세요.',
+        topArticles: [],
+        generatedAt: new Date().toISOString(),
+      };
+    }
+
+    const ageMonths = child
+      ? Math.floor((Date.now() - new Date(child.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
+      : null;
+
+    const domainScores =
+      latestAssessment?.scores.reduce(
+        (acc, s) => {
+          acc[s.domain] = s.score;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ) ?? {};
+
+    const articlesContext = bookmarks
+      .map((b, i) => {
+        const a = b.article;
+        const summary = a.koreanSummary ? `요약: ${a.koreanSummary.slice(0, 200)}` : '';
+        const findings = a.keyFindings?.slice(0, 2).join(' / ') ?? '';
+        return `[${i + 1}] ${a.title}\n${summary}\n${findings}`;
+      })
+      .join('\n\n');
+
+    const childContext = [
+      child && `아이 이름: ${child.name}, 나이: ${ageMonths}개월`,
+      child?.diagnosisName && `진단: ${child.diagnosisName}`,
+      Object.keys(domainScores).length > 0 &&
+        `최근 평가 점수: ${Object.entries(domainScores)
+          .map(([d, s]) => `${d}=${s}/5`)
+          .join(', ')}`,
+      latestSensory &&
+        `감각 프로파일(1=과민,5=둔감): 시각=${latestSensory.visual}, 청각=${latestSensory.auditory}, 촉각=${latestSensory.tactile}`,
+      child?.developmentalLevel &&
+        `발달 수준: ${JSON.stringify(child.developmentalLevel).slice(0, 200)}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const prompt = `당신은 자폐 아동 치료를 돕는 전문 상담사입니다.
+
+아래는 부모가 북마크한 ${bookmarks.length}편의 연구 논문 목록과 아이의 현재 상태입니다.
+
+=== 아이 현재 상태 ===
+${childContext}
+
+=== 북마크된 논문 (${bookmarks.length}편) ===
+${articlesContext}
+
+위 정보를 바탕으로 다음을 작성해주세요:
+
+1. **아이 상태 분석** (2-3문장): 현재 아이에게 가장 중요한 영역은?
+2. **TOP 3 추천 논문**: 이 아이에게 지금 가장 도움될 논문 3편을 골라 번호와 이유(1-2문장)를 적어주세요
+3. **실천 팁** (2-3가지): 선택한 논문들에서 지금 당장 집에서 해볼 수 있는 구체적인 활동
+
+반드시 한국어로 작성하고, 따뜻하고 격려하는 톤을 유지해주세요.
+
+JSON으로 응답해주세요:
+{
+  "digest": "전체 요약 (마크다운 허용)",
+  "topArticles": [
+    { "pubmedId": "논문번호", "title": "영문제목", "reason": "추천 이유 한 문장" }
+  ]
+}`;
+
+    try {
+      const result = await this.aiService.generate({
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 1500,
+      });
+
+      const text = result.content ?? '';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI response is not valid JSON');
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        digest: parsed.digest ?? '',
+        topArticles: parsed.topArticles ?? [],
+        generatedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      this.logger.error('AI digest generation failed', err);
+      return {
+        digest: 'AI 요약 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        topArticles: [],
+        generatedAt: new Date().toISOString(),
+      };
+    }
+  }
+
   async runWeeklyCollection(childId?: string, familyId?: string) {
     const batchJob = await this.prisma.batchJob.create({
       data: {

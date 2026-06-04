@@ -5,7 +5,9 @@ import {
   useBookmarks,
   useBookmarkArticle,
   useMarkAsRead,
+  useGenerateAiDigest,
   ResearchMatch,
+  AiDigestResult,
 } from '../hooks/use-research';
 import { PageHeader, ErrorState, EmptyState, LoadingSpinner } from '../components/ui';
 
@@ -118,6 +120,7 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
 export function ResearchPage() {
   const { selectedChildId } = useChildStore();
   const [tab, setTab] = useState<'feed' | 'bookmarks'>('feed');
+  const [digest, setDigest] = useState<AiDigestResult | null>(null);
 
   const {
     data: feed,
@@ -131,18 +134,103 @@ export function ResearchPage() {
     isError: bmError,
     refetch: refetchBm,
   } = useBookmarks();
+  const generateDigest = useGenerateAiDigest();
 
   const isLoading = tab === 'feed' ? feedLoading : bmLoading;
   const isError = tab === 'feed' ? feedError : bmError;
   const items = tab === 'feed' ? feed : bookmarks;
   const refetchFn = tab === 'feed' ? refetchFeed : refetchBm;
 
+  const handleGenerateDigest = async () => {
+    if (!selectedChildId) return;
+    const result = await generateDigest.mutateAsync(selectedChildId);
+    setDigest(result);
+  };
+
   if (isLoading) return <LoadingSpinner fullPage />;
   if (isError) return <ErrorState onRetry={() => refetchFn()} />;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <PageHeader title="연구 자료" subtitle="자녀의 프로파일에 맞는 최신 연구를 추천합니다." />
+      <PageHeader
+        title="연구 자료"
+        subtitle="자녀의 프로파일에 맞는 최신 연구를 추천합니다."
+        action={
+          selectedChildId ? (
+            <button
+              onClick={handleGenerateDigest}
+              disabled={generateDigest.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 disabled:opacity-60 transition-colors"
+            >
+              {generateDigest.isPending ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  AI 분석 중...
+                </>
+              ) : (
+                <>✨ AI 맞춤 요약</>
+              )}
+            </button>
+          ) : undefined
+        }
+      />
+
+      {/* AI Digest Card */}
+      {digest && (
+        <div className="bg-gradient-to-br from-primary-50 to-white border border-primary-200 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-primary-800 flex items-center gap-2">
+              ✨ AI 맞춤 연구 요약
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-400">
+                {new Date(digest.generatedAt).toLocaleString('ko-KR')}
+              </span>
+              <button
+                onClick={() => setDigest(null)}
+                className="text-neutral-400 hover:text-neutral-600 text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
+            {digest.digest}
+          </div>
+          {digest.topArticles.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide">
+                TOP 추천 논문
+              </p>
+              {digest.topArticles.map((a, i) => (
+                <div key={i} className="flex gap-2 text-sm">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="font-medium text-neutral-800 line-clamp-1">{a.title}</p>
+                    <p className="text-neutral-500 text-xs mt-0.5">{a.reason}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1">
