@@ -175,6 +175,7 @@ model Family {
   wellbeingCheckins ParentWellbeing[]
   emergencyEvents  EmergencyEvent[]
   researchMatches  ResearchUserMatch[]
+  researchDigests  ResearchDigest[]
   roleAssignments  RoleAssignment[]
 }
 
@@ -230,6 +231,7 @@ model Child {
   emergencyEvents  EmergencyEvent[]
   sensoryProfiles  SensoryProfile[]
   researchMatches  ResearchUserMatch[]
+  researchDigests  ResearchDigest[]
 
   @@index([familyId])
 }
@@ -652,9 +654,11 @@ model ResearchUserMatch {
   articleId    String
   familyId     String
   childId      String?
-  score        Float    @default(0) // 0-1 personalized relevance
+  score        Float    @default(0)
   isBookmarked Boolean  @default(false)
   isRead       Boolean  @default(false)
+  isArchived   Boolean  @default(false)
+  archivedAt   DateTime?
   createdAt    DateTime @default(now())
 
   article      ResearchArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
@@ -662,6 +666,23 @@ model ResearchUserMatch {
   child        Child?          @relation(fields: [childId], references: [id], onDelete: SetNull)
 
   @@unique([articleId, familyId])
+  @@index([familyId])
+  @@index([childId])
+  @@index([createdAt])
+  @@index([isArchived])
+}
+
+model ResearchDigest {
+  id          String   @id @default(cuid())
+  familyId    String
+  childId     String
+  digest      String   @db.Text
+  topArticles Json     @default("[]")
+  createdAt   DateTime @default(now())
+
+  family      Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+
   @@index([familyId])
   @@index([childId])
   @@index([createdAt])

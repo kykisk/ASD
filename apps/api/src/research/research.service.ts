@@ -102,6 +102,7 @@ export class ResearchService {
     return this.prisma.researchUserMatch.findMany({
       where: {
         familyId,
+        isArchived: false,
         ...(childId ? { OR: [{ childId }, { childId: null }] } : {}),
       },
       include: { article: true },
@@ -137,10 +138,71 @@ export class ResearchService {
 
   async getBookmarks(familyId: string, limit = 50) {
     return this.prisma.researchUserMatch.findMany({
-      where: { familyId, isBookmarked: true },
+      where: { familyId, isBookmarked: true, isArchived: false },
       include: { article: true },
       orderBy: { createdAt: 'desc' },
       take: limit,
+    });
+  }
+
+  async archiveOldArticles(familyId: string, daysOld = 90): Promise<number> {
+    const cutoff = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+    const result = await this.prisma.researchUserMatch.updateMany({
+      where: {
+        familyId,
+        isBookmarked: false,
+        isArchived: false,
+        createdAt: { lt: cutoff },
+      },
+      data: { isArchived: true, archivedAt: new Date() },
+    });
+    return result.count;
+  }
+
+  async unarchiveArticle(matchId: string, familyId: string): Promise<void> {
+    await this.prisma.researchUserMatch.update({
+      where: { id: matchId },
+      data: { isArchived: false, archivedAt: null },
+    });
+  }
+
+  async deleteArchivedArticles(familyId: string): Promise<number> {
+    const result = await this.prisma.researchUserMatch.deleteMany({
+      where: { familyId, isArchived: true, isBookmarked: false },
+    });
+    return result.count;
+  }
+
+  async getArchivedArticles(familyId: string, limit = 50) {
+    return this.prisma.researchUserMatch.findMany({
+      where: { familyId, isArchived: true },
+      include: {
+        article: {
+          select: { pubmedId: true, title: true, journal: true, publishedAt: true, tags: true },
+        },
+      },
+      orderBy: { archivedAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  async saveDigest(
+    familyId: string,
+    childId: string,
+    digest: string,
+    topArticles: object[],
+  ): Promise<void> {
+    await this.prisma.researchDigest.create({
+      data: { familyId, childId, digest, topArticles },
+    });
+  }
+
+  async getDigestHistory(familyId: string, childId: string, limit = 10) {
+    return this.prisma.researchDigest.findMany({
+      where: { familyId, childId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: { id: true, digest: true, topArticles: true, createdAt: true },
     });
   }
 
@@ -260,12 +322,12 @@ ${articlesContext}
 따뜻하고 격려하는 톤으로 작성해주세요. JSON 형식은 사용하지 마세요.`;
 
     try {
-      const result = await this.aiService.generate({
+      const aiResponse = await this.aiService.generate({
         messages: [{ role: 'user', content: prompt }],
         maxTokens: 1200,
       });
 
-      const text = (result.content ?? '').trim();
+      const text = (aiResponse.content ?? '').trim();
       if (!text) throw new Error('Empty AI response');
 
       const topArticles: { pubmedId: string; title: string; reason: string }[] = [];
@@ -280,11 +342,13 @@ ${articlesContext}
         });
       }
 
-      return {
+      const result = {
         digest: text,
         topArticles,
         generatedAt: new Date().toISOString(),
       };
+      this.saveDigest(familyId, childId, text, topArticles).catch(() => {});
+      return result;
     } catch (err) {
       this.logger.error('AI digest generation failed', err);
       return {

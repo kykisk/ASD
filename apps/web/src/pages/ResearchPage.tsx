@@ -6,8 +6,14 @@ import {
   useBookmarkArticle,
   useMarkAsRead,
   useGenerateAiDigest,
+  useArchivedArticles,
+  useUnarchiveArticle,
+  useDeleteArchived,
+  useDigestHistory,
   ResearchMatch,
   AiDigestResult,
+  ArchivedMatch,
+  DigestHistoryItem,
 } from '../hooks/use-research';
 import { PageHeader, ErrorState, EmptyState, LoadingSpinner } from '../components/ui';
 
@@ -131,7 +137,7 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
 
 export function ResearchPage() {
   const { selectedChildId } = useChildStore();
-  const [tab, setTab] = useState<'feed' | 'bookmarks'>('feed');
+  const [tab, setTab] = useState<'feed' | 'bookmarks' | 'archived' | 'history'>('feed');
   const [digest, setDigest] = useState<AiDigestResult | null>(null);
 
   const {
@@ -146,11 +152,21 @@ export function ResearchPage() {
     isError: bmError,
     refetch: refetchBm,
   } = useBookmarks();
+  const { data: archived, isLoading: archLoading } = useArchivedArticles();
+  const { data: digests, isLoading: digestsLoading } = useDigestHistory(selectedChildId);
   const generateDigest = useGenerateAiDigest();
+  const unarchiveMutation = useUnarchiveArticle();
+  const deleteArchivedMutation = useDeleteArchived();
 
-  const isLoading = tab === 'feed' ? feedLoading : bmLoading;
-  const isError = tab === 'feed' ? feedError : bmError;
-  const items = tab === 'feed' ? feed : bookmarks;
+  const isLoading =
+    tab === 'feed'
+      ? feedLoading
+      : tab === 'bookmarks'
+        ? bmLoading
+        : tab === 'archived'
+          ? archLoading
+          : digestsLoading;
+  const isError = tab === 'feed' ? feedError : tab === 'bookmarks' ? bmError : false;
   const refetchFn = tab === 'feed' ? refetchFeed : refetchBm;
 
   const handleGenerateDigest = async () => {
@@ -245,45 +261,144 @@ export function ResearchPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-neutral-100 rounded-xl p-1">
-        <button
-          onClick={() => setTab('feed')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            tab === 'feed'
-              ? 'bg-white text-primary-700 shadow-sm'
-              : 'text-neutral-500 hover:text-neutral-700'
-          }`}
-        >
-          추천
-        </button>
-        <button
-          onClick={() => setTab('bookmarks')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            tab === 'bookmarks'
-              ? 'bg-white text-primary-700 shadow-sm'
-              : 'text-neutral-500 hover:text-neutral-700'
-          }`}
-        >
-          북마크
-        </button>
+      <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 flex-wrap">
+        {[
+          { key: 'feed', label: '추천' },
+          { key: 'bookmarks', label: '북마크' },
+          { key: 'archived', label: `아카이브${archived?.length ? ` (${archived.length})` : ''}` },
+          { key: 'history', label: 'AI 요약 히스토리' },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key as typeof tab)}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+              tab === key
+                ? 'bg-white text-primary-700 shadow-sm'
+                : 'text-neutral-500 hover:text-neutral-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Article List */}
-      {items && items.length > 0 ? (
+      {/* Feed / Bookmarks */}
+      {(tab === 'feed' || tab === 'bookmarks') &&
+        ((tab === 'feed' ? feed : bookmarks)?.length ? (
+          <div className="space-y-3">
+            {(tab === 'feed' ? feed : bookmarks)!.map((item: ResearchMatch) => (
+              <ArticleCard key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title={tab === 'feed' ? '추천 논문이 없습니다' : '북마크한 논문이 없습니다'}
+            description={
+              tab === 'feed'
+                ? '매주 자동으로 아이의 프로파일에 맞는 연구를 수집합니다.'
+                : '관심 있는 논문을 북마크해보세요.'
+            }
+          />
+        ))}
+
+      {/* Archived */}
+      {tab === 'archived' && (
         <div className="space-y-3">
-          {items.map((item: ResearchMatch) => (
-            <ArticleCard key={item.id} item={item} />
-          ))}
+          {archived && archived.length > 0 && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  if (
+                    window.confirm(`아카이브된 논문 ${archived.length}개를 영구 삭제하시겠습니까?`)
+                  )
+                    deleteArchivedMutation.mutate();
+                }}
+                disabled={deleteArchivedMutation.isPending}
+                className="text-xs text-red-500 hover:text-red-700 px-3 py-1.5 border border-red-200 rounded-lg"
+              >
+                전체 영구 삭제
+              </button>
+            </div>
+          )}
+          {archived?.length ? (
+            archived.map((item: ArchivedMatch) => (
+              <div
+                key={item.id}
+                className="bg-neutral-50 rounded-xl border border-neutral-200 p-4 flex items-start justify-between gap-3 opacity-75"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-neutral-700 line-clamp-2">
+                    {item.article.title}
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {item.article.journal} ·{' '}
+                    {new Date(item.article.publishedAt).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                    })}
+                  </p>
+                  <p className="text-xs text-amber-500 mt-1">
+                    🗃️ {new Date(item.archivedAt).toLocaleDateString('ko-KR')} 보관됨
+                  </p>
+                </div>
+                <button
+                  onClick={() => unarchiveMutation.mutate(item.id)}
+                  className="text-xs text-primary-600 hover:text-primary-800 px-3 py-1.5 border border-primary-200 rounded-lg shrink-0"
+                >
+                  복원
+                </button>
+              </div>
+            ))
+          ) : (
+            <EmptyState
+              title="아카이브가 비어있습니다"
+              description="90일 이상 된 비북마크 논문이 자동으로 여기에 보관됩니다."
+            />
+          )}
         </div>
-      ) : (
-        <EmptyState
-          title={tab === 'feed' ? '추천 논문이 없습니다' : '북마크한 논문이 없습니다'}
-          description={
-            tab === 'feed'
-              ? '매주 자동으로 아이의 프로파일에 맞는 연구를 수집합니다.'
-              : '관심 있는 논문을 북마크해보세요.'
-          }
-        />
+      )}
+
+      {/* Digest History */}
+      {tab === 'history' && (
+        <div className="space-y-4">
+          {digests?.length ? (
+            digests.map((d: DigestHistoryItem) => (
+              <div key={d.id} className="bg-white rounded-xl border border-[#E8E4DF] p-5">
+                <p className="text-xs text-neutral-400 mb-2">
+                  {new Date(d.createdAt).toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+                <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap line-clamp-6">
+                  {d.digest}
+                </p>
+                {(d.topArticles as { title: string; reason: string }[]).length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    {(d.topArticles as { title: string; reason: string }[])
+                      .slice(0, 3)
+                      .map((a, i) => (
+                        <div key={i} className="flex gap-2 text-xs">
+                          <span className="w-4 h-4 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold shrink-0">
+                            {i + 1}
+                          </span>
+                          <span className="text-neutral-600 line-clamp-1">{a.title}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <EmptyState
+              title="AI 요약 히스토리가 없습니다"
+              description="'✨ AI 맞춤 요약' 버튼을 눌러 요약을 생성하면 여기에 기록됩니다."
+            />
+          )}
+        </div>
       )}
     </div>
   );

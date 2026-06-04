@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Param, Query } from '@nestjs/common';
 import { ResearchService } from './research.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { FamilyResolverService } from '../common/services/family-resolver.service.js';
@@ -23,6 +23,38 @@ export class ResearchController {
       childId,
       limit ? parseInt(limit, 10) : undefined,
     );
+  }
+
+  @Get('research/archived')
+  async getArchived(
+    @CurrentUser() user: { id: string; familyId: string | null },
+    @Query('limit') limit?: string,
+  ) {
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId) return [];
+    return this.researchService.getArchivedArticles(
+      familyId,
+      limit ? parseInt(limit, 10) : undefined,
+    );
+  }
+
+  @Patch('research/matches/:matchId/unarchive')
+  async unarchive(
+    @CurrentUser() user: { id: string; familyId: string | null },
+    @Param('matchId') matchId: string,
+  ) {
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId) return { success: false };
+    await this.researchService.unarchiveArticle(matchId, familyId);
+    return { success: true };
+  }
+
+  @Delete('research/archived')
+  async deleteArchived(@CurrentUser() user: { id: string; familyId: string | null }) {
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId) return { deleted: 0 };
+    const count = await this.researchService.deleteArchivedArticles(familyId);
+    return { deleted: count };
   }
 
   @Post('research/:articleId/bookmark')
@@ -50,6 +82,16 @@ export class ResearchController {
     const familyId = await this.familyResolver.resolve(user.id, user.familyId);
     if (!familyId) return [];
     return this.researchService.getBookmarks(familyId);
+  }
+
+  @Get('research/digests')
+  async getDigestHistory(
+    @CurrentUser() user: { id: string; familyId: string | null },
+    @Query('childId') childId: string,
+  ) {
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId || !childId) return [];
+    return this.researchService.getDigestHistory(familyId, childId);
   }
 
   @Post('research/ai-digest')

@@ -88,3 +88,77 @@ export function useGenerateAiDigest() {
     },
   });
 }
+
+export interface ArchivedMatch {
+  id: string;
+  articleId: string;
+  archivedAt: string;
+  article: {
+    pubmedId: string;
+    title: string;
+    journal: string;
+    publishedAt: string;
+    tags?: string[];
+  };
+}
+
+export interface DigestHistoryItem {
+  id: string;
+  digest: string;
+  topArticles: { pubmedId: string; title: string; reason: string }[];
+  createdAt: string;
+}
+
+export function useArchivedArticles() {
+  return useQuery({
+    queryKey: ['research', 'archived'],
+    staleTime: 0,
+    queryFn: async () => {
+      const { data } = await api.get<{ success: true; data: ArchivedMatch[] }>(
+        '/research/archived',
+      );
+      return data.data;
+    },
+  });
+}
+
+export function useUnarchiveArticle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (matchId: string) => {
+      await api.patch(`/research/matches/${matchId}/unarchive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['research'] });
+    },
+  });
+}
+
+export function useDeleteArchived() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.delete<{ success: true; data: { deleted: number } }>(
+        '/research/archived',
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['research'] });
+    },
+  });
+}
+
+export function useDigestHistory(childId?: string | null) {
+  return useQuery({
+    queryKey: ['research', 'digests', childId],
+    staleTime: 0,
+    queryFn: async () => {
+      const { data } = await api.get<{ success: true; data: DigestHistoryItem[] }>(
+        `/research/digests?childId=${childId}`,
+      );
+      return data.data;
+    },
+    enabled: !!childId,
+  });
+}
