@@ -110,6 +110,22 @@ export default function RootLayout() {
             name="reports"
             options={{ headerShown: true, title: '보고서', presentation: 'card' }}
           />
+          <Stack.Screen
+            name="wellbeing"
+            options={{ headerShown: true, title: '웰빙 체크인', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="emergency-guide"
+            options={{ headerShown: true, title: '비상 가이드', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="sensory-profile"
+            options={{ headerShown: true, title: '감각 프로파일', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="research"
+            options={{ headerShown: true, title: '연구 브리핑', presentation: 'card' }}
+          />
         </Stack>
       </AuthGate>
       <StatusBar style="dark" />

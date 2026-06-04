@@ -88,6 +88,20 @@ export class CurriculumService {
         itemWeights,
       );
 
+      const milestones: string[] = [];
+      if (aggregated?.domains) {
+        for (const d of aggregated.domains) {
+          if (d.trend?.direction === 'UP' && d.percentage >= 70) {
+            milestones.push(`${d.label} 영역 70% 이상 달성`);
+          }
+        }
+      }
+
+      const latestSensory = await this.prisma.sensoryProfile.findFirst({
+        where: { childId },
+        orderBy: { createdAt: 'desc' },
+      });
+
       const previousCurriculum = await this.prisma.curriculum.findFirst({
         where: { childId, status: { not: 'FAILED' } },
         orderBy: { date: 'desc' },
@@ -120,6 +134,8 @@ export class CurriculumService {
             frequency: string;
             currentGoal?: string;
           }>) ?? undefined,
+        sensoryProfile: latestSensory ?? undefined,
+        recentMilestones: milestones,
       });
 
       const result = await this.aiService.generateStructured(

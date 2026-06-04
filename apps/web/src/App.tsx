@@ -17,6 +17,11 @@ import { InsightsPage } from './pages/InsightsPage';
 import { CurriculumPage } from './pages/CurriculumPage';
 import { CurriculumHistoryPage } from './pages/CurriculumHistoryPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { WellbeingPage } from './pages/WellbeingPage';
+import { EmergencyGuidePage } from './pages/EmergencyGuidePage';
+import { SensoryProfilePage } from './pages/SensoryProfilePage';
+import { ResearchPage } from './pages/ResearchPage';
+import { FamilyCollaborationPage } from './pages/FamilyCollaborationPage';
 import { DesignPreviewIndex } from './pages/design-preview/index';
 import { DesignPreviewLogin } from './pages/design-preview/DesignPreviewLogin';
 import { DesignPreviewRegister } from './pages/design-preview/DesignPreviewRegister';
@@ -53,6 +58,11 @@ export default function App() {
         <Route path="curriculum" element={<CurriculumPage />} />
         <Route path="curriculum/history" element={<CurriculumHistoryPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="wellbeing" element={<WellbeingPage />} />
+        <Route path="emergency" element={<EmergencyGuidePage />} />
+        <Route path="sensory-profile" element={<SensoryProfilePage />} />
+        <Route path="research" element={<ResearchPage />} />
+        <Route path="collaboration" element={<FamilyCollaborationPage />} />
       </Route>
       <Route path="/design-preview" element={<DesignPreviewIndex />} />
       <Route path="/design-preview/login" element={<DesignPreviewLogin />} />

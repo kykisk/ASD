@@ -12,8 +12,25 @@ export interface CurriculumPromptParams {
   recentAssessmentCount: number;
   targetDate: string; // YYYY-MM-DD
   previousWeeklyGoal?: string;
-  developmentalLevel?: { language?: string; cognitive?: string; motor?: string; selfCare?: string; social?: string; overall?: string };
+  developmentalLevel?: {
+    language?: string;
+    cognitive?: string;
+    motor?: string;
+    selfCare?: string;
+    social?: string;
+    overall?: string;
+  };
   centerInfo?: Array<{ name: string; type: string; frequency: string; currentGoal?: string }>;
+  sensoryProfile?: {
+    visual: number;
+    auditory: number;
+    tactile: number;
+    vestibular: number;
+    proprioception: number;
+    olfactory: number;
+    aiRecommendations?: string | null;
+  };
+  recentMilestones?: string[];
 }
 
 @Injectable()
@@ -49,13 +66,22 @@ ${domainText}`;
     // 발달 수준 (있으면 포함)
     if (params.developmentalLevel) {
       const dl = params.developmentalLevel;
-      userContent += `\n\n아이의 발달 수준:\n`;
-      if (dl.language) userContent += `- 언어 발달: ${dl.language}\n`;
-      if (dl.cognitive) userContent += `- 인지 발달: ${dl.cognitive}\n`;
-      if (dl.motor) userContent += `- 대소근육: ${dl.motor}\n`;
-      if (dl.selfCare) userContent += `- 자조 능력: ${dl.selfCare}\n`;
-      if (dl.social) userContent += `- 사회성: ${dl.social}\n`;
-      if (dl.overall) userContent += `- 종합: ${dl.overall}\n`;
+      userContent += `\n\n아이의 발달 수준 (현재 상태 설명):\n`;
+      const devItems = [
+        { key: 'language', label: '언어/의사소통' },
+        { key: 'cognitive', label: '인지/학습' },
+        { key: 'motor', label: '대소근육 운동' },
+        { key: 'selfCare', label: '자조 기술' },
+        { key: 'social', label: '사회성/정서' },
+        { key: 'overall', label: '전반적 발달' },
+      ];
+      for (const item of devItems) {
+        const val = (dl as Record<string, string | undefined>)[item.key];
+        if (val) {
+          userContent += `- ${item.label}: ${val}\n`;
+        }
+      }
+      userContent += `위 발달 수준에 맞게 활동의 난이도와 지침을 조정해주세요.\n`;
     }
 
     // 센터/치료 정보 (있으면 포함)
@@ -67,6 +93,27 @@ ${domainText}`;
         userContent += `\n`;
       }
       userContent += `\n위 센터 치료를 보완하는 가정 활동을 만들어주세요. 센터에서 하는 것과 중복되지 않도록 해주세요.\n`;
+    }
+
+    // 감각 프로파일 (있으면 포함)
+    if (params.sensoryProfile) {
+      const sp = params.sensoryProfile;
+      userContent += `\n\n아이의 감각 프로파일 (1=과민, 3=보통, 5=둔감):\n`;
+      userContent += `- 시각: ${sp.visual}/5, 청각: ${sp.auditory}/5, 촉각: ${sp.tactile}/5\n`;
+      userContent += `- 전정감각: ${sp.vestibular}/5, 고유감각: ${sp.proprioception}/5, 후각: ${sp.olfactory}/5\n`;
+      if (sp.aiRecommendations) {
+        userContent += `감각 통합 권장사항: ${sp.aiRecommendations}\n`;
+      }
+      userContent += `위 감각 프로파일을 고려하여 감각적으로 적합한 활동을 설계해주세요.\n`;
+    }
+
+    // 최근 달성 마일스톤 (있으면 포함)
+    if (params.recentMilestones && params.recentMilestones.length > 0) {
+      userContent += `\n\n최근 달성된 마일스톤:\n`;
+      params.recentMilestones.forEach((m) => {
+        userContent += `✅ ${m}\n`;
+      });
+      userContent += `위 마일스톤을 기반으로 다음 단계 활동을 포함해주세요.\n`;
     }
 
     userContent += `\n오늘(${params.targetDate}) 커리큘럼을 생성해주세요.

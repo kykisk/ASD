@@ -40,6 +40,10 @@ model User {
   legalConsents    LegalConsent[]
   notifications    Notification[]
   deviceTokens     DeviceToken[]
+  wellbeingCheckins ParentWellbeing[]
+  activityComments  ActivityComment[]
+  roleAssignments   RoleAssignment[]  @relation("AssignedToUser")
+  createdRoleAssignments RoleAssignment[] @relation("AssignedByUser")
 
   @@index([email])
   @@index([role])
@@ -168,6 +172,10 @@ model Family {
   assessments    Assessment[]
   curricula      Curriculum[]
   reports        Report[]
+  wellbeingCheckins ParentWellbeing[]
+  emergencyEvents  EmergencyEvent[]
+  researchMatches  ResearchUserMatch[]
+  roleAssignments  RoleAssignment[]
 }
 
 model FamilyMember {
@@ -218,6 +226,10 @@ model Child {
   curricula      Curriculum[]
   activityLogs   ActivityLog[]
   reports        Report[]
+  wellbeingCheckins ParentWellbeing[]
+  emergencyEvents  EmergencyEvent[]
+  sensoryProfiles  SensoryProfile[]
+  researchMatches  ResearchUserMatch[]
 
   @@index([familyId])
 }
@@ -453,6 +465,7 @@ model ActivityLog {
 
   curriculum     Curriculum     @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
   child          Child          @relation(fields: [childId], references: [id])
+  comments       ActivityComment[]
 
   @@index([curriculumId])
   @@index([childId])
@@ -465,6 +478,9 @@ enum NotificationType {
   INPUT_REMINDER
   WEEKLY_INSIGHT_READY
   SYSTEM
+  WELLBEING_REMINDER
+  RESEARCH_READY
+  EMERGENCY_PATTERN
 }
 
 model Notification {
@@ -540,4 +556,150 @@ model AiFeatureConfig {
   feature   String   @unique
   configId  String
   updatedAt DateTime @updatedAt
+}
+
+// ─── PHASE 4 MODELS ──────────────────────────────────────────
+
+model ParentWellbeing {
+  id          String   @id @default(cuid())
+  userId      String
+  childId     String
+  familyId    String
+  mood        Int      // 1-5: 1=very bad, 5=very good
+  stressLevel Int      // 1-5: 1=very low, 5=very high
+  notes       String?
+  aiMessage   String?  @db.Text
+  burnoutRisk String   @default("LOW") // LOW, MEDIUM, HIGH
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family      Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([childId])
+  @@index([familyId])
+  @@index([createdAt])
+}
+
+model EmergencyEvent {
+  id            String   @id @default(cuid())
+  childId       String
+  familyId      String
+  userId        String
+  type          String   // MELTDOWN, SELF_INJURY, AGGRESSION, ELOPING, OTHER
+  severity      String   // MILD, MODERATE, SEVERE
+  trigger       String?
+  durationMin   Int?
+  interventions Json?    // string[]
+  outcome       String?
+  notes         String?
+  aiPattern     String?  @db.Text
+  occurredAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  child         Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family        Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([childId])
+  @@index([familyId])
+  @@index([occurredAt])
+}
+
+model SensoryProfile {
+  id              String   @id @default(cuid())
+  childId         String
+  familyId        String
+  visual          Int      // 1=hypersensitive, 3=typical, 5=hyposensitive
+  auditory        Int
+  tactile         Int
+  vestibular      Int
+  proprioception  Int
+  olfactory       Int
+  notes           String?
+  aiRecommendations String? @db.Text
+  createdAt       DateTime @default(now())
+
+  child           Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId])
+  @@index([familyId])
+  @@index([createdAt])
+}
+
+model ResearchArticle {
+  id            String   @id @default(cuid())
+  pubmedId      String   @unique
+  title         String
+  authors       String[]
+  abstract      String   @db.Text
+  publishedAt   DateTime
+  journal       String
+  koreanSummary String?  @db.Text
+  keyFindings   Json?    // string[]
+  tags          String[]
+  relevanceBase Float    @default(0) // base relevance 0-1
+  fetchedAt     DateTime @default(now())
+
+  userMatches   ResearchUserMatch[]
+
+  @@index([publishedAt])
+  @@index([fetchedAt])
+}
+
+model ResearchUserMatch {
+  id           String   @id @default(cuid())
+  articleId    String
+  familyId     String
+  childId      String?
+  score        Float    @default(0) // 0-1 personalized relevance
+  isBookmarked Boolean  @default(false)
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  article      ResearchArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  family       Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  child        Child?          @relation(fields: [childId], references: [id], onDelete: SetNull)
+
+  @@unique([articleId, familyId])
+  @@index([familyId])
+  @@index([childId])
+  @@index([createdAt])
+}
+
+model RoleAssignment {
+  id          String    @id @default(cuid())
+  familyId    String
+  assignedTo  String
+  assignedBy  String
+  childId     String?
+  title       String
+  description String?
+  date        String    // YYYY-MM-DD
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  assignedToUser User    @relation("AssignedToUser", fields: [assignedTo], references: [id], onDelete: Cascade)
+  assignedByUser User    @relation("AssignedByUser", fields: [assignedBy], references: [id], onDelete: Cascade)
+  family         Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([date])
+  @@index([assignedTo])
+}
+
+model ActivityComment {
+  id            String      @id @default(cuid())
+  activityLogId String
+  userId        String
+  content       String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityLogId])
+  @@index([userId])
 }

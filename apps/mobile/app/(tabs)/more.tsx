@@ -67,6 +67,13 @@ export default function MoreScreen() {
         <MenuItem label="설정" icon="⚙️" onPress={() => router.push('/settings')} />
       </View>
 
+      <View style={styles.section}>
+        <MenuItem label="웰빙 체크인" icon="💚" onPress={() => router.push('/wellbeing')} />
+        <MenuItem label="비상 가이드" icon="🆘" onPress={() => router.push('/emergency-guide')} />
+        <MenuItem label="감각 프로파일" icon="🎯" onPress={() => router.push('/sensory-profile')} />
+        <MenuItem label="연구 브리핑" icon="📰" onPress={() => router.push('/research')} />
+      </View>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>로그아웃</Text>
       </TouchableOpacity>
