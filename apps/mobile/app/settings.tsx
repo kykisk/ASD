@@ -30,15 +30,15 @@ export default function SettingsScreen() {
     const trimmed = name.trim();
     if (!trimmed) return;
 
+    const showErr = (msg: string) =>
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('입력 오류', msg);
+
     if (trimmed.length < 2) {
-      Alert.alert('입력 오류', '이름은 2자 이상이어야 합니다');
+      showErr('이름은 2자 이상이어야 합니다');
       return;
     }
     if (!/^[가-힣a-zA-Z\s\-'.]+$/.test(trimmed)) {
-      Alert.alert(
-        '입력 오류',
-        '이름은 한글, 영문, 공백, 하이픈(-)만 입력 가능합니다\n숫자는 사용할 수 없습니다',
-      );
+      showErr('이름은 한글, 영문, 공백, 하이픈(-)만 입력 가능합니다\n숫자는 사용할 수 없습니다');
       return;
     }
 

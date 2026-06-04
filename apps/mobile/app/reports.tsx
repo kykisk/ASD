@@ -32,7 +32,7 @@ const MONTH_NAMES = [
 interface ReportSummary {
   year: number;
   month: number;
-  hasPdf: boolean;
+  html: string;
   generatedAt: Date;
 }
 
@@ -47,9 +47,24 @@ export default function ReportsScreen() {
 
   const availableYears = [now.getFullYear() - 1, now.getFullYear()].filter((y) => y >= 2024);
 
+  const openHtmlInNewTab = (html: string, year: number, month: number) => {
+    if (Platform.OS !== 'web') return;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win) {
+      win.document.title = `AutiCare ${year}년 ${month}월 보고서`;
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!selectedChildId) {
-      Alert.alert('알림', '먼저 아이를 선택해주세요');
+      if (Platform.OS === 'web') {
+        window.alert('먼저 아이를 선택해주세요');
+      } else {
+        Alert.alert('알림', '먼저 아이를 선택해주세요');
+      }
       return;
     }
 
@@ -70,17 +85,27 @@ export default function ReportsScreen() {
     if (!confirmGenerate) return;
 
     try {
-      await generateMutation.mutateAsync({
+      const result = await generateMutation.mutateAsync({
         childId: selectedChildId,
         year: selectedYear,
         month: selectedMonth,
       });
+      const entry: ReportSummary = {
+        year: selectedYear,
+        month: selectedMonth,
+        html: result.html,
+        generatedAt: new Date(),
+      };
       setGeneratedReports((prev) => [
-        { year: selectedYear, month: selectedMonth, hasPdf: false, generatedAt: new Date() },
+        entry,
         ...prev.filter((r) => !(r.year === selectedYear && r.month === selectedMonth)),
       ]);
+
       if (Platform.OS === 'web') {
-        window.alert(`${selectedYear}년 ${selectedMonth}월 보고서가 생성되었습니다`);
+        const view = window.confirm(
+          `${selectedYear}년 ${selectedMonth}월 보고서가 생성되었습니다.\n지금 바로 보시겠습니까?`,
+        );
+        if (view) openHtmlInNewTab(result.html, selectedYear, selectedMonth);
       } else {
         Alert.alert('완료', `${selectedYear}년 ${selectedMonth}월 보고서가 생성되었습니다`);
       }
@@ -186,17 +211,28 @@ export default function ReportsScreen() {
 
       {generatedReports.length > 0 && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>생성된 보고서</Text>
+          <Text style={styles.cardTitle}>생성된 보고서 (이 세션)</Text>
           {generatedReports.map((report) => (
             <View key={`${report.year}-${report.month}`} style={styles.reportItem}>
-              <Text style={styles.reportTitle}>
-                {report.year}년 {report.month}월 월간 보고서
-              </Text>
-              <Text style={styles.reportDate}>
-                {report.generatedAt.toLocaleDateString('ko-KR')} 생성
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reportTitle}>
+                  {report.year}년 {report.month}월 월간 보고서
+                </Text>
+                <Text style={styles.reportDate}>
+                  {report.generatedAt.toLocaleDateString('ko-KR')} 생성
+                </Text>
+              </View>
+              {Platform.OS === 'web' && (
+                <TouchableOpacity
+                  style={styles.viewBtn}
+                  onPress={() => openHtmlInNewTab(report.html, report.year, report.month)}
+                >
+                  <Text style={styles.viewBtnText}>보기</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
+          <Text style={styles.sessionNote}>※ 보고서는 세션 내에서만 유지됩니다</Text>
         </View>
       )}
     </ScrollView>
@@ -278,10 +314,25 @@ const styles = StyleSheet.create({
   generateBtnDisabled: { opacity: 0.5 },
   generateBtnText: { color: '#fff', fontSize: fontSize.md, fontWeight: '600' },
   reportItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
   reportTitle: { fontSize: fontSize.md, color: colors.text, fontWeight: '500' },
   reportDate: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  viewBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.sm,
+  },
+  viewBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: '600' },
+  sessionNote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
+  },
 });
