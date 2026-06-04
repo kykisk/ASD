@@ -1,5 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
+import { useChildStore } from '../stores/child.store.js';
 import type { Child } from '../types/api.types.js';
 
 interface UpdateChildInput {
@@ -25,7 +26,7 @@ interface UpdateChildInput {
 }
 
 export function useUpdateChild(familyId: string | null) {
-  const queryClient = useQueryClient();
+  const fetchChildren = useChildStore((s) => s.fetchChildren);
 
   return useMutation({
     mutationFn: async ({ childId, input }: { childId: string; input: UpdateChildInput }) => {
@@ -33,7 +34,9 @@ export function useUpdateChild(familyId: string | null) {
       return data.data as Child;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['children', familyId] });
+      if (familyId) {
+        fetchChildren(familyId);
+      }
     },
   });
 }

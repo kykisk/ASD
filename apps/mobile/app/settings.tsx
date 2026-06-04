@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../stores/auth.store.js';
@@ -26,13 +27,36 @@ export default function SettingsScreen() {
   const [phone, setPhone] = useState('');
 
   const handleSaveName = async () => {
-    if (!name.trim()) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    if (trimmed.length < 2) {
+      Alert.alert('입력 오류', '이름은 2자 이상이어야 합니다');
+      return;
+    }
+    if (!/^[가-힣a-zA-Z\s\-'.]+$/.test(trimmed)) {
+      Alert.alert(
+        '입력 오류',
+        '이름은 한글, 영문, 공백, 하이픈(-)만 입력 가능합니다\n숫자는 사용할 수 없습니다',
+      );
+      return;
+    }
+
     try {
-      await updateMutation.mutateAsync({ name: name.trim() });
+      await updateMutation.mutateAsync({ name: trimmed });
       setEditingName(false);
-      Alert.alert('저장됨', '이름이 업데이트되었습니다');
-    } catch {
-      Alert.alert('오류', '이름 변경에 실패했습니다');
+      if (Platform.OS === 'web') {
+        window.alert('이름이 업데이트되었습니다');
+      } else {
+        Alert.alert('저장됨', '이름이 업데이트되었습니다');
+      }
+    } catch (err: unknown) {
+      const apiMsg = (err as any)?.response?.data?.error?.message;
+      if (Platform.OS === 'web') {
+        window.alert(apiMsg || '이름 변경에 실패했습니다');
+      } else {
+        Alert.alert('오류', apiMsg || '이름 변경에 실패했습니다');
+      }
     }
   };
 

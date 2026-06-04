@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useChildStore } from '../stores/child.store.js';
@@ -52,40 +53,47 @@ export default function ReportsScreen() {
       return;
     }
 
-    Alert.alert(
-      '보고서 생성',
-      `${selectedYear}년 ${selectedMonth}월 월간 보고서를 생성하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '생성',
-          onPress: async () => {
-            try {
-              await generateMutation.mutateAsync({
-                childId: selectedChildId,
-                year: selectedYear,
-                month: selectedMonth,
-              });
-              setGeneratedReports((prev) => [
-                {
-                  year: selectedYear,
-                  month: selectedMonth,
-                  hasPdf: false,
-                  generatedAt: new Date(),
-                },
-                ...prev.filter((r) => !(r.year === selectedYear && r.month === selectedMonth)),
-              ]);
-              Alert.alert('완료', `${selectedYear}년 ${selectedMonth}월 보고서가 생성되었습니다`);
-            } catch {
-              Alert.alert(
-                '오류',
-                '보고서 생성에 실패했습니다. 해당 기간에 충분한 데이터가 있는지 확인해주세요.',
-              );
-            }
-          },
-        },
-      ],
-    );
+    const confirmGenerate =
+      Platform.OS === 'web'
+        ? window.confirm(`${selectedYear}년 ${selectedMonth}월 월간 보고서를 생성하시겠습니까?`)
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              '보고서 생성',
+              `${selectedYear}년 ${selectedMonth}월 월간 보고서를 생성하시겠습니까?`,
+              [
+                { text: '취소', style: 'cancel', onPress: () => resolve(false) },
+                { text: '생성', onPress: () => resolve(true) },
+              ],
+            );
+          });
+
+    if (!confirmGenerate) return;
+
+    try {
+      await generateMutation.mutateAsync({
+        childId: selectedChildId,
+        year: selectedYear,
+        month: selectedMonth,
+      });
+      setGeneratedReports((prev) => [
+        { year: selectedYear, month: selectedMonth, hasPdf: false, generatedAt: new Date() },
+        ...prev.filter((r) => !(r.year === selectedYear && r.month === selectedMonth)),
+      ]);
+      if (Platform.OS === 'web') {
+        window.alert(`${selectedYear}년 ${selectedMonth}월 보고서가 생성되었습니다`);
+      } else {
+        Alert.alert('완료', `${selectedYear}년 ${selectedMonth}월 보고서가 생성되었습니다`);
+      }
+    } catch (err: unknown) {
+      const apiMsg = (err as any)?.response?.data?.error?.message;
+      const msg =
+        apiMsg || '보고서 생성에 실패했습니다. 해당 기간에 충분한 데이터가 있는지 확인해주세요.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('오류', msg);
+      }
+    }
   };
 
   return (
