@@ -2,11 +2,15 @@ import { Controller, Get, Patch, Post, Param, Body, Query } from '@nestjs/common
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '@auticare/prisma-client';
 import { AdminService } from './admin.service.js';
+import { ResearchBatchService } from '../research/research-batch.service.js';
 
 @Controller('admin')
 @Roles(UserRole.SYSTEM_ADMIN)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly researchBatchService: ResearchBatchService,
+  ) {}
 
   @Get('users')
   async listUsers(
@@ -40,6 +44,11 @@ export class AdminController {
     return this.adminService.listFamilies();
   }
 
+  @Patch('families/:id/tier')
+  async updateFamilyTier(@Param('id') id: string, @Body() body: { aiTier: string }) {
+    return this.adminService.updateFamilyTier(id, body.aiTier);
+  }
+
   @Get('batch-jobs')
   async listBatchJobs(
     @Query('type') type?: string,
@@ -54,7 +63,7 @@ export class AdminController {
   }
 
   @Post('research/batch')
-  async triggerResearch() {
-    return this.adminService.triggerResearchBatch();
+  async triggerResearchBatch() {
+    return this.researchBatchService.runWeeklyBatch();
   }
 }

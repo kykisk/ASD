@@ -1,16 +1,10 @@
 import { Controller, Get, Post, Param, Query } from '@nestjs/common';
 import { ResearchService } from './research.service.js';
-import { ResearchBatchService } from './research-batch.service.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
-import { Roles } from '../common/decorators/roles.decorator.js';
-import { UserRole } from '@auticare/prisma-client';
 
 @Controller()
 export class ResearchController {
-  constructor(
-    private readonly researchService: ResearchService,
-    private readonly researchBatchService: ResearchBatchService,
-  ) {}
+  constructor(private readonly researchService: ResearchService) {}
 
   @Get('research/feed')
   async getResearchFeed(
@@ -44,11 +38,5 @@ export class ResearchController {
   @Get('research/bookmarks')
   async getBookmarks(@CurrentUser() user: { id: string; familyId: string }) {
     return this.researchService.getBookmarks(user.familyId);
-  }
-
-  @Roles(UserRole.SYSTEM_ADMIN)
-  @Post('admin/research/batch')
-  async triggerBatch() {
-    return this.researchBatchService.runWeeklyBatch();
   }
 }

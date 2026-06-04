@@ -10,6 +10,6 @@ import { ResearchController } from './research.controller.js';
   imports: [AiModule, NotificationsModule],
   controllers: [ResearchController],
   providers: [PubmedService, ResearchService, ResearchBatchService],
-  exports: [ResearchService],
+  exports: [ResearchService, ResearchBatchService],
 })
 export class ResearchModule {}
