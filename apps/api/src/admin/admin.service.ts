@@ -7,7 +7,13 @@ import { ApiException } from '../common/exceptions/api.exception.js';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listUsers(params?: { search?: string; role?: string; status?: string; page?: number; limit?: number }) {
+  async listUsers(params?: {
+    search?: string;
+    role?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 20;
     const skip = (page - 1) * limit;
@@ -97,6 +103,32 @@ export class AdminService {
       where: { id: familyId },
       data: { aiTier: aiTier as AiTier },
       select: { id: true, name: true, aiTier: true },
+    });
+  }
+
+  async listBatchJobs(params?: { type?: string; status?: string; limit?: number }) {
+    const limit = params?.limit ?? 30;
+    const where: Record<string, unknown> = {};
+    if (params?.type) where.type = params.type;
+    if (params?.status) where.status = params.status;
+
+    return this.prisma.batchJob.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        totalItems: true,
+        processedItems: true,
+        failedItems: true,
+        errors: true,
+        startedAt: true,
+        completedAt: true,
+        createdAt: true,
+        targetDate: true,
+      },
     });
   }
 }

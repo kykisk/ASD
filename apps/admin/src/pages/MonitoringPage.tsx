@@ -9,6 +9,9 @@ import {
   Select,
   Space,
   Badge,
+  Button,
+  Tooltip,
+  Progress,
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -17,6 +20,8 @@ import {
   DatabaseOutlined,
   CloudServerOutlined,
   HddOutlined,
+  ReloadOutlined,
+  PlayCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -28,7 +33,6 @@ interface HealthStatus {
   latencyMs: number;
   icon: React.ReactNode;
 }
-
 interface ApiLog {
   id: string;
   timestamp: string;
@@ -38,11 +42,22 @@ interface ApiLog {
   latencyMs: number;
   userId: string | null;
 }
-
 interface ErrorSummary {
   endpoint: string;
   count: number;
   lastOccurred: string;
+}
+interface BatchJob {
+  id: string;
+  type: string;
+  status: string;
+  totalItems: number;
+  processedItems: number;
+  failedItems: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  targetDate: string | null;
 }
 
 const MOCK_HEALTH: HealthStatus[] = [
@@ -53,26 +68,76 @@ const MOCK_HEALTH: HealthStatus[] = [
 ];
 
 const MOCK_API_LOGS: ApiLog[] = [
-  { id: '1', timestamp: '2025-05-18T14:30:12Z', method: 'GET', path: '/v1/families/123/children', statusCode: 200, latencyMs: 45, userId: 'user-1' },
-  { id: '2', timestamp: '2025-05-18T14:30:15Z', method: 'POST', path: '/v1/ai/chat', statusCode: 201, latencyMs: 1230, userId: 'user-2' },
-  { id: '3', timestamp: '2025-05-18T14:30:18Z', method: 'GET', path: '/v1/admin/users', statusCode: 200, latencyMs: 32, userId: 'admin-1' },
-  { id: '4', timestamp: '2025-05-18T14:30:22Z', method: 'PUT', path: '/v1/families/456/questionnaires/1', statusCode: 404, latencyMs: 15, userId: 'user-3' },
-  { id: '5', timestamp: '2025-05-18T14:30:25Z', method: 'POST', path: '/v1/auth/login', statusCode: 401, latencyMs: 89, userId: null },
-  { id: '6', timestamp: '2025-05-18T14:30:28Z', method: 'GET', path: '/v1/ai/chat/history', statusCode: 500, latencyMs: 5002, userId: 'user-4' },
-  { id: '7', timestamp: '2025-05-18T14:30:30Z', method: 'DELETE', path: '/v1/admin/users/99', statusCode: 204, latencyMs: 28, userId: 'admin-1' },
-  { id: '8', timestamp: '2025-05-18T14:30:33Z', method: 'GET', path: '/v1/families/789/children', statusCode: 200, latencyMs: 38, userId: 'user-5' },
-  { id: '9', timestamp: '2025-05-18T14:30:35Z', method: 'POST', path: '/v1/ai/chat', statusCode: 503, latencyMs: 30000, userId: 'user-6' },
-  { id: '10', timestamp: '2025-05-18T14:30:38Z', method: 'GET', path: '/v1/admin/ai-config/claude-bedrock', statusCode: 200, latencyMs: 22, userId: 'admin-1' },
-  { id: '11', timestamp: '2025-05-18T14:30:40Z', method: 'POST', path: '/v1/auth/refresh', statusCode: 302, latencyMs: 55, userId: 'user-7' },
-  { id: '12', timestamp: '2025-05-18T14:30:42Z', method: 'GET', path: '/v1/families/111/questionnaires', statusCode: 200, latencyMs: 67, userId: 'user-8' },
+  {
+    id: '1',
+    timestamp: '2025-05-18T14:30:12Z',
+    method: 'GET',
+    path: '/v1/families/123/children',
+    statusCode: 200,
+    latencyMs: 45,
+    userId: 'user-1',
+  },
+  {
+    id: '2',
+    timestamp: '2025-05-18T14:30:15Z',
+    method: 'POST',
+    path: '/v1/ai/chat',
+    statusCode: 201,
+    latencyMs: 1230,
+    userId: 'user-2',
+  },
+  {
+    id: '3',
+    timestamp: '2025-05-18T14:30:18Z',
+    method: 'GET',
+    path: '/v1/admin/users',
+    statusCode: 200,
+    latencyMs: 32,
+    userId: 'admin-1',
+  },
+  {
+    id: '4',
+    timestamp: '2025-05-18T14:30:22Z',
+    method: 'PUT',
+    path: '/v1/families/456/questionnaires/1',
+    statusCode: 404,
+    latencyMs: 15,
+    userId: 'user-3',
+  },
+  {
+    id: '5',
+    timestamp: '2025-05-18T14:30:25Z',
+    method: 'POST',
+    path: '/v1/auth/login',
+    statusCode: 401,
+    latencyMs: 89,
+    userId: null,
+  },
 ];
 
 const MOCK_ERROR_SUMMARY: ErrorSummary[] = [
   { endpoint: 'POST /v1/ai/chat', count: 12, lastOccurred: '2025-05-18T14:30:35Z' },
   { endpoint: 'GET /v1/ai/chat/history', count: 5, lastOccurred: '2025-05-18T14:30:28Z' },
-  { endpoint: 'PUT /v1/families/:id/questionnaires/:id', count: 3, lastOccurred: '2025-05-18T14:30:22Z' },
-  { endpoint: 'POST /v1/auth/login', count: 8, lastOccurred: '2025-05-18T14:30:25Z' },
 ];
+
+const JOB_TYPE_LABELS: Record<string, string> = {
+  CURRICULUM_GENERATION: '커리큘럼 생성',
+  RESEARCH_COLLECTION: '연구 자료 수집',
+  INSIGHTS_GENERATION: 'AI 인사이트 생성',
+  REPORT_GENERATION: '보고서 생성',
+};
+const STATUS_COLOR: Record<string, string> = {
+  PENDING: 'default',
+  RUNNING: 'processing',
+  COMPLETED: 'success',
+  FAILED: 'error',
+};
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: '대기중',
+  RUNNING: '실행중',
+  COMPLETED: '완료',
+  FAILED: '실패',
+};
 
 function getStatusCodeColor(code: number): string {
   if (code >= 200 && code < 300) return 'green';
@@ -81,18 +146,69 @@ function getStatusCodeColor(code: number): string {
   return 'red';
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('ko-KR', {
+function formatTime(iso: string | null): string {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
   });
 }
 
+function durationStr(startedAt: string | null, completedAt: string | null): string {
+  if (!startedAt) return '-';
+  const end = completedAt ? new Date(completedAt) : new Date();
+  const sec = Math.round((end.getTime() - new Date(startedAt).getTime()) / 1000);
+  if (sec < 60) return `${sec}초`;
+  return `${Math.floor(sec / 60)}분 ${sec % 60}초`;
+}
+
 export function MonitoringPage() {
   const [healthData, setHealthData] = useState<HealthStatus[]>(MOCK_HEALTH);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [refreshCount, setRefreshCount] = useState(0);
+  const [batchJobs, setBatchJobs] = useState<BatchJob[]>([]);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchTypeFilter, setBatchTypeFilter] = useState<string>('ALL');
+  const [triggering, setTriggering] = useState(false);
+
+  const fetchBatchJobs = async () => {
+    setBatchLoading(true);
+    try {
+      const token = localStorage.getItem('token') || '';
+      const params = new URLSearchParams({ limit: '30' });
+      if (batchTypeFilter !== 'ALL') params.set('type', batchTypeFilter);
+      const res = await fetch(`/v1/admin/batch-jobs?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      setBatchJobs(json.data ?? []);
+    } catch {
+      setBatchJobs([]);
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const triggerResearchBatch = async () => {
+    setTriggering(true);
+    try {
+      const token = localStorage.getItem('token') || '';
+      await fetch('/v1/admin/research/batch', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      setTimeout(fetchBatchJobs, 1000);
+    } finally {
+      setTriggering(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBatchJobs();
+  }, [batchTypeFilter]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -103,27 +219,34 @@ export function MonitoringPage() {
         })),
       );
       setRefreshCount((c) => c + 1);
+      fetchBatchJobs();
     }, 30000);
     return () => clearInterval(timer);
-  }, []);
+  }, [batchTypeFilter]);
 
   const filteredLogs = useMemo(() => {
-    if (statusFilter === 'ALL') return MOCK_API_LOGS;
-    if (statusFilter === '2xx') return MOCK_API_LOGS.filter((l) => l.statusCode >= 200 && l.statusCode < 300);
-    if (statusFilter === '3xx') return MOCK_API_LOGS.filter((l) => l.statusCode >= 300 && l.statusCode < 400);
-    if (statusFilter === '4xx') return MOCK_API_LOGS.filter((l) => l.statusCode >= 400 && l.statusCode < 500);
+    if (statusFilter === '2xx')
+      return MOCK_API_LOGS.filter((l) => l.statusCode >= 200 && l.statusCode < 300);
+    if (statusFilter === '4xx')
+      return MOCK_API_LOGS.filter((l) => l.statusCode >= 400 && l.statusCode < 500);
     if (statusFilter === '5xx') return MOCK_API_LOGS.filter((l) => l.statusCode >= 500);
     return MOCK_API_LOGS;
   }, [statusFilter]);
 
   const logColumns: ColumnsType<ApiLog> = [
-    { title: '시간', dataIndex: 'timestamp', key: 'timestamp', width: 100, render: formatTime },
+    {
+      title: '시간',
+      dataIndex: 'timestamp',
+      key: 'timestamp',
+      width: 100,
+      render: (v) => formatTime(v),
+    },
     {
       title: '메서드',
       dataIndex: 'method',
       key: 'method',
       width: 80,
-      render: (method: string) => <Tag>{method}</Tag>,
+      render: (m: string) => <Tag>{m}</Tag>,
     },
     { title: '경로', dataIndex: 'path', key: 'path', ellipsis: true },
     {
@@ -167,8 +290,75 @@ export function MonitoringPage() {
       title: '마지막 발생',
       dataIndex: 'lastOccurred',
       key: 'lastOccurred',
+      width: 140,
+      render: (v) => formatTime(v),
+    },
+  ];
+
+  const batchColumns: ColumnsType<BatchJob> = [
+    {
+      title: '유형',
+      dataIndex: 'type',
+      key: 'type',
+      width: 160,
+      render: (t: string) => <Text strong>{JOB_TYPE_LABELS[t] ?? t}</Text>,
+    },
+    {
+      title: '상태',
+      dataIndex: 'status',
+      key: 'status',
       width: 100,
-      render: formatTime,
+      align: 'center',
+      render: (s: string) => (
+        <Badge
+          status={STATUS_COLOR[s] as 'default' | 'processing' | 'success' | 'error'}
+          text={STATUS_LABEL[s] ?? s}
+        />
+      ),
+    },
+    {
+      title: '진행',
+      key: 'progress',
+      width: 160,
+      render: (_: unknown, r: BatchJob) => {
+        if (!r.totalItems) return <Text type="secondary">-</Text>;
+        const pct = Math.round((r.processedItems / r.totalItems) * 100);
+        return (
+          <Tooltip title={`${r.processedItems} / ${r.totalItems} (실패: ${r.failedItems})`}>
+            <Progress
+              percent={pct}
+              size="small"
+              status={
+                r.status === 'FAILED'
+                  ? 'exception'
+                  : r.status === 'COMPLETED'
+                    ? 'success'
+                    : 'active'
+              }
+            />
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: '시작',
+      dataIndex: 'startedAt',
+      key: 'startedAt',
+      width: 140,
+      render: (v) => formatTime(v),
+    },
+    {
+      title: '소요',
+      key: 'duration',
+      width: 90,
+      render: (_: unknown, r: BatchJob) => durationStr(r.startedAt, r.completedAt),
+    },
+    {
+      title: '생성일',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 140,
+      render: (v) => formatTime(v),
     },
   ];
 
@@ -214,7 +404,57 @@ export function MonitoringPage() {
       </Text>
 
       <Card
-        title="API 로그"
+        title="배치 작업 이력"
+        size="small"
+        style={{ marginBottom: 24 }}
+        extra={
+          <Space>
+            <Select
+              value={batchTypeFilter}
+              onChange={setBatchTypeFilter}
+              style={{ width: 160 }}
+              size="small"
+              options={[
+                { value: 'ALL', label: '전체 유형' },
+                { value: 'RESEARCH_COLLECTION', label: '연구 자료 수집' },
+                { value: 'CURRICULUM_GENERATION', label: '커리큘럼 생성' },
+                { value: 'INSIGHTS_GENERATION', label: 'AI 인사이트' },
+              ]}
+            />
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={fetchBatchJobs}
+              loading={batchLoading}
+            >
+              새로고침
+            </Button>
+            <Button
+              size="small"
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              onClick={triggerResearchBatch}
+              loading={triggering}
+            >
+              연구 배치 실행
+            </Button>
+          </Space>
+        }
+      >
+        <Table
+          columns={batchColumns}
+          dataSource={batchJobs}
+          rowKey="id"
+          loading={batchLoading}
+          pagination={{ pageSize: 10, showTotal: (t) => `총 ${t}건` }}
+          scroll={{ x: 800 }}
+          size="small"
+          locale={{ emptyText: '배치 실행 이력이 없습니다' }}
+        />
+      </Card>
+
+      <Card
+        title="API 로그 (샘플)"
         size="small"
         style={{ marginBottom: 24 }}
         extra={
@@ -226,7 +466,6 @@ export function MonitoringPage() {
             options={[
               { value: 'ALL', label: '전체' },
               { value: '2xx', label: '2xx 성공' },
-              { value: '3xx', label: '3xx 리다이렉트' },
               { value: '4xx', label: '4xx 클라이언트' },
               { value: '5xx', label: '5xx 서버' },
             ]}
@@ -243,7 +482,7 @@ export function MonitoringPage() {
         />
       </Card>
 
-      <Card title="오류 요약 (최근 24시간)" size="small">
+      <Card title="오류 요약 (샘플)" size="small">
         <Table
           columns={errorColumns}
           dataSource={MOCK_ERROR_SUMMARY}
