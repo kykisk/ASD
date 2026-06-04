@@ -24,6 +24,7 @@ import {
   PlayCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { adminApi } from '../services/api';
 
 const { Title, Text } = Typography;
 
@@ -177,14 +178,10 @@ export function MonitoringPage() {
   const fetchBatchJobs = async () => {
     setBatchLoading(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const params = new URLSearchParams({ limit: '30' });
-      if (batchTypeFilter !== 'ALL') params.set('type', batchTypeFilter);
-      const res = await fetch(`/v1/admin/batch-jobs?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      setBatchJobs(json.data ?? []);
+      const params: Record<string, string> = { limit: '30' };
+      if (batchTypeFilter !== 'ALL') params.type = batchTypeFilter;
+      const { data } = await adminApi.get('/admin/batch-jobs', { params });
+      setBatchJobs((data as any).data ?? []);
     } catch {
       setBatchJobs([]);
     } finally {
@@ -195,11 +192,7 @@ export function MonitoringPage() {
   const triggerResearchBatch = async () => {
     setTriggering(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      await fetch('/v1/admin/research/batch', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
+      await adminApi.post('/admin/research/batch');
       setTimeout(fetchBatchJobs, 1000);
     } finally {
       setTriggering(false);
