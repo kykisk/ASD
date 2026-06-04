@@ -352,14 +352,14 @@ export function AppLayout() {
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-neutral-200 transform transition-all duration-200 ease-in-out
+        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-neutral-200 transform transition-all duration-200 ease-in-out flex flex-col
           w-[240px] lg:translate-x-0
           sm:w-[60px] sm:translate-x-0
           lg:w-[240px]
           ${sidebarOpen ? 'translate-x-0 !w-[240px]' : '-translate-x-full sm:translate-x-0'}
         `}
       >
-        <div className="flex items-center gap-2 h-16 px-4 lg:px-6 border-b border-neutral-100">
+        <div className="flex items-center gap-2 h-16 px-4 lg:px-6 border-b border-neutral-100 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-sm shrink-0">
             <svg
               viewBox="0 0 24 24"
@@ -378,7 +378,7 @@ export function AppLayout() {
           </span>
         </div>
 
-        <nav className="p-2 lg:p-4 space-y-4 overflow-y-auto">
+        <nav className="flex-1 overflow-y-auto p-2 lg:p-4 space-y-4">
           {navGroups.map((group) => (
             <div key={group.label}>
               <p className="hidden lg:block sidebar-open-label px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
