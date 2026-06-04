@@ -23,6 +23,7 @@ export interface ResearchMatch {
 export function useResearchFeed(childId?: string | null) {
   return useQuery({
     queryKey: ['research', 'feed', childId],
+    staleTime: 0,
     queryFn: async () => {
       const params = childId ? `?childId=${childId}` : '';
       const { data } = await api.get<{ success: true; data: ResearchMatch[] }>(
@@ -36,6 +37,7 @@ export function useResearchFeed(childId?: string | null) {
 export function useBookmarks() {
   return useQuery({
     queryKey: ['research', 'bookmarks'],
+    staleTime: 0,
     queryFn: async () => {
       const { data } = await api.get<{ success: true; data: ResearchMatch[] }>(
         '/research/bookmarks',
