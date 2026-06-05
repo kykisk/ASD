@@ -12,6 +12,8 @@ import {
   Button,
   Tooltip,
   Progress,
+  Modal,
+  List,
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -48,6 +50,14 @@ interface ErrorSummary {
   count: number;
   lastOccurred: string;
 }
+interface BatchJobError {
+  query?: string;
+  articleId?: string;
+  title?: string;
+  reason?: string;
+  error?: string;
+}
+
 interface BatchJob {
   id: string;
   type: string;
@@ -55,6 +65,7 @@ interface BatchJob {
   totalItems: number;
   processedItems: number;
   failedItems: number;
+  errors: BatchJobError[] | null;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
@@ -182,6 +193,7 @@ export function MonitoringPage() {
     total: number;
     failed: number;
   } | null>(null);
+  const [errorModalJob, setErrorModalJob] = useState<BatchJob | null>(null);
 
   const fetchBatchJobs = async () => {
     setBatchLoading(true);
@@ -367,24 +379,38 @@ export function MonitoringPage() {
     {
       title: '진행',
       key: 'progress',
-      width: 160,
+      width: 180,
       render: (_: unknown, r: BatchJob) => {
         if (!r.totalItems) return <Text type="secondary">-</Text>;
         const pct = Math.round((r.processedItems / r.totalItems) * 100);
+        const hasErrors = r.failedItems > 0 && r.errors && r.errors.length > 0;
         return (
-          <Tooltip title={`${r.processedItems} / ${r.totalItems} (실패: ${r.failedItems})`}>
-            <Progress
-              percent={pct}
-              size="small"
-              status={
-                r.status === 'FAILED'
-                  ? 'exception'
-                  : r.status === 'COMPLETED'
-                    ? 'success'
-                    : 'active'
-              }
-            />
-          </Tooltip>
+          <div>
+            <Tooltip title={`${r.processedItems} / ${r.totalItems}`}>
+              <Progress
+                percent={pct}
+                size="small"
+                status={
+                  r.status === 'FAILED'
+                    ? 'exception'
+                    : r.status === 'COMPLETED'
+                      ? pct === 100
+                        ? 'success'
+                        : 'normal'
+                      : 'active'
+                }
+              />
+            </Tooltip>
+            {r.failedItems > 0 && (
+              <Text
+                type="danger"
+                style={{ fontSize: 12, cursor: hasErrors ? 'pointer' : 'default' }}
+                onClick={() => hasErrors && setErrorModalJob(r)}
+              >
+                실패 {r.failedItems}건{hasErrors ? ' (클릭하여 확인)' : ''}
+              </Text>
+            )}
+          </div>
         );
       },
     },
@@ -549,6 +575,46 @@ export function MonitoringPage() {
           size="small"
         />
       </Card>
+
+      <Modal
+        title={`오류 상세 내역 — ${JOB_TYPE_LABELS[errorModalJob?.type ?? ''] ?? errorModalJob?.type ?? ''}`}
+        open={!!errorModalJob}
+        onCancel={() => setErrorModalJob(null)}
+        footer={null}
+        width={640}
+      >
+        {errorModalJob?.errors && errorModalJob.errors.length > 0 ? (
+          <List
+            size="small"
+            dataSource={errorModalJob.errors}
+            renderItem={(err, idx) => (
+              <List.Item key={idx}>
+                <div style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Tag color="red">#{idx + 1}</Tag>
+                    {err.query && <Tag color="blue">쿼리: {err.query}</Tag>}
+                    {err.articleId && (
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        ID: {err.articleId}
+                      </Text>
+                    )}
+                  </div>
+                  {err.title && (
+                    <Text strong style={{ display: 'block', marginTop: 4 }}>
+                      {err.title}
+                    </Text>
+                  )}
+                  <Text type="danger" style={{ fontSize: 13 }}>
+                    {err.reason ?? err.error ?? '알 수 없는 오류'}
+                  </Text>
+                </div>
+              </List.Item>
+            )}
+          />
+        ) : (
+          <Text type="secondary">저장된 오류 정보가 없습니다.</Text>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -370,7 +370,7 @@ ${articlesContext}
     });
 
     let totalArticles = 0;
-    const errors: Array<{ query: string; error: string }> = [];
+    const errors: Array<{ query: string; error: string; articleId?: string; title?: string }> = [];
 
     for (const query of ASD_QUERIES) {
       try {
@@ -398,7 +398,6 @@ ${articlesContext}
             },
           });
 
-          // Summarize (non-blocking per article)
           const summary = await this.summarizeArticle(article.title, article.abstract, 'system');
           if (summary) {
             await this.prisma.researchArticle.update({
@@ -407,6 +406,13 @@ ${articlesContext}
                 koreanSummary: summary.koreanSummary,
                 keyFindings: summary.keyFindings,
               },
+            });
+          } else {
+            errors.push({
+              query,
+              articleId: created.id,
+              title: article.title,
+              error: 'AI 요약 생성 실패',
             });
           }
 
@@ -519,6 +525,7 @@ ${articlesContext}
     jobId: string,
   ): Promise<void> {
     let failed = 0;
+    const errors: Array<{ articleId: string; title: string; reason: string }> = [];
 
     for (let i = 0; i < articles.length; i++) {
       const article = articles[i];
@@ -535,7 +542,11 @@ ${articlesContext}
           });
         } else {
           failed++;
+          errors.push({ articleId: article.id, title: article.title, reason: 'AI 요약 생성 실패' });
         }
+      } else {
+        failed++;
+        errors.push({ articleId: article.id, title: article.title, reason: '초록 없음' });
       }
 
       await this.prisma.batchJob.update({
@@ -546,7 +557,11 @@ ${articlesContext}
 
     await this.prisma.batchJob.update({
       where: { id: jobId },
-      data: { status: 'COMPLETED', completedAt: new Date() },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        errors: errors.length > 0 ? (errors as unknown as Record<string, unknown>[]) : undefined,
+      },
     });
 
     this.logger.log(
