@@ -79,12 +79,16 @@ export function useMarkAsRead() {
 }
 
 export function useGenerateAiDigest() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (childId: string) => {
       const { data } = await api.post<{ success: true; data: AiDigestResult }>(
         `/research/ai-digest?childId=${childId}`,
       );
       return data.data;
+    },
+    onSuccess: (_data, childId) => {
+      queryClient.invalidateQueries({ queryKey: ['research', 'digests', childId] });
     },
   });
 }
