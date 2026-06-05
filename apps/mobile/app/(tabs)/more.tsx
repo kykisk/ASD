@@ -76,6 +76,7 @@ export default function MoreScreen() {
 
       <Text style={styles.sectionLabel}>가족</Text>
       <View style={styles.section}>
+        <MenuItem label="아이 추가" icon="➕" onPress={() => router.push('../add-child')} />
         <MenuItem label="가족 설정" icon="👨‍👩‍👧" onPress={() => router.push('/family')} />
         <MenuItem label="설정" icon="⚙️" onPress={() => router.push('/settings')} />
       </View>
