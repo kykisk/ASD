@@ -117,6 +117,7 @@ ${domainText}`;
     }
 
     userContent += `\n오늘(${params.targetDate}) 커리큘럼을 생성해주세요.
+활동은 반드시 3~5개 이내로 생성하세요.
 
 다음 JSON 형식으로만 응답하세요:
 {

@@ -33,14 +33,15 @@ export class ResearchService {
         messages: [
           {
             role: 'system',
-            content: '당신은 자폐 스펙트럼 장애 연구 논문 전문 번역가입니다.',
+            content:
+              '당신은 자폐 스펙트럼 장애 연구 논문 전문 번역가입니다. 반드시 순수 JSON만 반환하세요. 마크다운이나 코드 블록을 절대 사용하지 마세요.',
           },
           {
             role: 'user',
-            content: `다음 논문을 한국어로 요약해주세요:\n제목: ${title}\n초록: ${abstract}\n\n1. 한국어 요약 (3문장): \n2. 핵심 발견 3가지 (bullet points):\nJSON 형식으로: { "koreanSummary": "string", "keyFindings": ["string"] }`,
+            content: `다음 논문을 한국어로 요약해주세요:\n제목: ${title}\n초록: ${abstract}\n\n다음 JSON 형식으로만 응답하세요 (코드 블록 없이):\n{"koreanSummary":"3문장 한국어 요약","keyFindings":["핵심 발견1","핵심 발견2","핵심 발견3"]}`,
           },
         ],
-        maxTokens: 500,
+        maxTokens: 1000,
       });
 
       const jsonStr = this.extractJson(response.content);
@@ -488,11 +489,14 @@ ${articlesContext}
   }
 
   private extractJson(content: string): string {
-    const fenceMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+    const stripped = content.trim();
+    const fenceMatch = stripped.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*$/);
     if (fenceMatch) return fenceMatch[1].trim();
-    const braceMatch = content.match(/\{[\s\S]*\}/);
+    const inlineFence = stripped.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (inlineFence) return inlineFence[1].trim();
+    const braceMatch = stripped.match(/\{[\s\S]*\}/);
     if (braceMatch) return braceMatch[0];
-    return content.trim();
+    return stripped;
   }
 
   async reSummarizeArticles(): Promise<{ jobId: string; total: number }> {
