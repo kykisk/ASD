@@ -2,7 +2,9 @@
 
 ## USER REQUESTS (AS-IS)
 
-- Phase 1~4 구현 + 검증 완료
+- Phase 1~4 구현 + 검증 + UX 개선 완료
+- P4 이연 항목 전부 완료 (아이추가/GDPR/아카이브)
+- Phase 5 시작 결정 (Licensing)
 - Phase 4 UX 개선 작업 완료 (이번 세션)
 - "컨텍스트가 다차서 새세션에서 계속해야겠다" → 문서 업데이트 후 새 세션
 
@@ -45,51 +47,58 @@ Phase 4: P4-001~025 구현 완료 + 검증 완료 (146 커밋)
 
 ## CURRENT STATE
 
-- Phase 1 + 2 + 3 + 4: 구현 + 검증 완료
-- 빌드: api ✅ web ✅ admin ✅ mobile(export) ✅
+- Phase 1~4 + P4 이연: 완전 완료
+- **Phase 5: P5-001 진행 예정** (License 스키마 신규 작성)
+- Git: 155 커밋, master 브랜치
 - 테스트: 244개 통과
-- Git: 148 커밋, master 브랜치 push 완료
 - 웹: http://3.35.36.62:4200
-- 모바일 웹: http://3.35.36.62:8081 (restart-mobile.sh 실행 후)
+- 모바일 웹: http://3.35.36.62:8081
 - Admin: http://3.35.36.62:4300
-- 연구 논문: 24개 수집 (요약 있음 2개 / 요약 재처리 필요 22개)
+- 연구 논문: 24개 수집 (요약 20건 완료)
 
 ## PENDING TASKS
 
-1. **연구 요약 재처리 실행**:
-   - `./scripts/restart-api.sh` 후 Admin → 모니터링 → "요약 재처리" 버튼 클릭
-   - 22개 논문 AI 요약 생성 (AI 예산 확인 필요)
+### Phase 5 (진행 중)
 
-2. **Phase 4 이연 항목**:
-   - GDPR 데이터 내보내기 (모바일) — settings.tsx Phase 4 배지
-   - 아이 추가 (모바일) — More 탭
-   - 연구 자동 아카이브: 배치에 archiveOldArticles() 연결 필요
+1. **P5-001**: License 스키마 (Prisma 신규) ← 다음
+2. P5-002: 라이선스 CRUD 모듈
+3. P5-003: 라이선스 검증 미들웨어
+4. P5-004: 법적 동의 강화
+5. P5-005: M-CHAT-R/F + CARS-2 + ABC 문항 데이터 (데모)
+6. P5-006: 채점 알고리즘
+7. P5-007: 점수 해석 서비스
+8. P5-008: Admin 라이선스 관리 페이지
+9. P5-009~012: 웹+모바일 UI 흐름
+10. P5-013~018: 품질/문서/AI연동
 
-3. **Phase 5 대기 중** (SPEC/IMPLEMENTATION_PLAN.md 참조)
+### Phase 5 결정사항
+
+- 도구 데이터: 데모 데이터 (운영 전 실제 데이터 교체)
+- 구현 도구: M-CHAT-R/F + CARS-2 + ABC (3개 우선)
 
 ## KEY FILES
 
-- ASD/SPEC/IMPLEMENTATION_PLAN.md — Phase 5 계획
-- ASD/auticare/AGENTS.md — 개발 필수 참조 (13~14절 UX 개선 + 배포 계획)
-- ASD/auticare/DEPLOYMENT_GUIDE.md — 배포 환경별 비용/방법 가이드 ← NEW
-- ASD/auticare/PHASE4_TEST_CHECKLIST.md — Phase 4 수동 테스트 체크리스트
-- ASD/auticare/apps/api/src/research/ — 연구 모듈 (reSummarizeArticles 포함)
-- ASD/auticare/apps/api/src/admin/admin.controller.ts — re-summarize 엔드포인트
-- ASD/auticare/apps/web/src/pages/DashboardPage.tsx — ResearchTicker 포함
-- ASD/auticare/apps/mobile/app/research.tsx — 3탭 AI요약 포함
-- ASD/auticare/apps/mobile/app/sensory-profile.tsx — 활용 가이드 카드 포함
+- ASD/SPEC/IMPLEMENTATION_PLAN.md — Phase 5 상세 (12절)
+- ASD/auticare/AGENTS.md — 개발 필수 참조 (16절 Phase 5)
+- ASD/auticare/DEPLOYMENT_GUIDE.md — 배포 가이드
+- ASD/auticare/MOBILE_TEST_GUIDE.md — 모바일 터널링 테스트
+- ASD/auticare/libs/prisma-client/prisma/schema.prisma — License 모델 추가 필요
+- ASD/auticare/apps/api/src/research/ — 연구 모듈
+- ASD/auticare/apps/mobile/app/add-child.tsx — 아이 추가 화면
+- ASD/auticare/apps/mobile/app/settings.tsx — GDPR 내보내기
 
 ## IMPORTANT DECISIONS
 
 - Phase 4 컨트롤러: user.familyId 직접 사용 금지 → FamilyResolverService 필수
-- AI 응답 파싱: JSON 요청하면 마크다운 포함으로 파싱 실패 → 평문 텍스트 요청
+- AI 응답 파싱: 시스템 프롬프트에 마크다운 금지 명시 필수 (JSON 파싱 오류 방지)
+- 연구 요약: maxTokens 1000 (500은 JSON 잘림)
+- 커리큘럼 활동: 3~5개 이내 명시 (스키마 max 5)
 - Express ETag: main.ts에 app.set('etag', false) (304 캐시 방지)
-- 연구 아카이브: isArchived=true (숨김, 복원 가능) / deleteMany (영구 삭제)
-- 모바일 ResearchMatch: item.article.xxx 중첩 접근, tags/keyFindings는 ?? [] 필요
-- 앱 자동 동기화: AppInitializer가 /users/me + /families/my 자동 호출
-- 사이드바: 도구 그룹 = 질문지 + 보고서 + 감각 프로파일 (측정 도구 분류)
+- 사이드바: 도구 그룹 = 질문지 + 보고서 + 감각 프로파일
 - AI digest: 평문 텍스트 응답, regex로 TOP 3 논문 파싱
 - 연구 요약 재처리: fire-and-forget + BatchJob 폴링 (2초 간격)
+- Admin 비밀번호: Admin123!@#
+- Phase 5 도구: M-CHAT-R/F + CARS-2 + ABC (데모 데이터)
 
 ## EXPLICIT CONSTRAINTS
 
@@ -101,14 +110,15 @@ Phase 4: P4-001~025 구현 완료 + 검증 완료 (146 커밋)
 - 새 API 훅 전 컨트롤러 경로 확인 필수
 - AI 기능: .catch(() => {}) 필수
 - PII 필드 (name, birthDate): nameEnc/birthDateEnc로 저장, 직접 select 불가
-- 모바일 Platform.OS 분기: Alert, SecureStore, SplashScreen, Notifications
+- 스키마 변경 순서: migrate → generate → build → restart-api
+- 모바일 코드 변경 후: ./scripts/restart-mobile.sh (2~3분)
 
 ## CONTEXT FOR CONTINUATION
 
 새 세션 시작 시:
 
-1. AGENTS.md 12~13절 읽기 (Phase 4 완료 + UX 개선 현황)
-2. 연구 요약 재처리 실행 여부 확인 (Admin → 모니터링)
-3. Phase 4 이연 항목 처리 or Phase 5 시작
-4. 새 기능 개발 시: FamilyResolverService 반드시 사용
-5. 모바일 코드 변경 후: ./scripts/restart-mobile.sh (2~3분)
+1. AGENTS.md 16절 읽기 (Phase 5 태스크 목록)
+2. P5-001부터 순차적으로
+3. 새 기능 개발 시: FamilyResolverService 반드시 사용
+4. 라이선스 모듈: apps/api/src/licenses/ 신규 생성 예정
+5. 데모 데이터 방식: 실제 저작권 도구 문항 대신 유사 구조 샘플 문항

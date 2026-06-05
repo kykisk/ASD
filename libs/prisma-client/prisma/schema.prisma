@@ -177,6 +177,7 @@ model Family {
   researchMatches  ResearchUserMatch[]
   researchDigests  ResearchDigest[]
   roleAssignments  RoleAssignment[]
+  licenses         License[]
 }
 
 model FamilyMember {
@@ -723,4 +724,42 @@ model ActivityComment {
 
   @@index([activityLogId])
   @@index([userId])
+}
+
+// ============================================================
+// Phase 5 — Licensing
+// ============================================================
+
+enum LicensedTool {
+  M_CHAT_R_F
+  CARS_2
+  ABC
+  ADOS_2
+  SCQ
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+model License {
+  id          String        @id @default(cuid())
+  tool        LicensedTool
+  keyHash     String        // SHA-256 of the original license key
+  familyId    String
+  status      LicenseStatus @default(ACTIVE)
+  activatedAt DateTime      @default(now())
+  expiresAt   DateTime?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  family      Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([tool, familyId])
+  @@index([familyId])
+  @@index([status])
+  @@index([expiresAt])
 }
