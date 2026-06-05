@@ -7,13 +7,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/auth.store.js';
 import { useChildStore } from '../../stores/child.store.js';
 import { useDashboard } from '../../hooks/use-dashboard.js';
+import { useResearchFeed, useDigestHistory } from '../../hooks/use-research.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
 import type { TodaySchedule, DashboardDomainScore, DashboardAlert } from '../../types/api.types.js';
+import type { ResearchMatch, DigestHistoryItem } from '../../hooks/use-research.js';
 
 const CATEGORY_COLORS: Record<string, string> = {
   THERAPY: '#5B8A72',
@@ -33,6 +36,113 @@ const DOMAIN_LABELS: Record<string, string> = {
   DAILY_LIVING: '일상생활',
 };
 
+function ResearchTickerCard({ articles }: { articles: ResearchMatch[] }) {
+  const router = useRouter();
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    if (articles.length <= 1) return;
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIdx((prev) => (prev + 1) % articles.length);
+        setVisible(true);
+      }, 350);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [articles.length]);
+
+  const current = articles[idx];
+  if (!current) return null;
+  const text = current.article.koreanSummary || current.article.title;
+  const date = new Date(current.article.publishedAt).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'short',
+  });
+
+  return (
+    <TouchableOpacity
+      style={styles.tickerCard}
+      activeOpacity={0.7}
+      onPress={() => router.push('/research')}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={styles.tickerBadge}>
+          <Text style={styles.tickerBadgeText}>📰 연구</Text>
+        </View>
+        <Text style={[styles.tickerText, { opacity: visible ? 1 : 0 }]} numberOfLines={1}>
+          {text}
+        </Text>
+        <View style={styles.tickerMeta}>
+          <Text style={styles.tickerMetaBadgeText}>{date}</Text>
+          <View style={styles.tickerMetaBadge}>
+            <Text style={styles.tickerMetaBadgeText}>✨AI요약</Text>
+          </View>
+          <Text style={styles.tickerArrow}>→</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function LatestDigestCard({ digest }: { digest: DigestHistoryItem }) {
+  const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const date = new Date(digest.createdAt).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return (
+    <TouchableOpacity
+      style={styles.digestCard}
+      activeOpacity={0.7}
+      onPress={() => router.push('/research')}
+    >
+      <View style={styles.digestHeader}>
+        <Text style={styles.digestTitle}>✨ AI 맞춤 요약</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          {!expanded && <Text style={styles.digestDate}>{date}</Text>}
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.digestToggle}>{expanded ? '접기▲' : '펼치기▼'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      {!expanded ? (
+        <Text style={styles.digestPreview} numberOfLines={2}>
+          {digest.digest}
+        </Text>
+      ) : (
+        <>
+          <Text style={styles.digestPreview}>{digest.digest}</Text>
+          {digest.topArticles.length > 0 && (
+            <View style={styles.digestTopSection}>
+              {digest.topArticles.slice(0, 2).map((item, i) => (
+                <View key={item.pubmedId} style={styles.digestTopRow}>
+                  <View style={styles.digestBadge}>
+                    <Text style={styles.digestBadgeText}>{i + 1}</Text>
+                  </View>
+                  <Text style={styles.digestTopTitle} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 function TrendArrow({ trend }: { trend: 'UP' | 'DOWN' | 'STABLE' }) {
   if (trend === 'UP') return <Text style={styles.trendUp}>↑</Text>;
   if (trend === 'DOWN') return <Text style={styles.trendDown}>↓</Text>;
@@ -48,6 +158,16 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const selectedChildId = useChildStore((s) => s.selectedChildId);
   const { data, isLoading, error, refetch } = useDashboard(selectedChildId);
+  const { data: researchFeed } = useResearchFeed();
+  const { data: digests } = useDigestHistory(selectedChildId);
+
+  const sortedArticles = researchFeed
+    ? [...researchFeed].sort(
+        (a, b) =>
+          new Date(b.article.publishedAt).getTime() - new Date(a.article.publishedAt).getTime(),
+      )
+    : [];
+  const latestDigest = digests && digests.length > 0 ? digests[0] : null;
 
   const onRefresh = useCallback(async () => {
     await refetch();
@@ -114,6 +234,9 @@ export default function HomeScreen() {
           ))}
         </View>
       )}
+
+      {sortedArticles.length > 0 && <ResearchTickerCard articles={sortedArticles} />}
+      {latestDigest && <LatestDigestCard digest={latestDigest} />}
 
       {data && (
         <View style={styles.card}>
@@ -411,5 +534,107 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  tickerCard: {
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: 'rgba(91, 138, 114, 0.4)',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+  },
+  tickerBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  tickerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+  },
+  tickerText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.text,
+    marginHorizontal: spacing.sm,
+  },
+  tickerMeta: {
+    flexDirection: 'row' as const,
+    gap: spacing.xs,
+    alignItems: 'center' as const,
+  },
+  tickerMetaBadge: {
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  tickerMetaBadgeText: {
+    color: colors.primary,
+    fontSize: fontSize.xs,
+  },
+  tickerArrow: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+  },
+  digestCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+  },
+  digestHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: spacing.xs,
+  },
+  digestTitle: {
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  digestDate: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  digestToggle: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  digestPreview: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    lineHeight: 20,
+    marginTop: spacing.xs,
+  },
+  digestTopSection: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  digestTopRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: spacing.sm,
+  },
+  digestBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  digestBadgeText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+  },
+  digestTopTitle: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    flex: 1,
   },
 });
