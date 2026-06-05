@@ -279,6 +279,7 @@ model Questionnaire {
   id             String            @id @default(cuid())
   familyId       String
   type           QuestionnaireType @default(NON_LICENSED_USER_INPUT)
+  licensedTool   LicensedTool?
   name           String
   description    String?
   domains        String[]          // e.g., ["COMMUNICATION", "SOCIAL", "MOTOR"]
