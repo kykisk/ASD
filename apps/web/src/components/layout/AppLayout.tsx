@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useLogout } from '../../hooks/use-auth';
 import { ChildSwitcher } from './ChildSwitcher';
 import { NotificationBell } from './NotificationBell';
+import { AppInitializer } from '../AppInitializer';
 
 const navGroups = [
   {
@@ -361,6 +362,7 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
+      <AppInitializer />
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-neutral-900/30 backdrop-blur-sm z-40 lg:hidden"
