@@ -26,6 +26,11 @@ export class ResearchBatchService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('Starting weekly research collection...');
     const result = await this.researchService.runWeeklyCollection();
     this.logger.log(`Weekly research collection completed: ${result.totalArticles} articles`);
-    return result;
+
+    this.logger.log('Starting weekly archive...');
+    const archived = await this.researchService.archiveOldArticlesForAllFamilies();
+    this.logger.log(`Weekly archive completed: ${archived} articles archived`);
+
+    return { ...result, archived };
   }
 }

@@ -160,6 +160,19 @@ export class ResearchService {
     return result.count;
   }
 
+  async archiveOldArticlesForAllFamilies(daysOld = 90): Promise<number> {
+    const families = await this.prisma.family.findMany({ select: { id: true } });
+    let total = 0;
+    for (const family of families) {
+      const count = await this.archiveOldArticles(family.id, daysOld);
+      total += count;
+    }
+    this.logger.log(
+      `Archive completed: ${total} articles archived across ${families.length} families`,
+    );
+    return total;
+  }
+
   async unarchiveArticle(matchId: string, familyId: string): Promise<void> {
     await this.prisma.researchUserMatch.update({
       where: { id: matchId },
