@@ -2,142 +2,136 @@
 
 ## USER REQUESTS (AS-IS)
 
-- "phase1 구현해볼까" → Phase 1 전체 구현 완료 (8주)
-- "go" × 6 → Phase 2 전체 구현 완료 (6주)
-- Phase 2 검증: 다수 버그 발견 및 수정 완료
-- "이전에 하던 작업을 새 세션에서 이어하려고해" → Phase 3 (Mobile) 전체 구현 완료 (6주)
-- Phase 3 검증: 테스트 + 버그 수정 + 누락 기능 추가 완료
-- "이제 Phase4를 진행해보자" → Phase 4 시작 예정
+- Phase 1~3 구현 + 검증 완료
+- Phase 4 구현 완료 (P4-001~025)
+- Phase 4 검증 중: 다수 버그 수정 완료
+- "컨텍스트가 다차서 새세션에서 계속해야겠다" → 문서 업데이트 후 새 세션
 
 ## GOAL
 
-Phase 4 (Expansion) 구현 시작.
-P4-001 ~ P4-025 순서대로 진행.
+Phase 4 검증 계속 + 미완료 항목 처리.
+다음 세션에서 PHASE4_TEST_CHECKLIST.md 기반으로 테스트 진행.
 
 ## WORK COMPLETED
 
-Phase 1 전체 구현 + 검증 (8주, 154 테스트)
-Phase 2 전체 구현 + 검증 (6주, 218 테스트)
-Phase 3 전체 구현 (6주, 244 테스트)
-Phase 3 검증 및 버그 수정 완료 (121 커밋)
+Phase 1~3: 완료 + 검증 완료 (244 테스트)
+Phase 4: P4-001~025 구현 완료 + 검증 진행 중 (146 커밋)
 
-[Phase 3 검증 중 수정된 주요 버그]
+[Phase 4 구현 내용]
 
-1. 일정 API 날짜 형식 오류
-   - 원인: QueryScheduleDto가 ISO 8601 datetime 필요, YYYY-MM-DD 전달
-   - 수정: use-schedules.ts에서 T00:00:00.000Z / T23:59:59.999Z 변환
+백엔드 모듈 5개:
 
-2. 로그아웃 후 이전 사용자 데이터 노출
-   - 원인: Zustand store + React Query 캐시 미초기화
-   - 수정: auth.store logout에서 childStore.reset() + queryClient.clear()
-   - 웹: use-auth.ts logout에서 clearSelectedChild() + queryClient.clear()
+- wellbeing/: 무드 체크인, 번아웃 감지, AI 격려 메시지
+- emergency/: 5종 가이드, 이벤트 로그, AI 패턴 분석
+- sensory/: 6채널 프로파일 CRUD, AI 활동 추천
+- research/: PubMed 수집, AI 요약, 가족 매칭, 주간 배치
+- collaboration/: 역할 분담, 활동 로그 댓글
 
-3. 질문지 API 엔드포인트 불일치
-   - 원인: /questionnaires → 실제: /families/:id/questionnaires
-   - 수정: useQuestionnaires(familyId) 파라미터 추가, child.store에 familyId 저장
+Research 추가 기능 (세션 중 요청으로 구현):
 
-4. familyId JWT null 이슈
-   - 원인: 가족 생성 후 재로그인 전까지 JWT familyId=null
-   - 수정: child.store.familyId (fetchChildren 시 저장) fallback 사용
+- AI 맞춤 요약 (POST /research/ai-digest): 북마크 논문 + 아이 상태 분석
+- ResearchDigest 모델: AI 요약 히스토리 저장/조회
+- 아카이브 관리: isArchived 필드, 복원/삭제, 90일 자동 만료 준비
+- 날짜 필터: 최근 2년 이내 논문만 수집 (PubMed datetype=pdat)
+- 날짜 배지: 논문 카드에 발행일 + 오래된 논문 노란 배지
 
-5. 커리큘럼 엔드포인트 오류
-   - /curricula/today → /curriculum/today (단수)
-   - /children/:id/curricula/:id/confirm → /curricula/:id/confirm
+웹 UI:
 
-6. Alert.alert 웹 무반응
-   - 수정: 모든 Alert.alert를 Platform.OS 분기로 교체 (로그아웃, 삭제, 보고서 등)
+- 5개 신규 페이지 (WellbeingPage, EmergencyGuidePage, SensoryProfilePage, ResearchPage, FamilyCollaborationPage)
+- 사이드바 아코디언 그룹 (치료관리/도구/부모지원/가족)
+- ResearchPage 4탭 (추천/북마크/아카이브/AI 요약 히스토리)
+- AI 요약 히스토리 펼치기/접기 토글 (DigestHistoryCard)
+- AppInitializer: 앱 진입 시 자동 family/child 동기화 (서버 재시작 후 자동 복구)
 
-7. 저장 후 화면 미갱신
-   - 원인: React Query invalidation이 Zustand store 미갱신
-   - 수정: mutation onSuccess에서 fetchChildren(familyId) 직접 호출
+모바일:
 
-[Phase 3 검증 중 추가된 기능]
+- 4개 신규 화면 (wellbeing, emergency-guide, sensory-profile, research)
+- more.tsx: 4개 메뉴 추가
 
-- 커리큘럼 완료 액션 (PATCH /curricula/:id/complete + 완료 버튼 UI)
-- 커리큘럼 히스토리 탭 (오늘/히스토리 탭, setQueriesData 즉시 갱신)
-- AI 커리큘럼 생성 버튼 (POST /children/:id/curriculum/generate)
-- 일정 탭 추가 (P3-010 누락 - schedule.tsx + 탭 레이아웃)
-- 아이 프로필 편집 (useUpdateChild - 이름/성별/진단명/발달수준)
-- 아이 삭제 (useDeleteChild)
-- 가족 편집 (useUpdateFamily/InviteMember/UpdateMemberRole/RemoveMember)
-- 보고서 DB 저장 (P2-039 누락 - Report 모델 + listReports + getReport)
+AI 프롬프트 고도화:
 
-[Phase 3 이연 항목 처리]
+- P4-022: 감각 프로파일 → 커리큘럼 프롬프트 반영
+- P4-023: 마일스톤(UP 트렌드 70% 이상) → 커리큘럼 프롬프트 반영
+- P4-024: 발달수준 카테고리별 구조화
 
-- 보고서 DB 저장 → ✅ 완료 (Report Prisma 모델 + upsert)
-- GDPR 내보내기 모바일 → 🔄 Phase 4 (settings.tsx 배지)
-- 아이 추가 모바일 → 🔄 Phase 4
+[Phase 4 검증 중 수정된 버그]
+
+1. 연구 피드 빈 배열: childId 필터에 OR [childId, null] 조건 추가
+2. Phase 4 API 빈 결과: FamilyResolverService를 모든 Phase 4 컨트롤러에 적용
+3. AI digest 500: Child.name/birthDate 암호화 필드 접근 오류 → 제거
+4. AI digest JSON 파싱 오류: JSON 응답 → 평문 텍스트로 변경
+5. 관리자 배치 stub: admin.module에 ResearchModule import, 실제 DI
+6. Express ETag 304: main.ts에 etag=false 추가
+7. 서버 재시작 후 데이터 미표시: AppInitializer 추가 (자동 동기화)
+8. 모바일 연구 화면 오류: ResearchMatch 타입 수정 (item.article.xxx 중첩), null 방어
 
 ## CURRENT STATE
 
-- Phase 1 + 2 + 3: 완료 + 검증 완료
+- Phase 1 + 2 + 3 + 4: 구현 완료
 - 빌드: api ✅ web ✅ admin ✅ mobile(export) ✅
-- 테스트: 244개 통과 (36개 파일)
-- Git: 121 커밋, master 브랜치 push 완료
-- 모바일 웹 접속: http://3.35.36.62:8081 (start-mobile.sh 실행 후)
-- PHASE3_TEST_CHECKLIST.md: 백엔드 5개 완료, 모바일 주요 기능 검증 완료
+- 테스트: 244개 통과
+- Git: 146 커밋, master 브랜치 push 완료
+- 웹: http://3.35.36.62:4200
+- 모바일 웹: http://3.35.36.62:8081 (restart-mobile.sh 실행 후)
+- Admin: http://3.35.36.62:4300
+- PubMed 연구 배치: Admin 패널 → 모니터링 → "연구 배치 실행" 버튼
+- 수집된 논문: 20개 (2026-06-04 기준)
 
 ## PENDING TASKS
 
-1. Phase 4 구현 (SPEC/IMPLEMENTATION_PLAN.md 11절):
-   - P4-001~004: 부모 웰빙 (무드 체크인, 번아웃 감지, AI 격려)
-   - P4-005~008: 비상 가이드 (단계별 가이드, 진정 타이머, 패턴 분석)
-   - P4-009~011: 감각 프로파일 (6채널, 레이더 차트)
-   - P4-012~018: 연구 자동 수집 (PubMed, AI 요약, 개인화)
-   - P4-019~021: 가족 협업 (역할 분담, 활동 로그 댓글)
-   - P4-022~025: AI 프롬프트 고도화 (감각+마일스톤+구조화 발달수준)
+1. Phase 4 수동 테스트 (PHASE4_TEST_CHECKLIST.md 참조):
+   - 웹 UI 25개 항목 미완료
+   - 모바일 10개 항목 미완료
 
 2. Phase 4로 이연된 항목:
-   - GDPR 데이터 내보내기 (모바일 파일 처리)
+   - GDPR 데이터 내보내기 (모바일)
    - 아이 추가 (모바일)
+   - 연구 자동 아카이브: 배치에 archiveOldArticles() 연결 필요
 
-3. 모바일 미완료 QA:
-   - 오프라인 모드 (비행기 모드 테스트)
-   - 푸시 알림 (.env FCM_PROJECT_ID 등 설정 필요)
-   - EAS Build 실제 iOS/Android 빌드
+3. Phase 5 대기 중 (SPEC/IMPLEMENTATION_PLAN.md 참조)
 
 ## KEY FILES
 
-- ASD/SPEC/IMPLEMENTATION_PLAN.md - Phase 4 상세 태스크 (11절)
-- ASD/auticare/AGENTS.md - 개발 필수 참조 (버그 패턴 10.7, Phase 4 계획 11절)
-- ASD/auticare/PHASE3_TEST_CHECKLIST.md - Phase 3 수동 테스트 체크리스트
-- ASD/auticare/apps/mobile/ - React Native 앱 전체
-- ASD/auticare/apps/mobile/hooks/ - 실API 훅 (use-schedules, use-curricula 등)
-- ASD/auticare/apps/mobile/app/(tabs)/schedule.tsx - 일정 화면
-- ASD/auticare/apps/mobile/app/(tabs)/curriculum.tsx - 커리큘럼 (완료/히스토리)
-- ASD/auticare/apps/api/src/reports/report.service.ts - 보고서 서비스 (DB 저장 포함)
-- ASD/auticare/libs/prisma-client/prisma/schema.prisma - DB 스키마
-- ASD/auticare/scripts/restart-mobile.sh - 모바일 재빌드+서버 재시작 (all-in-one)
+- ASD/SPEC/IMPLEMENTATION_PLAN.md - Phase 5 계획
+- ASD/auticare/AGENTS.md - 개발 필수 참조 (12.2 Phase 4 버그 패턴 포함)
+- ASD/auticare/PHASE4_TEST_CHECKLIST.md - Phase 4 수동 테스트 체크리스트
+- ASD/auticare/apps/api/src/research/ - 연구 모듈 전체
+- ASD/auticare/apps/api/src/common/services/family-resolver.service.ts - familyId 해석
+- ASD/auticare/apps/web/src/components/AppInitializer.tsx - 자동 동기화
+- ASD/auticare/apps/web/src/pages/ResearchPage.tsx - 연구 4탭 UI
+- ASD/auticare/apps/mobile/app/research.tsx - 모바일 연구 화면
+- ASD/auticare/libs/prisma-client/prisma/schema.prisma - 스키마 (Phase 4 모델 포함)
+- ASD/auticare/scripts/ - 서버 관리 스크립트
 
 ## IMPORTANT DECISIONS
 
-- 모바일 웹 서빙: expo start --web 불가 → expo export + 정적 서버 (scripts/serve-mobile.js)
-- FCM: .env 미설정 시 graceful skip
-- familyId: JWT 대신 child.store.familyId 사용 (JWT는 재로그인 전 null)
-- 일정 날짜: 반드시 ISO 8601 datetime 형식 (T00:00:00.000Z)
-- Alert/Confirm: Platform.OS === 'web' ? window.alert/confirm : Alert.alert
-- 보고서: 생성 시 DB upsert, 조회는 GET /children/:id/reports
-- 커리큘럼 완료: PATCH /curricula/:id/complete (GENERATED→CONFIRMED→COMPLETED)
-- 즉시 UI 갱신: invalidateQueries 대신 setQueriesData 사용 (탭 전환 시 캐시 즉시 반영)
+- Phase 4 컨트롤러: user.familyId 직접 사용 금지 → FamilyResolverService 필수
+- AI 응답 파싱: JSON 요청하면 마크다운 포함으로 파싱 실패 → 평문 텍스트 요청
+- Express ETag: main.ts에 app.set('etag', false) (304 캐시 방지)
+- 연구 아카이브: isArchived=true (숨김, 복원 가능) / deleteMany (영구 삭제)
+- 모바일 ResearchMatch: item.article.xxx 중첩 접근, tags/keyFindings는 ?? [] 필요
+- 앱 자동 동기화: AppInitializer가 /users/me + /families/my 자동 호출
+- 사이드바: 아코디언 그룹 (현재 경로 포함 그룹 자동 펼침)
+- AI digest: 평문 텍스트 응답, regex로 TOP 3 논문 파싱
 
 ## EXPLICIT CONSTRAINTS
 
-- 모든 답변 한국어
+- 모든 답변 한국어 (영어로 질문해도 한국어로 답변)
 - 충돌 금지 포트: 3000, 4173, 5432
 - ESM: 상대 임포트에 .js 확장자 필수 (모바일도 동일)
 - as any, @ts-ignore 금지
 - Mock 훅 절대 금지 → 반드시 실제 API 호출
-- 새 API 훅 작성 전 컨트롤러 경로 반드시 확인 (URL 불일치 버그 다수 발생)
-- AI 기능: .catch(() => {}) 필수 — AI 실패가 주 기능 차단하면 안 됨
+- 새 API 훅 전 컨트롤러 경로 확인 필수
+- AI 기능: .catch(() => {}) 필수
+- PII 필드 (name, birthDate): nameEnc/birthDateEnc로 저장, 직접 select 불가
 - 모바일 Platform.OS 분기: Alert, SecureStore, SplashScreen, Notifications
 
 ## CONTEXT FOR CONTINUATION
 
-Phase 4 시작 시:
+새 세션 시작 시:
 
-1. SPEC/IMPLEMENTATION_PLAN.md 11절 (Phase 4) 읽기
-2. Prisma 스키마 변경 순서: migrate dev → generate → build api → restart-api
-3. 백엔드 API 우선 → 웹 → 모바일 순서로 구현
-4. 새 모바일 훅 작성 전 컨트롤러 경로 확인 (AGENTS.md 10.7 참고)
-5. 모바일 웹 테스트: ./scripts/restart-mobile.sh (2~3분 빌드)
-6. Phase 4 배지 패턴: settings.tsx의 phase4Row/phase4Badge 스타일 재사용
+1. AGENTS.md 12절 (Phase 4 완료 현황) 읽기
+2. PHASE4_TEST_CHECKLIST.md 기반으로 수동 테스트 진행
+3. 새 기능 개발 시: FamilyResolverService 반드시 사용
+4. 연구 관련 수정: research.service.ts (아카이브/digest 로직 포함)
+5. 모바일 코드 변경 후: ./scripts/restart-mobile.sh (2~3분)

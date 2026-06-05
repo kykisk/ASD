@@ -3,12 +3,12 @@
 > AI 에이전트가 이 프로젝트에서 작업할 때 반드시 읽어야 하는 문서입니다.
 > 이 프로젝트는 자폐 아동 가정치료 지원 시스템입니다.
 
-| 항목          | 내용                                |
-| ------------- | ----------------------------------- |
-| 현재 Phase    | **Phase 3 검증 완료. Phase 4 시작** |
-| 최종 업데이트 | 2026-06-04                          |
-| 총 커밋       | 121개                               |
-| 테스트        | 244개 통과                          |
+| 항목          | 내용                                           |
+| ------------- | ---------------------------------------------- |
+| 현재 Phase    | **Phase 4 구현 중 (P4-001~025 완료, 검증 중)** |
+| 최종 업데이트 | 2026-06-04                                     |
+| 총 커밋       | 146개                                          |
+| 테스트        | 244개 통과                                     |
 
 ---
 
@@ -569,7 +569,89 @@ SPEC/IMPLEMENTATION_PLAN.md 11절 참조.
 
 ---
 
-## 12. 커밋 컨벤션
+## 12. Phase 4 완료 현황 (Expansion)
+
+### 12.1 구현 완료 기능
+
+| 영역                   | 내용                                                                    | 상태 |
+| ---------------------- | ----------------------------------------------------------------------- | ---- |
+| **부모 웰빙**          | ParentWellbeing 모델, 무드 체크인 CRUD, 번아웃 감지, AI 격려 메시지     | ✅   |
+| **비상 가이드**        | 5종 가이드 데이터, EmergencyEvent 로그, AI 패턴 분석                    | ✅   |
+| **감각 프로파일**      | SensoryProfile 모델, 6채널 CRUD, AI 활동 추천                           | ✅   |
+| **연구 자동 수집**     | PubMed API, AI 한국어 요약, 가족 매칭, 주간 배치, **아카이브/히스토리** | ✅   |
+| **가족 협업**          | RoleAssignment CRUD, ActivityComment                                    | ✅   |
+| **AI 프롬프트 고도화** | 감각프로필+마일스톤+발달수준 구조화 반영                                | ✅   |
+| **AI 맞춤 요약**       | 북마크 논문 기반 개인화 요약, 히스토리 저장/조회                        | ✅   |
+
+### 12.2 Phase 4 검증 중 발견된 버그 (CRITICAL)
+
+| #   | 버그                             | 원인                                                                      | 수정                                                       |
+| --- | -------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1   | **연구 피드 빈 배열**            | `childId` 파라미터로 필터링 시 `childId=null` 레코드 미포함               | `OR [childId, null]` 조건으로 수정                         |
+| 2   | **Phase 4 API 전부 빈 결과**     | `user.familyId` JWT null → FamilyResolverService 미적용                   | 모든 Phase 4 컨트롤러에 `FamilyResolverService` 적용       |
+| 3   | **AI digest 500**                | `Child.name` 필드 없음 (암호화된 `nameEnc`)                               | `name` 제거, `diagnosisName`만 사용                        |
+| 4   | **AI digest 500**                | `Child.birthDate` 필드 없음 (암호화된 `birthDateEnc`)                     | `birthDate` 제거, 나이 계산 제거                           |
+| 5   | **AI digest JSON 파싱 오류**     | AI 응답 마크다운이 JSON 안에 포함되어 파싱 실패                           | JSON 요청 제거 → 평문 텍스트 요청으로 변경                 |
+| 6   | **관리자 배치 실행 무반응**      | admin.controller의 가짜 stub이 실제 ResearchBatchService 가로챔           | admin.module에 ResearchModule import, 실제 서비스 DI       |
+| 7   | **Express ETag 304**             | Express 기본 ETag가 빈 응답 캐시 → 데이터 추가돼도 304 반환               | `main.ts`에 `app.set('etag', false)` 추가                  |
+| 8   | **서버 재시작 후 데이터 미표시** | JWT familyId=null, React Query 캐시 stale                                 | `AppInitializer` 컴포넌트 추가 (웹 앱 진입 시 자동 동기화) |
+| 9   | **모바일 연구 화면 오류**        | `ResearchMatch` 타입이 flat인데 실제 API는 중첩 구조 (`item.article.xxx`) | 타입 수정 + `tags ?? []` null 방어                         |
+
+### 12.3 연구(Research) 모듈 상세 구조
+
+```
+ResearchArticle: PubMed 논문 (pubmedId UNIQUE)
+  └── ResearchUserMatch: 가족별 매칭 (isBookmarked, isRead, isArchived)
+        └── ResearchDigest: AI 맞춤 요약 히스토리 (familyId, childId)
+
+수집: PubMed eutils API → AI 한국어 요약 → 가족별 매칭 저장
+아카이브: 90일 이상 비북마크 → isArchived=true (숨김, 복원 가능)
+삭제: 아카이브된 항목 명시적 삭제 (DELETE /research/archived)
+날짜 필터: 최근 2년 이내 논문만 수집 (datetype=pdat)
+```
+
+**웹 연구 페이지 4탭:** 추천 | 북마크 | 아카이브 | AI 요약 히스토리
+
+### 12.4 FamilyResolverService (CRITICAL — Phase 4 전체에 적용)
+
+`apps/api/src/common/services/family-resolver.service.ts`
+
+```typescript
+async resolve(userId: string, jwtFamilyId: string | null | undefined): Promise<string | null> {
+  if (jwtFamilyId) return jwtFamilyId;                    // JWT 빠른 경로
+  const member = await this.prisma.familyMember.findFirst({ where: { userId } });
+  return member?.familyId ?? null;                         // DB fallback
+}
+```
+
+**모든 Phase 4 컨트롤러**에서 `user.familyId` 직접 사용 금지. 반드시 위 서비스 사용.
+
+### 12.5 AppInitializer (웹 앱 자동 동기화)
+
+`apps/web/src/components/AppInitializer.tsx`
+
+앱 진입 시 자동으로:
+
+1. `GET /users/me` → 최신 유저 정보
+2. `GET /families/my` → familyId 확보 (JWT null이어도 OK)
+3. auth store + child store 업데이트
+4. `queryClient.invalidateQueries()` → 서버 재시작 후 stale 캐시 제거
+5. `window.focus` 이벤트 → 탭 전환 후 자동 refetch
+
+**효과:** 서버 재시작 후 로그아웃 없이 페이지 새로고침만 하면 데이터 정상 표시
+
+### 12.6 웹 사이드바 그룹 구조
+
+아코디언 방식 (클릭으로 펼치기/접기):
+
+- **치료 관리**: 대시보드, 커리큘럼, 일정, 평가 입력, 성장 기록, AI 분석
+- **도구**: 질문지, 보고서
+- **부모 지원**: 웰빙 체크인, 비상 가이드, 감각 프로파일, 연구 자료
+- **가족**: 아이 관리, 가족 관리, 가족 협업
+
+---
+
+## 13. 커밋 컨벤션
 
 ```
 feat(scope): 새 기능 추가
