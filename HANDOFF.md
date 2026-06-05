@@ -48,7 +48,7 @@ Phase 4: P4-001~025 구현 완료 + 검증 완료 (146 커밋)
 - Phase 1 + 2 + 3 + 4: 구현 + 검증 완료
 - 빌드: api ✅ web ✅ admin ✅ mobile(export) ✅
 - 테스트: 244개 통과
-- Git: 147 커밋, master 브랜치 push 완료
+- Git: 148 커밋, master 브랜치 push 완료
 - 웹: http://3.35.36.62:4200
 - 모바일 웹: http://3.35.36.62:8081 (restart-mobile.sh 실행 후)
 - Admin: http://3.35.36.62:4300
@@ -70,7 +70,8 @@ Phase 4: P4-001~025 구현 완료 + 검증 완료 (146 커밋)
 ## KEY FILES
 
 - ASD/SPEC/IMPLEMENTATION_PLAN.md — Phase 5 계획
-- ASD/auticare/AGENTS.md — 개발 필수 참조 (13절 UX 개선 포함)
+- ASD/auticare/AGENTS.md — 개발 필수 참조 (13~14절 UX 개선 + 배포 계획)
+- ASD/auticare/DEPLOYMENT_GUIDE.md — 배포 환경별 비용/방법 가이드 ← NEW
 - ASD/auticare/PHASE4_TEST_CHECKLIST.md — Phase 4 수동 테스트 체크리스트
 - ASD/auticare/apps/api/src/research/ — 연구 모듈 (reSummarizeArticles 포함)
 - ASD/auticare/apps/api/src/admin/admin.controller.ts — re-summarize 엔드포인트
