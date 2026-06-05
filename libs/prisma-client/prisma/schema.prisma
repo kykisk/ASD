@@ -372,8 +372,9 @@ model MediaAttachment {
 model LegalConsent {
   id              String   @id @default(cuid())
   userId          String
-  consentType     String   // TERMS_OF_SERVICE, PRIVACY_POLICY, LICENSED_TOOL_USE
+  consentType     String   // TERMS_OF_SERVICE, PRIVACY_POLICY, LICENSED_TOOL_USE_<TOOL>
   consentVersion  String
+  documentContent String?  // 동의 당시 표시된 실제 동의서 내용 (스냅샷)
   ipAddress       String?
   userAgent       String?
   consentedAt     DateTime @default(now())
