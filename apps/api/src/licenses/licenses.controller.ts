@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { LicensedTool } from '@auticare/prisma-client';
 import { LicensesService } from './licenses.service.js';
+import { AssessmentScoringService } from './assessment-scoring.service.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { FamilyResolverService } from '../common/services/family-resolver.service.js';
@@ -10,6 +11,7 @@ import { UserRole } from '@auticare/prisma-client';
 export class LicensesController {
   constructor(
     private readonly licensesService: LicensesService,
+    private readonly scoringService: AssessmentScoringService,
     private readonly familyResolver: FamilyResolverService,
   ) {}
 
@@ -85,5 +87,10 @@ export class LicensesController {
     const hasLicense =
       resolvedId === familyId ? await this.licensesService.validateLicense(familyId, tool) : false;
     return { tool, hasLicense };
+  }
+
+  @Post('assessments/:assessmentId/score')
+  async scoreAssessment(@Param('assessmentId') assessmentId: string) {
+    return this.scoringService.score(assessmentId);
   }
 }
