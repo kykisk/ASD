@@ -3,12 +3,12 @@
 > AI 에이전트가 이 프로젝트에서 작업할 때 반드시 읽어야 하는 문서입니다.
 > 이 프로젝트는 자폐 아동 가정치료 지원 시스템입니다.
 
-| 항목          | 내용                                           |
-| ------------- | ---------------------------------------------- |
-| 현재 Phase    | **Phase 4 구현 중 (P4-001~025 완료, 검증 중)** |
-| 최종 업데이트 | 2026-06-04                                     |
-| 총 커밋       | 146개                                          |
-| 테스트        | 244개 통과                                     |
+| 항목          | 내용                                 |
+| ------------- | ------------------------------------ |
+| 현재 Phase    | **Phase 4 검증 완료 + UX 개선 완료** |
+| 최종 업데이트 | 2026-06-05                           |
+| 총 커밋       | 147개                                |
+| 테스트        | 244개 통과                           |
 
 ---
 
@@ -645,13 +645,61 @@ async resolve(userId: string, jwtFamilyId: string | null | undefined): Promise<s
 아코디언 방식 (클릭으로 펼치기/접기):
 
 - **치료 관리**: 대시보드, 커리큘럼, 일정, 평가 입력, 성장 기록, AI 분석
-- **도구**: 질문지, 보고서
-- **부모 지원**: 웰빙 체크인, 비상 가이드, 감각 프로파일, 연구 자료
+- **도구**: 질문지, 보고서, **감각 프로파일** (치료 보조 측정 도구로 재분류)
+- **부모 지원**: 웰빙 체크인, 비상 가이드, 연구 자료
 - **가족**: 아이 관리, 가족 관리, 가족 협업
+
+**모바일 More 탭 그룹:**
+
+- **치료 도구**: 아이 프로필, 감각 프로파일, 보고서
+- **부모 지원**: 웰빙 체크인, 비상 가이드, 연구 브리핑
+- **가족**: 가족 설정, 설정
 
 ---
 
-## 13. 커밋 컨벤션
+## 13. Phase 4 UX 개선 현황 (2026-06-05)
+
+### 13.1 이번 세션 완료 항목
+
+| 항목                          | 내용                                                                 | 파일                                                                |
+| ----------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **모바일 AI 요약/히스토리**   | research.tsx 3탭(추천/북마크/AI요약) + 생성 버튼 + DigestHistoryCard | `apps/mobile/app/research.tsx`, `apps/mobile/hooks/use-research.ts` |
+| **감각 프로파일 활용 가이드** | 작성 시 어디에 활용되는지 인라인 카드 (웹+모바일)                    | `SensoryProfilePage.tsx`, `sensory-profile.tsx`                     |
+| **감각 프로파일 → 도구 이동** | 부모 지원 → 도구 그룹으로 재분류                                     | `AppLayout.tsx`, `more.tsx`                                         |
+| **대시보드 연구 티커**        | 히어로 배너 아래 뉴스 티커 (5초 자동 전환, AI요약 표시)              | `DashboardPage.tsx`                                                 |
+| **연구 요약 재처리**          | 요약 없는 논문 일괄 재처리 (Admin) + 실시간 진행률                   | `research.service.ts`, `admin.controller.ts`, `MonitoringPage.tsx`  |
+
+### 13.2 대시보드 연구 티커 (ResearchTicker)
+
+`apps/web/src/pages/DashboardPage.tsx`
+
+- `useResearchFeed(selectedChildId)` 데이터 사용, `publishedAt` 기준 최신순 정렬
+- 5초마다 fade 전환 (useState + useEffect setInterval)
+- 텍스트: `koreanSummary` 우선, 없으면 `title`
+- 우측 `✨ AI 요약` 배지 표시
+- 클릭 → `/research` 이동
+- 연구 데이터 없으면 렌더링 안 됨
+
+### 13.3 연구 요약 재처리 (Admin)
+
+`POST /v1/admin/research/re-summarize`
+
+- `koreanSummary IS NULL` 논문 전체 조회 → `RESEARCH_RESUMMARY` BatchJob 생성 → 즉시 `{ jobId, total }` 반환 (fire-and-forget)
+- 논문마다 `processedItems` 업데이트 → Admin 프론트 2초 폴링
+- 버튼 텍스트 실시간: `재처리 중 (15/22)`
+- 완료 시 alert + 배치 이력 자동 갱신
+
+### 13.4 연구 데이터 품질 이슈 (CRITICAL)
+
+수집된 논문 중 `koreanSummary`가 null인 경우 원인:
+
+- PubMed 배치 실행 당시 AI 예산 초과 또는 AI 응답 JSON 파싱 실패
+- `abstract`는 존재하지만 `summarizeArticle()`이 null 반환 시 silent skip
+- **해결**: Admin → 모니터링 → "요약 재처리" 버튼 (실시간 진행률 표시)
+
+---
+
+## 14. 커밋 컨벤션
 
 ```
 feat(scope): 새 기능 추가

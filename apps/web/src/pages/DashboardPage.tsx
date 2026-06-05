@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useChildStore } from '../stores/child.store';
 import { useDashboard, DomainScore } from '../hooks/use-dashboard';
 import { useWeeklyInsight, InsightRecord } from '../hooks/use-insights';
+import { useResearchFeed, ResearchMatch } from '../hooks/use-research';
 import { Skeleton, ErrorState, EmptyState } from '../components/ui';
 
 const DOMAIN_COLORS: Record<string, string> = {
@@ -68,7 +70,15 @@ function DashboardSkeleton() {
   );
 }
 
-function ProgressRing({ percent, size = 80, strokeWidth = 6 }: { percent: number; size?: number; strokeWidth?: number }) {
+function ProgressRing({
+  percent,
+  size = 80,
+  strokeWidth = 6,
+}: {
+  percent: number;
+  size?: number;
+  strokeWidth?: number;
+}) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percent / 100) * circumference;
@@ -99,13 +109,24 @@ function ProgressRing({ percent, size = 80, strokeWidth = 6 }: { percent: number
   );
 }
 
-const TREND_CONFIG: Record<InsightRecord['overallTrend'], { label: string; color: string; bg: string }> = {
+const TREND_CONFIG: Record<
+  InsightRecord['overallTrend'],
+  { label: string; color: string; bg: string }
+> = {
   IMPROVING: { label: '성장 중', color: '#5B8A72', bg: '#E8F5EE' },
   STABLE: { label: '안정', color: '#64748B', bg: '#F1F5F9' },
   NEEDS_ATTENTION: { label: '관심 필요', color: '#D97706', bg: '#FFFBEB' },
 };
 
-function InsightCard({ insight, isLoading, isError }: { insight?: InsightRecord; isLoading: boolean; isError: boolean }) {
+function InsightCard({
+  insight,
+  isLoading,
+  isError,
+}: {
+  insight?: InsightRecord;
+  isLoading: boolean;
+  isError: boolean;
+}) {
   if (isLoading) {
     return (
       <div
@@ -158,9 +179,7 @@ function InsightCard({ insight, isLoading, isError }: { insight?: InsightRecord;
         </span>
       </div>
 
-      <p className="text-sm text-neutral-700 leading-relaxed mb-4">
-        {insight.summary}
-      </p>
+      <p className="text-sm text-neutral-700 leading-relaxed mb-4">{insight.summary}</p>
 
       {insight.highlights.length > 0 && (
         <div className="mb-3">
@@ -261,10 +280,74 @@ function DomainScoreCard({ domain, score, trend, delay }: DomainScore & { delay:
   );
 }
 
+function ResearchTicker({ articles }: { articles: ResearchMatch[] }) {
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    if (articles.length <= 1) return;
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIdx((i) => (i + 1) % articles.length);
+        setVisible(true);
+      }, 350);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [articles.length]);
+
+  const current = articles[idx];
+  if (!current) return null;
+
+  const text = current.article.koreanSummary || current.article.title;
+  const date = new Date(current.article.publishedAt).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'short',
+  });
+
+  return (
+    <Link
+      to="/research"
+      className="flex items-center gap-3 px-4 py-2.5 bg-primary-50 border border-primary-100 rounded-xl hover:bg-primary-100/60 transition-colors overflow-hidden group cursor-pointer no-underline"
+    >
+      {/* Label badge */}
+      <span className="shrink-0 flex items-center gap-1 bg-primary-500 text-white text-[11px] font-bold px-2 py-1 rounded-md leading-none whitespace-nowrap">
+        📰 연구
+      </span>
+
+      {/* Scrolling text */}
+      <span
+        className="flex-1 text-sm text-neutral-700 truncate"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'translateY(0)' : 'translateY(-6px)',
+          transition: 'opacity 0.3s ease, transform 0.3s ease',
+        }}
+      >
+        {text}
+      </span>
+
+      {/* Right meta */}
+      <div className="shrink-0 flex items-center gap-2 text-xs text-neutral-400 whitespace-nowrap">
+        <span className="hidden sm:inline">{date}</span>
+        <span className="text-xs bg-primary-100 text-primary-600 px-1.5 py-0.5 rounded font-medium">
+          ✨ AI 요약
+        </span>
+        <span className="text-primary-400 group-hover:translate-x-0.5 transition-transform">→</span>
+      </div>
+    </Link>
+  );
+}
+
 export function DashboardPage() {
   const { selectedChildId } = useChildStore();
   const { data, isLoading, isError, refetch } = useDashboard(selectedChildId);
-  const { data: insight, isLoading: insightLoading, isError: insightError } = useWeeklyInsight(selectedChildId);
+  const {
+    data: insight,
+    isLoading: insightLoading,
+    isError: insightError,
+  } = useWeeklyInsight(selectedChildId);
+  const { data: researchFeed } = useResearchFeed(selectedChildId);
 
   if (!selectedChildId) {
     return (
@@ -285,7 +368,13 @@ export function DashboardPage() {
   }
 
   if (isError) {
-    return <ErrorState title="대시보드를 불러올 수 없습니다" message="네트워크 연결을 확인해주세요." onRetry={() => refetch()} />;
+    return (
+      <ErrorState
+        title="대시보드를 불러올 수 없습니다"
+        message="네트워크 연결을 확인해주세요."
+        onRetry={() => refetch()}
+      />
+    );
   }
 
   const { child, today, recentAssessment, weeklyProgress, alerts } = data;
@@ -300,9 +389,7 @@ export function DashboardPage() {
     const domainLabel = DOMAIN_LABELS[upDomain.domain] || upDomain.domain;
     summaryParts.push(`${domainLabel} 점수 상승중`);
   }
-  const summaryText = summaryParts.length > 0
-    ? summaryParts.join(' · ')
-    : '오늘 일정이 없어요';
+  const summaryText = summaryParts.length > 0 ? summaryParts.join(' · ') : '오늘 일정이 없어요';
 
   const quickActions = [
     { icon: '📝', label: '평가하기', to: '/assessment' },
@@ -342,9 +429,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      <section
-        className="dashboard-animate-in mb-6 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-6 sm:p-7 text-white relative overflow-hidden"
-      >
+      <section className="dashboard-animate-in mb-6 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-6 sm:p-7 text-white relative overflow-hidden">
         <div className="absolute -top-8 -right-5 w-[120px] h-[120px] rounded-full bg-white/8" />
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-xl sm:text-[22px] font-bold">
@@ -354,10 +439,21 @@ export function DashboardPage() {
             치료 {child.therapyDays}일째
           </span>
         </div>
-        <p className="text-[15px] mt-2 opacity-90 leading-relaxed">
-          {summaryText}
-        </p>
+        <p className="text-[15px] mt-2 opacity-90 leading-relaxed">{summaryText}</p>
       </section>
+
+      {/* Research Ticker */}
+      {researchFeed && researchFeed.length > 0 && (
+        <div className="dashboard-animate-in mb-2" style={{ animationDelay: '60ms' }}>
+          <ResearchTicker
+            articles={[...researchFeed].sort(
+              (a, b) =>
+                new Date(b.article.publishedAt).getTime() -
+                new Date(a.article.publishedAt).getTime(),
+            )}
+          />
+        </div>
+      )}
 
       <section className="flex flex-col gap-4">
         <div
@@ -368,9 +464,7 @@ export function DashboardPage() {
             <span>📅</span> 오늘 일정
           </h3>
           {today.schedules.length === 0 ? (
-            <p className="text-sm text-neutral-400 text-center py-4">
-              오늘 예정된 일정이 없어요
-            </p>
+            <p className="text-sm text-neutral-400 text-center py-4">오늘 예정된 일정이 없어요</p>
           ) : (
             <div className="flex flex-col gap-3">
               {today.schedules.slice(0, 3).map((item) => {
@@ -387,7 +481,9 @@ export function DashboardPage() {
                     <span className="text-[13px] text-neutral-400 min-w-[40px] font-medium">
                       {item.time}
                     </span>
-                    <span className={`text-[15px] flex-1 ${item.completed ? 'text-neutral-400 line-through' : 'text-neutral-800'}`}>
+                    <span
+                      className={`text-[15px] flex-1 ${item.completed ? 'text-neutral-400 line-through' : 'text-neutral-800'}`}
+                    >
                       {item.title}
                     </span>
                     {item.completed && (
@@ -424,9 +520,7 @@ export function DashboardPage() {
           className="dashboard-animate-in bg-white border border-neutral-200 rounded-xl shadow-sage-sm p-5"
           style={{ animationDelay: '400ms' }}
         >
-          <h3 className="text-base font-semibold mb-4 text-neutral-800">
-            이번 주 활동
-          </h3>
+          <h3 className="text-base font-semibold mb-4 text-neutral-800">이번 주 활동</h3>
           <div className="flex items-center gap-6">
             <div className="relative w-20 h-20 shrink-0">
               <ProgressRing percent={weeklyProgress.completionRate} />

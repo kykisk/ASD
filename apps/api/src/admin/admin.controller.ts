@@ -3,6 +3,7 @@ import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '@auticare/prisma-client';
 import { AdminService } from './admin.service.js';
 import { ResearchBatchService } from '../research/research-batch.service.js';
+import { ResearchService } from '../research/research.service.js';
 
 @Controller('admin')
 @Roles(UserRole.SYSTEM_ADMIN)
@@ -10,6 +11,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly researchBatchService: ResearchBatchService,
+    private readonly researchService: ResearchService,
   ) {}
 
   @Get('users')
@@ -65,5 +67,10 @@ export class AdminController {
   @Post('research/batch')
   async triggerResearchBatch() {
     return this.researchBatchService.runWeeklyBatch();
+  }
+
+  @Post('research/re-summarize')
+  async triggerReSummarize() {
+    return this.researchService.reSummarizeArticles();
   }
 }

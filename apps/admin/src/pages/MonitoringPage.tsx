@@ -124,6 +124,7 @@ const MOCK_ERROR_SUMMARY: ErrorSummary[] = [
 const JOB_TYPE_LABELS: Record<string, string> = {
   CURRICULUM_GENERATION: '커리큘럼 생성',
   RESEARCH_COLLECTION: '연구 자료 수집',
+  RESEARCH_RESUMMARY: '연구 요약 재처리',
   INSIGHTS_GENERATION: 'AI 인사이트 생성',
   REPORT_GENERATION: '보고서 생성',
 };
@@ -174,6 +175,13 @@ export function MonitoringPage() {
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchTypeFilter, setBatchTypeFilter] = useState<string>('ALL');
   const [triggering, setTriggering] = useState(false);
+  const [reSummarizing, setReSummarizing] = useState(false);
+  const [reSummarizeJobId, setReSummarizeJobId] = useState<string | null>(null);
+  const [reSummarizeProgress, setReSummarizeProgress] = useState<{
+    processed: number;
+    total: number;
+    failed: number;
+  } | null>(null);
 
   const fetchBatchJobs = async () => {
     setBatchLoading(true);
@@ -198,6 +206,53 @@ export function MonitoringPage() {
       setTriggering(false);
     }
   };
+
+  const triggerReSummarize = async () => {
+    setReSummarizing(true);
+    setReSummarizeProgress(null);
+    try {
+      const { data } = await adminApi.post('/admin/research/re-summarize');
+      const result = (data as any).data ?? data;
+      setReSummarizeJobId(result.jobId);
+      setReSummarizeProgress({ processed: 0, total: result.total, failed: 0 });
+    } catch {
+      alert('요약 재처리 시작에 실패했습니다.');
+      setReSummarizing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!reSummarizeJobId) return;
+    const poll = setInterval(async () => {
+      try {
+        const { data } = await adminApi.get('/admin/batch-jobs', {
+          params: { type: 'RESEARCH_RESUMMARY', limit: '5' },
+        });
+        const jobs: any[] = (data as any).data ?? [];
+        const job = jobs.find((j) => j.id === reSummarizeJobId);
+        if (!job) return;
+        setReSummarizeProgress({
+          processed: job.processedItems,
+          total: job.totalItems,
+          failed: job.failedItems,
+        });
+        if (job.status === 'COMPLETED' || job.status === 'FAILED') {
+          clearInterval(poll);
+          setReSummarizeJobId(null);
+          setReSummarizing(false);
+          fetchBatchJobs();
+          const succeeded = job.processedItems - job.failedItems;
+          alert(
+            `요약 재처리 완료\n성공: ${succeeded}건 / 실패: ${job.failedItems}건 / 전체: ${job.totalItems}건`,
+          );
+          setReSummarizeProgress(null);
+        }
+      } catch (_) {
+        void _;
+      }
+    }, 2000);
+    return () => clearInterval(poll);
+  }, [reSummarizeJobId]);
 
   useEffect(() => {
     fetchBatchJobs();
@@ -430,6 +485,16 @@ export function MonitoringPage() {
               loading={triggering}
             >
               연구 배치 실행
+            </Button>
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={triggerReSummarize}
+              loading={reSummarizing}
+            >
+              {reSummarizeProgress
+                ? `재처리 중 (${reSummarizeProgress.processed}/${reSummarizeProgress.total})`
+                : '요약 재처리'}
             </Button>
           </Space>
         }

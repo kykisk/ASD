@@ -63,6 +63,7 @@ export default function MoreScreen() {
       <Text style={styles.sectionLabel}>치료 도구</Text>
       <View style={styles.section}>
         <MenuItem label="아이 프로필" icon="👤" onPress={() => router.push('/child-profile')} />
+        <MenuItem label="감각 프로파일" icon="🎯" onPress={() => router.push('/sensory-profile')} />
         <MenuItem label="보고서" icon="📊" onPress={() => router.push('/reports')} />
       </View>
 
@@ -70,7 +71,6 @@ export default function MoreScreen() {
       <View style={styles.section}>
         <MenuItem label="웰빙 체크인" icon="💚" onPress={() => router.push('/wellbeing')} />
         <MenuItem label="비상 가이드" icon="🆘" onPress={() => router.push('/emergency-guide')} />
-        <MenuItem label="감각 프로파일" icon="🎯" onPress={() => router.push('/sensory-profile')} />
         <MenuItem label="연구 브리핑" icon="📰" onPress={() => router.push('/research')} />
       </View>
 

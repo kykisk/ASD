@@ -101,6 +101,36 @@ export function SensoryProfilePage() {
 
       <PageHeader title="감각 프로파일" subtitle="6가지 감각 채널의 민감도를 평가합니다." />
 
+      {/* Guide Card */}
+      <div className="bg-primary-50 border border-primary-200 rounded-2xl p-5">
+        <h4 className="text-sm font-semibold text-primary-700 mb-3">
+          이 정보가 어떻게 활용되나요?
+        </h4>
+        <div className="space-y-2.5">
+          <div className="flex items-start gap-2.5">
+            <span className="text-base leading-5">🎯</span>
+            <p className="text-sm text-neutral-600">
+              <span className="font-semibold text-neutral-700">커리큘럼 자동 맞춤화</span>
+              {' — '}AI가 매일 생성하는 커리큘럼에 감각 특성이 반영돼요
+            </p>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="text-base leading-5">📚</span>
+            <p className="text-sm text-neutral-600">
+              <span className="font-semibold text-neutral-700">연구 자료 개인화</span>
+              {' — '}AI 맞춤 연구 요약 시 감각 프로파일이 함께 분석돼요
+            </p>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="text-base leading-5">✨</span>
+            <p className="text-sm text-neutral-600">
+              <span className="font-semibold text-neutral-700">즉시 AI 활동 추천</span>
+              {' — '}저장하면 바로 감각 통합 활동 3가지를 AI가 추천해줘요
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Radar Chart */}
       {radarData && (
         <div className="bg-white rounded-2xl border border-[#E8E4DF] p-6">

@@ -488,4 +488,69 @@ ${articlesContext}
     if (braceMatch) return braceMatch[0];
     return content.trim();
   }
+
+  async reSummarizeArticles(): Promise<{ jobId: string; total: number }> {
+    const articles = await this.prisma.researchArticle.findMany({
+      where: { koreanSummary: null },
+      select: { id: true, title: true, abstract: true },
+    });
+
+    const batchJob = await this.prisma.batchJob.create({
+      data: {
+        type: 'RESEARCH_RESUMMARY',
+        status: 'RUNNING',
+        startedAt: new Date(),
+        targetDate: new Date(),
+        totalItems: articles.length,
+        processedItems: 0,
+        failedItems: 0,
+      },
+    });
+
+    this.processReSummarize(articles, batchJob.id).catch((err) => {
+      this.logger.error('Re-summarize background job failed', err);
+    });
+
+    return { jobId: batchJob.id, total: articles.length };
+  }
+
+  private async processReSummarize(
+    articles: { id: string; title: string; abstract: string }[],
+    jobId: string,
+  ): Promise<void> {
+    let failed = 0;
+
+    for (let i = 0; i < articles.length; i++) {
+      const article = articles[i];
+
+      if (article.abstract?.trim()) {
+        const summary = await this.summarizeArticle(article.title, article.abstract, 'system');
+        if (summary) {
+          await this.prisma.researchArticle.update({
+            where: { id: article.id },
+            data: {
+              koreanSummary: summary.koreanSummary,
+              keyFindings: summary.keyFindings,
+            },
+          });
+        } else {
+          failed++;
+        }
+      }
+
+      await this.prisma.batchJob.update({
+        where: { id: jobId },
+        data: { processedItems: i + 1, failedItems: failed },
+      });
+    }
+
+    await this.prisma.batchJob.update({
+      where: { id: jobId },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
+
+    this.logger.log(
+      `Re-summarize job ${jobId} complete: ${articles.length - failed} succeeded, ${failed} failed`,
+    );
+  }
 }

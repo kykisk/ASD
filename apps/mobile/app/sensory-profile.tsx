@@ -91,6 +91,38 @@ export default function SensoryProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: '감각 프로파일', headerShown: true }} />
 
+      {/* Guide Card */}
+      <View style={styles.guideCard}>
+        <Text style={styles.guideTitle}>이 정보가 어떻게 활용되나요?</Text>
+        <View style={styles.guideItem}>
+          <Text style={styles.guideIcon}>🎯</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guideItemLabel}>커리큘럼 자동 맞춤화</Text>
+            <Text style={styles.guideItemDesc}>
+              AI가 매일 생성하는 커리큘럼에 감각 특성이 반영돼요
+            </Text>
+          </View>
+        </View>
+        <View style={styles.guideItem}>
+          <Text style={styles.guideIcon}>📚</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guideItemLabel}>연구 자료 개인화</Text>
+            <Text style={styles.guideItemDesc}>
+              AI 맞춤 연구 요약 시 감각 프로파일이 함께 분석돼요
+            </Text>
+          </View>
+        </View>
+        <View style={styles.guideItem}>
+          <Text style={styles.guideIcon}>✨</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guideItemLabel}>즉시 AI 활동 추천</Text>
+            <Text style={styles.guideItemDesc}>
+              저장하면 바로 감각 통합 활동 3가지를 AI가 추천해줘요
+            </Text>
+          </View>
+        </View>
+      </View>
+
       {/* Latest profile display */}
       {isLoading ? (
         <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.lg }} />
@@ -195,6 +227,40 @@ export default function SensoryProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
+  guideCard: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(91, 138, 114, 0.3)',
+    padding: spacing.md,
+  },
+  guideTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    marginBottom: spacing.sm,
+  },
+  guideItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  guideIcon: {
+    fontSize: fontSize.md,
+    lineHeight: 22,
+  },
+  guideItemLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  guideItemDesc: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
+  },
   card: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,

@@ -53,3 +53,40 @@ export function useMarkAsRead() {
     },
   });
 }
+
+export interface AiDigestResult {
+  digest: string;
+  topArticles: { pubmedId: string; title: string; reason: string }[];
+  generatedAt: string;
+}
+
+export interface DigestHistoryItem {
+  id: string;
+  digest: string;
+  topArticles: { pubmedId: string; title: string; reason: string }[];
+  createdAt: string;
+}
+
+export function useGenerateAiDigest() {
+  const queryClient = useQueryClient();
+  return useMutation<AiDigestResult, Error, string>({
+    mutationFn: async (childId) => {
+      const { data } = await api.post(`/research/ai-digest?childId=${childId}`);
+      return data.data as AiDigestResult;
+    },
+    onSuccess: (_data, childId) => {
+      queryClient.invalidateQueries({ queryKey: ['research', 'digests', childId] });
+    },
+  });
+}
+
+export function useDigestHistory(childId: string | null) {
+  return useQuery<DigestHistoryItem[]>({
+    queryKey: ['research', 'digests', childId],
+    queryFn: async () => {
+      const { data } = await api.get(`/research/digests?childId=${childId}`);
+      return data.data as DigestHistoryItem[];
+    },
+    enabled: !!childId,
+  });
+}
