@@ -17,6 +17,78 @@ import {
 } from '../hooks/use-research';
 import { PageHeader, ErrorState, EmptyState, LoadingSpinner } from '../components/ui';
 
+function DigestHistoryCard({ item }: { item: DigestHistoryItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const topArticles = item.topArticles as { title: string; reason: string }[];
+
+  return (
+    <div className="bg-white rounded-xl border border-[#E8E4DF] overflow-hidden">
+      {/* Header — always visible, click to toggle */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-50 transition-colors"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-lg shrink-0">✨</span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-neutral-800 truncate">
+              {new Date(item.createdAt).toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              생성
+            </p>
+            {!expanded && (
+              <p className="text-xs text-neutral-500 truncate mt-0.5">
+                {item.digest.replace(/\*\*/g, '').replace(/#+\s/g, '').slice(0, 80)}...
+              </p>
+            )}
+          </div>
+        </div>
+        <svg
+          className={`w-4 h-4 text-neutral-400 shrink-0 ml-2 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-5 pb-5 border-t border-neutral-100 space-y-4">
+          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap pt-4">
+            {item.digest}
+          </p>
+          {topArticles.length > 0 && (
+            <div className="bg-primary-50 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide">
+                TOP 추천 논문
+              </p>
+              {topArticles.map((a, i) => (
+                <div key={i} className="flex gap-2 text-sm">
+                  <span className="w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold shrink-0">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="font-medium text-neutral-800 line-clamp-1">{a.title}</p>
+                    {a.reason && <p className="text-neutral-500 text-xs mt-0.5">{a.reason}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ArticleCard({ item }: { item: ResearchMatch }) {
   const bookmark = useBookmarkArticle();
   const markRead = useMarkAsRead();
@@ -360,38 +432,9 @@ export function ResearchPage() {
 
       {/* Digest History */}
       {tab === 'history' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {digests?.length ? (
-            digests.map((d: DigestHistoryItem) => (
-              <div key={d.id} className="bg-white rounded-xl border border-[#E8E4DF] p-5">
-                <p className="text-xs text-neutral-400 mb-2">
-                  {new Date(d.createdAt).toLocaleString('ko-KR', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-                <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap line-clamp-6">
-                  {d.digest}
-                </p>
-                {(d.topArticles as { title: string; reason: string }[]).length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    {(d.topArticles as { title: string; reason: string }[])
-                      .slice(0, 3)
-                      .map((a, i) => (
-                        <div key={i} className="flex gap-2 text-xs">
-                          <span className="w-4 h-4 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold shrink-0">
-                            {i + 1}
-                          </span>
-                          <span className="text-neutral-600 line-clamp-1">{a.title}</span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            ))
+            digests.map((d: DigestHistoryItem) => <DigestHistoryCard key={d.id} item={d} />)
           ) : (
             <EmptyState
               title="AI 요약 히스토리가 없습니다"
