@@ -12,18 +12,47 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../stores/auth.store.js';
-import { useProfile, useUpdateProfile } from '../hooks/use-profile.js';
+import { useProfile, useUpdateProfile, useDataExport } from '../hooks/use-profile.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 
 export default function SettingsScreen() {
   const { user } = useAuthStore();
   const { data: profile, isLoading } = useProfile();
   const updateMutation = useUpdateProfile();
+  const exportMutation = useDataExport();
 
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState('');
   const [editingPhone, setEditingPhone] = useState(false);
   const [phone, setPhone] = useState('');
+
+  const handleExport = async () => {
+    try {
+      const exportData = await exportMutation.mutateAsync();
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `auticare-data-export-${date}.json`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        Alert.alert('내보내기 완료', `${filename} 파일이 준비되었습니다.`);
+      }
+    } catch {
+      if (Platform.OS === 'web') {
+        window.alert('데이터 내보내기에 실패했습니다. 다시 시도해주세요.');
+      } else {
+        Alert.alert('오류', '데이터 내보내기에 실패했습니다. 다시 시도해주세요.');
+      }
+    }
+  };
 
   const handleSaveName = async () => {
     const trimmed = name.trim();
@@ -154,12 +183,18 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>개인정보</Text>
-        <View style={styles.phase4Row}>
+        <TouchableOpacity
+          style={[styles.actionRow, exportMutation.isPending && { opacity: 0.6 }]}
+          onPress={handleExport}
+          disabled={exportMutation.isPending}
+        >
           <Text style={styles.actionLabel}>내 데이터 내보내기 (GDPR)</Text>
-          <View style={styles.phase4Badge}>
-            <Text style={styles.phase4BadgeText}>Phase 4</Text>
-          </View>
-        </View>
+          {exportMutation.isPending ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text style={styles.exportBadge}>↓ JSON</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.card}>
@@ -231,20 +266,15 @@ const styles = StyleSheet.create({
   },
   actionLabel: { fontSize: fontSize.md, color: colors.text },
   actionArrow: { fontSize: fontSize.xl, color: colors.textMuted },
-  phase4Row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    opacity: 0.5,
-  },
-  phase4Badge: {
+  exportBadge: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: '600',
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    backgroundColor: '#E0E0E0',
-    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.sm,
   },
-  phase4BadgeText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '600' },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
