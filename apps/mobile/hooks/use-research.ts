@@ -1,17 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 
-export interface ResearchMatch {
-  id: string;
+export interface ResearchArticle {
+  pubmedId: string;
   title: string;
   journal: string;
-  publishedDate: string;
-  tags: string[];
-  koreanSummary: string;
-  keyFindings: string[];
-  relevanceScore: number;
+  publishedAt: string;
+  koreanSummary: string | null;
+  keyFindings: string[] | null;
+  tags: string[] | null;
+}
+
+export interface ResearchMatch {
+  id: string;
+  articleId: string;
   isBookmarked: boolean;
   isRead: boolean;
+  score: number;
+  article: ResearchArticle;
 }
 
 export function useResearchFeed() {
@@ -26,14 +32,9 @@ export function useResearchFeed() {
 
 export function useBookmarkArticle() {
   const queryClient = useQueryClient();
-
-  return useMutation<void, Error, { articleId: string; bookmarked: boolean }>({
-    mutationFn: async ({ articleId, bookmarked }) => {
-      if (bookmarked) {
-        await api.post(`/research/${articleId}/bookmark`);
-      } else {
-        await api.delete(`/research/${articleId}/bookmark`);
-      }
+  return useMutation<void, Error, string>({
+    mutationFn: async (articleId) => {
+      await api.post(`/research/${articleId}/bookmark`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['research', 'feed'] });
@@ -43,9 +44,8 @@ export function useBookmarkArticle() {
 
 export function useMarkAsRead() {
   const queryClient = useQueryClient();
-
-  return useMutation<void, Error, { articleId: string }>({
-    mutationFn: async ({ articleId }) => {
+  return useMutation<void, Error, string>({
+    mutationFn: async (articleId) => {
       await api.post(`/research/${articleId}/read`);
     },
     onSuccess: () => {
