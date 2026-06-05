@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, Logger } from '@nestj
 import { createHash } from 'crypto';
 import { PrismaService } from '@auticare/prisma-client';
 import { LicensedTool, LicenseStatus } from '@auticare/prisma-client';
+import { LicensedToolDataService } from './licensed-tool-data.service.js';
 
 export interface RegisterLicenseInput {
   tool: LicensedTool;
@@ -9,13 +10,17 @@ export interface RegisterLicenseInput {
   familyId: string;
   expiresAt?: Date;
   notes?: string;
+  registeredBy?: string;
 }
 
 @Injectable()
 export class LicensesService {
   private readonly logger = new Logger(LicensesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly toolDataService: LicensedToolDataService,
+  ) {}
 
   private hashKey(key: string): string {
     return createHash('sha256').update(key.trim()).digest('hex');
@@ -31,7 +36,7 @@ export class LicensesService {
       );
     }
 
-    return this.prisma.license.create({
+    const license = await this.prisma.license.create({
       data: {
         tool: input.tool,
         keyHash: this.hashKey(input.licenseKey),
@@ -41,6 +46,12 @@ export class LicensesService {
         notes: input.notes ?? null,
       },
     });
+
+    await this.toolDataService
+      .createForFamily(input.familyId, input.tool, input.registeredBy ?? 'system')
+      .catch((err) => this.logger.error(`Failed to create questionnaire for ${input.tool}`, err));
+
+    return license;
   }
 
   async activate(id: string) {

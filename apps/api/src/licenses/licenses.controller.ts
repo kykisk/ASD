@@ -18,6 +18,7 @@ export class LicensesController {
   @Post('admin/licenses')
   @Roles(UserRole.SYSTEM_ADMIN)
   async register(
+    @CurrentUser() user: { id: string },
     @Body()
     body: {
       tool: LicensedTool;
@@ -33,6 +34,7 @@ export class LicensesController {
       familyId: body.familyId,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
       notes: body.notes,
+      registeredBy: user.id,
     });
   }
 
