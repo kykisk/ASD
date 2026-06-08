@@ -51,6 +51,9 @@ const mockPrismaService = {
   assessment: {
     findMany: vi.fn(),
   },
+  sensoryProfile: {
+    findFirst: vi.fn(),
+  },
 };
 
 const mockAiService = {
@@ -159,6 +162,7 @@ describe('CurriculumService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       mockPrismaService.assessment.findMany.mockResolvedValue([]);
+      mockPrismaService.sensoryProfile.findFirst.mockResolvedValue(null);
       mockAiService.generateStructured.mockResolvedValue({
         weeklyGoal: '의사소통 능력 향상',
         activities: mockCurriculumRecord.activities,
@@ -180,6 +184,7 @@ describe('CurriculumService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       mockPrismaService.assessment.findMany.mockResolvedValue([]);
+      mockPrismaService.sensoryProfile.findFirst.mockResolvedValue(null);
       mockAiService.generateStructured.mockRejectedValue(new Error('AI provider down'));
       mockPrismaService.curriculum.create.mockResolvedValue({
         ...mockCurriculumRecord,
@@ -290,6 +295,7 @@ describe('CurriculumService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       mockPrismaService.assessment.findMany.mockResolvedValue([]);
+      mockPrismaService.sensoryProfile.findFirst.mockResolvedValue(null);
       mockAiService.generateStructured.mockResolvedValue({
         weeklyGoal: '새로운 목표',
         activities: mockCurriculumRecord.activities,
