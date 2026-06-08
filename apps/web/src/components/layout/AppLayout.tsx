@@ -321,6 +321,14 @@ export function AppLayout() {
   };
 
   useEffect(() => {
+    if (sidebarOpen) {
+      setOpenGroups(
+        navGroups.reduce<Record<string, boolean>>((acc, g) => ({ ...acc, [g.label]: true }), {}),
+      );
+    }
+  }, [sidebarOpen]);
+
+  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
@@ -390,10 +398,16 @@ export function AppLayout() {
                     ${hasActive ? 'text-primary-600' : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50'}
                   `}
                 >
-                  <span className="hidden lg:block sidebar-open-label">{group.label}</span>
-                  <span className="lg:hidden sidebar-open-label-hidden w-full h-px bg-neutral-200 block" />
+                  <span
+                    className={`${sidebarOpen ? 'block' : 'hidden lg:block'} sidebar-open-label`}
+                  >
+                    {group.label}
+                  </span>
+                  <span
+                    className={`${sidebarOpen ? 'hidden' : 'lg:hidden'} sidebar-open-label-hidden w-full h-px bg-neutral-200 block`}
+                  />
                   <svg
-                    className={`hidden lg:block sidebar-open-label w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                    className={`${sidebarOpen ? 'block' : 'hidden lg:block'} sidebar-open-label w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -423,7 +437,11 @@ export function AppLayout() {
                         }
                       >
                         <span className="shrink-0">{item.icon}</span>
-                        <span className="hidden lg:block sidebar-open-label">{item.label}</span>
+                        <span
+                          className={`${sidebarOpen ? 'block' : 'hidden lg:block'} sidebar-open-label`}
+                        >
+                          {item.label}
+                        </span>
                         <span className="absolute left-full ml-2 px-2 py-1 rounded bg-neutral-800 text-white text-xs whitespace-nowrap opacity-0 pointer-events-none sm:group-hover:opacity-100 lg:!opacity-0 lg:!pointer-events-none transition-opacity z-50">
                           {item.label}
                         </span>
