@@ -1,16 +1,46 @@
 import { useEffect, useRef } from 'react';
+import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/auth.store';
 import { useChildStore } from '../stores/child.store';
 import { api } from '../services/api';
 
-/**
- * 앱 진입 시 자동으로 유저/가족 데이터를 동기화합니다.
- * JWT의 familyId가 null이어도 DB에서 최신 데이터를 가져옵니다.
- * 로그아웃 없이 서버 재시작 후에도 데이터가 정상 표시됩니다.
- */
+const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
+
+async function proactiveRefresh(
+  setAuth: (
+    token: string,
+    user: NonNullable<ReturnType<typeof useAuthStore.getState>['user']>,
+  ) => void,
+  clearAuth: () => void,
+) {
+  const { accessToken, tokenExpiresAt, user } = useAuthStore.getState();
+  if (!accessToken || !user) return;
+
+  const isNearExpiry =
+    tokenExpiresAt !== null && tokenExpiresAt - Date.now() < REFRESH_THRESHOLD_MS;
+  const isExpired = tokenExpiresAt !== null && tokenExpiresAt <= Date.now();
+
+  if (!isNearExpiry && !isExpired) return;
+
+  try {
+    const { data } = await axios.post(
+      `${import.meta.env.VITE_API_URL || '/v1'}/auth/refresh`,
+      {},
+      { withCredentials: true },
+    );
+    const newToken = data.data?.accessToken || data.accessToken;
+    if (newToken) {
+      setAuth(newToken, user);
+    }
+  } catch {
+    clearAuth();
+    window.location.href = '/login';
+  }
+}
+
 export function AppInitializer() {
-  const { isAuthenticated, user, setAuth, clearAuth } = useAuthStore();
+  const { isAuthenticated, setAuth, clearAuth } = useAuthStore();
   const { selectedChildId, setSelectedChild } = useChildStore();
   const queryClient = useQueryClient();
   const initializedRef = useRef(false);
@@ -21,22 +51,18 @@ export function AppInitializer() {
 
     const sync = async () => {
       try {
-        // 1. 최신 유저 정보 가져오기
         const { data: meData } = await api.get('/users/me');
         const freshUser = meData.data;
 
-        // 2. 가족 정보 가져오기 (JWT familyId가 null이어도 DB 조회)
         const { data: familiesData } = await api.get('/families/my');
         const families = familiesData.data as { id: string; name: string }[];
         const familyId = families[0]?.id ?? null;
 
-        // 3. auth store 업데이트 (familyId 포함)
         const currentToken = useAuthStore.getState().accessToken;
         if (currentToken) {
           setAuth(currentToken, { ...freshUser, familyId });
         }
 
-        // 4. 선택된 아이가 없으면 첫 번째 아이 자동 선택
         if (familyId && !selectedChildId) {
           const { data: childrenData } = await api.get(`/families/${familyId}/children`);
           const children = childrenData.data as { id: string }[];
@@ -45,10 +71,8 @@ export function AppInitializer() {
           }
         }
 
-        // 5. 전체 React Query 캐시 무효화 (서버 재시작 후 stale 데이터 제거)
         await queryClient.invalidateQueries();
       } catch {
-        // 토큰 만료 등 오류 시 로그아웃
         clearAuth();
         queryClient.clear();
       }
@@ -57,17 +81,37 @@ export function AppInitializer() {
     sync();
   }, [isAuthenticated]);
 
-  // 페이지 포커스 시 재동기화 (탭 전환 후 돌아왔을 때)
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    const check = () => proactiveRefresh(setAuth, clearAuth);
+    check();
+
+    const interval = setInterval(check, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, setAuth, clearAuth]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        proactiveRefresh(setAuth, clearAuth);
+        queryClient.invalidateQueries();
+      }
+    };
 
     const handleFocus = () => {
       queryClient.invalidateQueries();
     };
 
+    document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isAuthenticated]);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isAuthenticated, setAuth, clearAuth]);
 
   return null;
 }
