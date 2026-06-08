@@ -7,6 +7,8 @@ import {
   type Domain,
 } from '../hooks/use-questionnaires';
 import { useMyFamily } from '../hooks/use-families';
+import { useChildStore } from '../stores/child.store';
+import { useAssessments, type Assessment } from '../hooks/use-assessments';
 import { QuestionnaireFormModal } from '../components/questionnaire/QuestionnaireFormModal';
 import { ImportModal } from '../components/questionnaire/ImportModal';
 import { AiGenerateModal } from '../components/questionnaire/AiGenerateModal';
@@ -40,11 +42,44 @@ function formatDate(dateStr: string): string {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function getLicensedSeverity(
+  tool: string,
+  score: number,
+): { label: string; color: string; bg: string } {
+  if (tool === 'CARS_2') {
+    if (score < 30) return { label: '비자폐', color: '#5B8A72', bg: '#e8f5ee' };
+    if (score < 37) return { label: '경증-중등도', color: '#D4A800', bg: '#fef9e7' };
+    return { label: '중증', color: '#E88B8B', bg: '#fef2f2' };
+  }
+  if (tool === 'M_CHAT_R_F') {
+    if (score <= 2) return { label: '낮은 위험', color: '#5B8A72', bg: '#e8f5ee' };
+    if (score <= 7) return { label: '중간 위험', color: '#D4A800', bg: '#fef9e7' };
+    return { label: '높은 위험', color: '#E88B8B', bg: '#fef2f2' };
+  }
+  if (tool === 'ABC') {
+    return score > 0
+      ? { label: '유의미', color: '#F0A86E', bg: '#fff7ed' }
+      : { label: '정상 범위', color: '#5B8A72', bg: '#e8f5ee' };
+  }
+  return { label: `${score}점`, color: '#94A3B8', bg: '#f8fafc' };
+}
+
 export function QuestionnairePage() {
   const navigate = useNavigate();
   const { data: family } = useMyFamily();
+  const { selectedChildId } = useChildStore();
   const { data: questionnaires, isLoading, isError, refetch } = useQuestionnaires(family?.id);
   const deleteQuestionnaire = useDeleteQuestionnaire(family?.id);
+  const { data: allAssessments } = useAssessments(selectedChildId);
+
+  const latestByTool = (allAssessments ?? [])
+    .filter((a: Assessment) => a.questionnaire?.type === 'LICENSED' && a.totalScore !== null)
+    .reduce<Record<string, Assessment>>((acc, a) => {
+      const t = a.questionnaire?.licensedTool ?? '';
+      if (!t) return acc;
+      if (!acc[t] || new Date(a.createdAt) > new Date(acc[t].createdAt)) acc[t] = a;
+      return acc;
+    }, {});
 
   const [activeTab, setActiveTab] = useState<'custom' | 'licensed'>('custom');
   const [showFormModal, setShowFormModal] = useState(false);
@@ -324,6 +359,28 @@ export function QuestionnairePage() {
                   )}
                 </div>
                 <p className="text-sm text-neutral-500">{tool.description}</p>
+                {tool.available &&
+                  latestByTool[tool.id] &&
+                  (() => {
+                    const latest = latestByTool[tool.id];
+                    const sev = getLicensedSeverity(tool.id, latest.totalScore ?? 0);
+                    return (
+                      <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
+                        <span className="text-xs text-neutral-400">
+                          최근 {formatDate(latest.createdAt)} · {latest.totalScore}점
+                        </span>
+                        <span
+                          className="text-xs font-semibold px-2 py-0.5 rounded-md"
+                          style={{ color: sev.color, background: sev.bg }}
+                        >
+                          {sev.label}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                {tool.available && !latestByTool[tool.id] && (
+                  <p className="mt-2 text-xs text-neutral-300">아직 평가 기록 없음</p>
+                )}
               </div>
             ))}
           </div>
