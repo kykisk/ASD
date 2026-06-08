@@ -17,6 +17,11 @@ export interface Assessment {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  questionnaire?: {
+    type: string;
+    licensedTool: string | null;
+    name: string;
+  };
 }
 
 export interface DomainScore {
@@ -78,13 +83,7 @@ export function useCreateAssessment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      childId,
-      input,
-    }: {
-      childId: string;
-      input: CreateAssessmentInput;
-    }) => {
+    mutationFn: async ({ childId, input }: { childId: string; input: CreateAssessmentInput }) => {
       const { data } = await api.post<{ success: true; data: Assessment }>(
         `/children/${childId}/assessments`,
         input,

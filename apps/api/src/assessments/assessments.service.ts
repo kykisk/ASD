@@ -54,7 +54,11 @@ export class AssessmentsService {
     return assessment;
   }
 
-  async findByChild(childId: string, userId: string, query: { startDate?: string; endDate?: string; limit?: number }) {
+  async findByChild(
+    childId: string,
+    userId: string,
+    query: { startDate?: string; endDate?: string; limit?: number },
+  ) {
     const child = await this.prisma.child.findUnique({ where: { id: childId } });
     if (!child) {
       throw new ApiException(404, 'CHILD_404', '아이를 찾을 수 없습니다');
@@ -71,7 +75,10 @@ export class AssessmentsService {
         childId,
         ...(Object.keys(createdAtFilter).length > 0 && { createdAt: createdAtFilter }),
       },
-      include: { scores: true },
+      include: {
+        scores: true,
+        questionnaire: { select: { type: true, licensedTool: true, name: true } },
+      },
       orderBy: { createdAt: 'desc' },
       take: query.limit ?? 20,
     });
