@@ -12,6 +12,7 @@ import { useAssessments, type Assessment } from '../hooks/use-assessments';
 import { QuestionnaireFormModal } from '../components/questionnaire/QuestionnaireFormModal';
 import { ImportModal } from '../components/questionnaire/ImportModal';
 import { AiGenerateModal } from '../components/questionnaire/AiGenerateModal';
+import { ImageImportModal } from '../components/questionnaire/ImageImportModal';
 import { Skeleton, ErrorState, EmptyState, PageHeader } from '../components/ui';
 
 const DOMAIN_LABELS: Record<Domain, { label: string; color: string }> = {
@@ -85,6 +86,7 @@ export function QuestionnairePage() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAiGenerateModal, setShowAiGenerateModal] = useState(false);
+  const [showImageImport, setShowImageImport] = useState(false);
   const [editingQuestionnaire, setEditingQuestionnaire] = useState<Questionnaire | null>(null);
 
   const openEdit = (q: Questionnaire) => {
@@ -202,6 +204,13 @@ export function QuestionnairePage() {
                 />
               </svg>
               파일로 가져오기
+            </button>
+            <button
+              onClick={() => setShowImageImport(true)}
+              className="h-[48px] flex items-center gap-2 px-6 rounded-xl border-[1.5px] border-primary-500 text-primary-600 text-[15px] font-semibold hover:bg-primary-50 transition-colors"
+            >
+              <span className="text-base">📷</span>
+              사진으로 가져오기
             </button>
           </div>
 
@@ -418,6 +427,8 @@ export function QuestionnairePage() {
       <ImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
 
       <AiGenerateModal isOpen={showAiGenerateModal} onClose={() => setShowAiGenerateModal(false)} />
+
+      <ImageImportModal isOpen={showImageImport} onClose={() => setShowImageImport(false)} />
     </div>
   );
 }

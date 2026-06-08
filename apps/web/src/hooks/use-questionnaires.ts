@@ -81,7 +81,7 @@ export function useImportQuestionnaire(
       formData.append('file', file);
       formData.append('name', name);
       const { data } = await api.post<{ success: true; data: Questionnaire }>(
-         `/families/${familyId}/questionnaires/import/${format}`,
+        `/families/${familyId}/questionnaires/import/${format}`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -105,6 +105,33 @@ export function useDeleteQuestionnaire(familyId: string | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questionnaires', familyId] });
+    },
+  });
+}
+
+export interface ImageExtractionResult {
+  extraction: {
+    name: string;
+    description: string | null;
+    domains: string[];
+    scaleType: string;
+    items: Array<{
+      text: string;
+      domain: string;
+      score: number | null;
+      description?: string;
+    }>;
+  };
+}
+
+export function useImportFromImage(familyId: string | null) {
+  return useMutation({
+    mutationFn: async (images: Array<{ base64: string; mimeType: string }>) => {
+      const { data } = await api.post<{ success: true; data: ImageExtractionResult }>(
+        `/families/${familyId}/questionnaires/from-image`,
+        { images },
+      );
+      return data.data;
     },
   });
 }
