@@ -1,23 +1,26 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChildStore } from '../stores/child.store';
 import { useChildren } from '../hooks/use-children';
-import { useAuthStore } from '../stores/auth.store';
 import { useMyFamily } from '../hooks/use-families';
 import { useGrowthData } from '../hooks/use-growth';
+import { useAssessments } from '../hooks/use-assessments';
 import type { GrowthData } from '../hooks/use-growth';
+import type { Assessment } from '../hooks/use-assessments';
 import { GrowthLineChart } from '../components/charts/GrowthLineChart';
 import { DomainRadarChart } from '../components/charts/DomainRadarChart';
 import { ComparisonChart } from '../components/charts/ComparisonChart';
 import { MilestoneTimeline } from '../components/charts/MilestoneTimeline';
 import type { Milestone } from '../components/charts/MilestoneTimeline';
 
-type TabKey = 'trend' | 'domain' | 'milestone';
+type TabKey = 'trend' | 'domain' | 'milestone' | 'clinical';
 type DayRange = 7 | 30 | 90;
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'trend', label: '성장 추이' },
   { key: 'domain', label: '도메인 비교' },
   { key: 'milestone', label: '마일스톤' },
+  { key: 'clinical', label: '임상 평가' },
 ];
 
 const MOCK_MILESTONES: Milestone[] = [
@@ -65,7 +68,10 @@ const DOMAIN_LIST = [
 
 const MOCK_GROWTH_DATA: GrowthData = {
   childId: 'mock',
-  dateRange: { from: new Date(Date.now() - 13 * 2 * 86400000).toISOString(), to: new Date().toISOString() },
+  dateRange: {
+    from: new Date(Date.now() - 13 * 2 * 86400000).toISOString(),
+    to: new Date().toISOString(),
+  },
   domains: DOMAIN_LIST.map((d) => ({
     domain: d.domain,
     label: d.label,
@@ -73,13 +79,21 @@ const MOCK_GROWTH_DATA: GrowthData = {
     data: Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - i) * 2);
-      return { date: date.toISOString().split('T')[0], score: 2.5 + Math.random() * 2, assessmentId: `mock-${i}` };
+      return {
+        date: date.toISOString().split('T')[0],
+        score: 2.5 + Math.random() * 2,
+        assessmentId: `mock-${i}`,
+      };
     }),
   })),
   overall: Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i) * 2);
-    return { date: date.toISOString().split('T')[0], score: 2.8 + Math.random() * 1.5, assessmentId: `mock-${i}` };
+    return {
+      date: date.toISOString().split('T')[0],
+      score: 2.8 + Math.random() * 1.5,
+      assessmentId: `mock-${i}`,
+    };
   }),
   weeklyAverages: [
     { week: '1주', score: 2.8 },
@@ -132,24 +146,55 @@ function EmptyState() {
       >
         📊
       </div>
-      <p style={{ fontSize: 15, color: '#475569', fontWeight: 500 }}>
-        성장 데이터가 없어요
-      </p>
-      <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 6 }}>
-        평가를 시작해보세요.
-      </p>
+      <p style={{ fontSize: 15, color: '#475569', fontWeight: 500 }}>성장 데이터가 없어요</p>
+      <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 6 }}>평가를 시작해보세요.</p>
     </div>
   );
 }
 
+const TOOL_LABELS: Record<string, string> = {
+  M_CHAT_R_F: 'M-CHAT-R/F',
+  CARS_2: 'CARS-2',
+  ABC: 'ABC',
+  ADOS_2: 'ADOS-2',
+  SCQ: 'SCQ',
+};
+
+function getLicensedSeverity(
+  tool: string,
+  score: number,
+): { label: string; color: string; bg: string } {
+  if (tool === 'CARS_2') {
+    if (score < 30) return { label: '비자폐', color: '#5B8A72', bg: '#e8f5ee' };
+    if (score < 37) return { label: '경증-중등도', color: '#D4A800', bg: '#fef9e7' };
+    return { label: '중증', color: '#E88B8B', bg: '#fef2f2' };
+  }
+  if (tool === 'M_CHAT_R_F') {
+    if (score <= 2) return { label: '낮은 위험', color: '#5B8A72', bg: '#e8f5ee' };
+    if (score <= 7) return { label: '중간 위험', color: '#D4A800', bg: '#fef9e7' };
+    return { label: '높은 위험', color: '#E88B8B', bg: '#fef2f2' };
+  }
+  if (tool === 'ABC') {
+    return score > 0
+      ? { label: '유의미', color: '#F0A86E', bg: '#fff7ed' }
+      : { label: '정상 범위', color: '#5B8A72', bg: '#e8f5ee' };
+  }
+  return { label: `${score}점`, color: '#94A3B8', bg: '#f8fafc' };
+}
+
 export function GrowthPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>('trend');
   const [dayRange, setDayRange] = useState<DayRange>(30);
   const { selectedChildId } = useChildStore();
-  const { user } = useAuthStore();
   const { data: family } = useMyFamily();
   const { data: children } = useChildren(family?.id);
   const { data: growthData, isLoading } = useGrowthData(selectedChildId, dayRange);
+  const { data: allAssessments } = useAssessments(selectedChildId);
+
+  const licensedAssessments = (allAssessments ?? []).filter(
+    (a: Assessment) => a.questionnaire?.type === 'LICENSED' && a.totalScore !== null,
+  );
 
   const selectedChild = children?.find((c) => c.id === selectedChildId);
   const displayData = growthData || MOCK_GROWTH_DATA;
@@ -169,9 +214,7 @@ export function GrowthPage() {
           성장 기록
         </h1>
         <p style={{ fontSize: 14, color: '#64748b' }}>
-          {selectedChild
-            ? `${selectedChild.name}의 발달 성장 추이`
-            : '아이를 선택해주세요'}
+          {selectedChild ? `${selectedChild.name}의 발달 성장 추이` : '아이를 선택해주세요'}
         </p>
       </div>
 
@@ -238,10 +281,7 @@ export function GrowthPage() {
                   padding: '5px 12px',
                   borderRadius: 6,
                   border: 'none',
-                  background:
-                    dayRange === days
-                      ? 'rgba(91, 138, 114, 0.12)'
-                      : 'transparent',
+                  background: dayRange === days ? 'rgba(91, 138, 114, 0.12)' : 'transparent',
                   color: dayRange === days ? '#5B8A72' : '#94a3b8',
                   fontSize: 12,
                   fontWeight: dayRange === days ? 600 : 400,
@@ -256,9 +296,7 @@ export function GrowthPage() {
 
           <div style={cardStyle}>
             <div style={{ marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-                발달 추이 그래프
-              </h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>발달 추이 그래프</h3>
               <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
                 최근 {dayRange}일 · 영역별 점수 변화
               </p>
@@ -276,26 +314,28 @@ export function GrowthPage() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div style={cardStyle}>
             <div style={{ marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-                영역별 현황
-              </h3>
-              <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                현재 도메인 점수 분포
-              </p>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>영역별 현황</h3>
+              <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>현재 도메인 점수 분포</p>
             </div>
-            <DomainRadarChart domains={displayData.domains.map(d => ({ domain: d.domain, label: d.label, score: d.data[d.data.length - 1]?.score ?? 0, maxScore: 5 }))} />
+            <DomainRadarChart
+              domains={displayData.domains.map((d) => ({
+                domain: d.domain,
+                label: d.label,
+                score: d.data[d.data.length - 1]?.score ?? 0,
+                maxScore: 5,
+              }))}
+            />
           </div>
 
           <div style={cardStyle}>
             <div style={{ marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-                기간별 비교
-              </h3>
-              <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                전체 평균 점수 변화
-              </p>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>기간별 비교</h3>
+              <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>전체 평균 점수 변화</p>
             </div>
-            <ComparisonChart weeklyData={displayData.weeklyAverages} monthlyData={displayData.monthlyAverages} />
+            <ComparisonChart
+              weeklyData={displayData.weeklyAverages}
+              monthlyData={displayData.monthlyAverages}
+            />
           </div>
         </div>
       )}
@@ -303,17 +343,117 @@ export function GrowthPage() {
       {!isLoading && selectedChildId && activeTab === 'milestone' && (
         <div style={cardStyle}>
           <div style={{ marginBottom: 16 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-              발달 마일스톤
-            </h3>
-            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-              달성 및 목표 추적
-            </p>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>발달 마일스톤</h3>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>달성 및 목표 추적</p>
           </div>
           <MilestoneTimeline
             milestones={MOCK_MILESTONES}
             childName={selectedChild?.name || '아이'}
           />
+        </div>
+      )}
+
+      {!isLoading && selectedChildId && activeTab === 'clinical' && (
+        <div style={cardStyle}>
+          <div
+            style={{
+              marginBottom: 20,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>임상 평가 기록</h3>
+              <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                라이선스 표준화 도구 (CARS-2, M-CHAT-R/F, ABC)
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/questionnaires')}
+              style={{
+                fontSize: 12,
+                color: '#5B8A72',
+                fontWeight: 600,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              + 새 평가
+            </button>
+          </div>
+
+          {licensedAssessments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🏥</div>
+              <p style={{ fontSize: 14, fontWeight: 500 }}>임상 평가 기록이 없습니다</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>
+                질문지 탭에서 라이선스 도구로 평가를 시작해보세요
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {licensedAssessments.map((a: Assessment) => {
+                const tool = a.questionnaire?.licensedTool ?? '';
+                const toolLabel = TOOL_LABELS[tool] ?? tool;
+                const sev = getLicensedSeverity(tool, a.totalScore ?? 0);
+                const date = new Date(a.createdAt);
+                const dateStr = `${date.getMonth() + 1}월 ${date.getDate()}일`;
+                return (
+                  <div
+                    key={a.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: 12,
+                      border: '1px solid #e8e4df',
+                      background: '#fdfbf7',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          background: '#9B8EC420',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 16,
+                        }}
+                      >
+                        🏥
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
+                          {toolLabel}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                          {dateStr} · 총점 {a.totalScore}점
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                        color: sev.color,
+                        background: sev.bg,
+                      }}
+                    >
+                      {sev.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
