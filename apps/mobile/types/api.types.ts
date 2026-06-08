@@ -134,6 +134,11 @@ export interface Assessment {
   totalScore: number | null;
   createdAt: string;
   scores: AssessmentScore[];
+  questionnaire?: {
+    type: string;
+    licensedTool: string | null;
+    name: string;
+  };
 }
 
 export interface CreateAssessmentInput {

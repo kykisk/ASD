@@ -9,10 +9,38 @@ import {
 } from 'react-native';
 import { useChildStore } from '../../stores/child.store.js';
 import { useGrowth } from '../../hooks/use-growth.js';
-import { useAggregatedAssessment } from '../../hooks/use-assessments.js';
+import { useAggregatedAssessment, useAssessments } from '../../hooks/use-assessments.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
+import { useRouter } from 'expo-router';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
-import type { AggregatedDomain, TimeSeriesPoint } from '../../types/api.types.js';
+import type { AggregatedDomain, TimeSeriesPoint, Assessment } from '../../types/api.types.js';
+
+const TOOL_LABELS: Record<string, string> = {
+  M_CHAT_R_F: 'M-CHAT-R/F',
+  CARS_2: 'CARS-2',
+  ABC: 'ABC',
+  ADOS_2: 'ADOS-2',
+  SCQ: 'SCQ',
+};
+
+function getLicensedSeverity(tool: string, score: number): { label: string; color: string } {
+  if (tool === 'CARS_2') {
+    if (score < 30) return { label: '비자폐', color: '#5B8A72' };
+    if (score < 37) return { label: '경증-중등도', color: '#D4A800' };
+    return { label: '중증', color: '#E88B8B' };
+  }
+  if (tool === 'M_CHAT_R_F') {
+    if (score <= 2) return { label: '낮은 위험', color: '#5B8A72' };
+    if (score <= 7) return { label: '중간 위험', color: '#D4A800' };
+    return { label: '높은 위험', color: '#E88B8B' };
+  }
+  if (tool === 'ABC') {
+    return score > 0
+      ? { label: '유의미', color: '#F0A86E' }
+      : { label: '정상 범위', color: '#5B8A72' };
+  }
+  return { label: `${score}점`, color: '#94A3B8' };
+}
 
 const DOMAIN_COLORS: Record<string, string> = {
   COMMUNICATION: '#7B9FD4',
@@ -101,6 +129,7 @@ function OverallTimeline({ points }: { points: TimeSeriesPoint[] }) {
 }
 
 export default function GrowthScreen() {
+  const router = useRouter();
   const selectedChildId = useChildStore((s) => s.selectedChildId);
   const {
     data: growth,
@@ -114,6 +143,11 @@ export default function GrowthScreen() {
     error: aggError,
     refetch: refetchAgg,
   } = useAggregatedAssessment(selectedChildId);
+  const { data: allAssessments } = useAssessments(selectedChildId);
+
+  const licensedAssessments = (allAssessments ?? []).filter(
+    (a: Assessment) => a.questionnaire?.type === 'LICENSED' && a.totalScore !== null,
+  );
 
   const isLoading = loadingGrowth || loadingAgg;
   const error = growthError || aggError;
@@ -227,6 +261,50 @@ export default function GrowthScreen() {
           })}
         </View>
       )}
+
+      {/* 임상 평가 기록 */}
+      <View style={styles.card}>
+        <View style={styles.clinicalHeader}>
+          <View>
+            <Text style={styles.cardTitle}>임상 평가 기록</Text>
+            <Text style={styles.clinicalSubtitle}>CARS-2 · M-CHAT-R/F · ABC</Text>
+          </View>
+          <TouchableOpacity onPress={() => router.push('../licensed-assessment')}>
+            <Text style={styles.clinicalLink}>+ 새 평가</Text>
+          </TouchableOpacity>
+        </View>
+
+        {licensedAssessments.length === 0 ? (
+          <View style={styles.clinicalEmpty}>
+            <Text style={styles.clinicalEmptyIcon}>🏥</Text>
+            <Text style={styles.clinicalEmptyTitle}>임상 평가 기록이 없습니다</Text>
+            <Text style={styles.clinicalEmptyText}>라이선스 도구에서 평가를 시작해보세요</Text>
+          </View>
+        ) : (
+          licensedAssessments.map((a: Assessment) => {
+            const tool = a.questionnaire?.licensedTool ?? '';
+            const sev = getLicensedSeverity(tool, a.totalScore ?? 0);
+            const date = new Date(a.createdAt);
+            const dateStr = `${date.getMonth() + 1}월 ${date.getDate()}일`;
+            return (
+              <View key={a.id} style={styles.clinicalRow}>
+                <View style={styles.clinicalIcon}>
+                  <Text style={{ fontSize: 16 }}>🏥</Text>
+                </View>
+                <View style={styles.clinicalInfo}>
+                  <Text style={styles.clinicalTool}>{TOOL_LABELS[tool] ?? tool}</Text>
+                  <Text style={styles.clinicalDate}>
+                    {dateStr} · 총점 {a.totalScore}점
+                  </Text>
+                </View>
+                <View style={[styles.clinicalBadge, { borderColor: sev.color + '40' }]}>
+                  <Text style={[styles.clinicalBadgeText, { color: sev.color }]}>{sev.label}</Text>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -432,4 +510,47 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  clinicalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  clinicalSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  clinicalLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: '600' },
+  clinicalEmpty: { alignItems: 'center', paddingVertical: spacing.xl },
+  clinicalEmptyIcon: { fontSize: 32, marginBottom: spacing.sm },
+  clinicalEmptyTitle: { fontSize: fontSize.md, fontWeight: '600', color: colors.textSecondary },
+  clinicalEmptyText: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  clinicalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  clinicalIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#9B8EC420',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clinicalInfo: { flex: 1 },
+  clinicalTool: { fontSize: fontSize.sm, fontWeight: '600', color: colors.text },
+  clinicalDate: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  clinicalBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+  },
+  clinicalBadgeText: { fontSize: fontSize.xs, fontWeight: '600' },
 });
