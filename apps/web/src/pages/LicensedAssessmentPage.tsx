@@ -139,9 +139,34 @@ export function LicensedAssessmentPage() {
     }
     setScores(newScores);
 
-    // Auto-advance
-    if (currentIndex < items.length - 1) {
+    const isLast = currentIndex === items.length - 1;
+    const nowAllAnswered = items.every((item) =>
+      item.id === currentItem.id ? true : newScores.some((s) => s.itemId === item.id),
+    );
+
+    if (!isLast) {
       setCurrentIndex(currentIndex + 1);
+    } else if (nowAllAnswered) {
+      handleSubmitWithScores(newScores);
+    }
+  };
+
+  const handleSubmitWithScores = async (finalScores: ScoreEntry[]) => {
+    if (!selectedChildId || !questionnaireQuery.data) return;
+    setStep('scoring');
+    try {
+      const assessment = await createAssessment.mutateAsync({
+        childId: selectedChildId,
+        input: {
+          questionnaireId: questionnaireQuery.data.id,
+          scores: finalScores.map((s) => ({ itemId: s.itemId, domain: s.domain, score: s.score })),
+        },
+      });
+      const result = await scoreAssessment.mutateAsync(assessment.id);
+      setScoringResult(result);
+      setStep('results');
+    } catch {
+      setStep('assessing');
     }
   };
 
@@ -152,25 +177,7 @@ export function LicensedAssessmentPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedChildId || !questionnaireQuery.data) return;
-    setStep('scoring');
-
-    try {
-      const assessment = await createAssessment.mutateAsync({
-        childId: selectedChildId,
-        input: {
-          questionnaireId: questionnaireQuery.data.id,
-          scores: scores.map((s) => ({ itemId: s.itemId, domain: s.domain, score: s.score })),
-        },
-      });
-
-      const result = await scoreAssessment.mutateAsync(assessment.id);
-      setScoringResult(result);
-      setStep('results');
-    } catch {
-      // On error, go back to assessing
-      setStep('assessing');
-    }
+    await handleSubmitWithScores(scores);
   };
 
   const currentScore = currentItem
