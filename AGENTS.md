@@ -3,12 +3,12 @@
 > AI 에이전트가 이 프로젝트에서 작업할 때 반드시 읽어야 하는 문서입니다.
 > 이 프로젝트는 자폐 아동 가정치료 지원 시스템입니다.
 
-| 항목          | 내용                         |
-| ------------- | ---------------------------- |
-| 현재 Phase    | **Phase 5 시작 (Licensing)** |
-| 최종 업데이트 | 2026-06-05                   |
-| 총 커밋       | 155개                        |
-| 테스트        | 244개 통과                   |
+| 항목          | 내용                            |
+| ------------- | ------------------------------- |
+| 현재 Phase    | **Phase 5 완료 (Licensing)**    |
+| 최종 업데이트 | 2026-06-08                      |
+| 총 커밋       | 167개                           |
+| 테스트        | 264개 통과 (3개 기존 사전 실패) |
 
 ---
 
@@ -728,20 +728,20 @@ async resolve(userId: string, jwtFamilyId: string | null | undefined): Promise<s
 
 ### 16.2 태스크 목록
 
-| ID         | 내용                                  | 상태       |
-| ---------- | ------------------------------------- | ---------- |
-| P5-001     | License 스키마 (Prisma 신규)          | 🔄 진행 중 |
-| P5-002     | 라이선스 CRUD 모듈                    | ⏳         |
-| P5-003     | 라이선스 검증 미들웨어                | ⏳         |
-| P5-004     | 법적 동의 강화                        | ⏳         |
-| P5-005     | M-CHAT-R/F + CARS-2 + ABC 문항 데이터 | ⏳         |
-| P5-006     | 채점 알고리즘                         | ⏳         |
-| P5-007     | 점수 해석 서비스                      | ⏳         |
-| P5-008     | Admin 라이선스 관리 페이지            | ⏳         |
-| P5-009~011 | 웹 UI 흐름 (선택→동의→평가→결과)      | ⏳         |
-| P5-012     | 모바일 동일 흐름                      | ⏳         |
-| P5-013~016 | 법적 감사, E2E, 보안, Swagger         | ⏳         |
-| P5-017~018 | AI 커리큘럼 라이선스 점수 반영        | ⏳         |
+| ID         | 내용                                  | 상태 |
+| ---------- | ------------------------------------- | ---- |
+| P5-001     | License 스키마 (Prisma 신규)          | ✅   |
+| P5-002     | 라이선스 CRUD 모듈                    | ✅   |
+| P5-003     | 라이선스 검증 미들웨어                | ✅   |
+| P5-004     | 법적 동의 강화                        | ✅   |
+| P5-005     | M-CHAT-R/F + CARS-2 + ABC 문항 데이터 | ✅   |
+| P5-006     | 채점 알고리즘                         | ✅   |
+| P5-007     | 점수 해석 서비스                      | ✅   |
+| P5-008     | Admin 라이선스 관리 페이지            | ✅   |
+| P5-009~011 | 웹 UI 흐름 (선택→동의→평가→결과)      | ✅   |
+| P5-012     | 모바일 동일 흐름                      | ✅   |
+| P5-013~016 | 법적 감사, 테스트, 보안, 문서화       | ✅   |
+| P5-017~018 | AI 커리큘럼 라이선스 점수 반영        | ✅   |
 
 ### 16.3 결정사항
 
@@ -756,6 +756,47 @@ async resolve(userId: string, jwtFamilyId: string | null | undefined): Promise<s
 | GDPR 데이터 내보내기 (모바일) | ✅      |
 | 연구 자동 아카이브 배치 연결  | ✅      |
 | P4 이연 전체                  | ✅ 완료 |
+
+### 16.5 Phase 5 핵심 아키텍처
+
+#### 라이선스 모듈 구조 (`apps/api/src/licenses/`)
+
+| 파일                            | 역할                                                |
+| ------------------------------- | --------------------------------------------------- |
+| `licenses.service.ts`           | 등록/활성화/취소/검증/만료처리                      |
+| `licensed-tool-data.service.ts` | 도구별 데모 문항 정의 + 가족 질문지 생성            |
+| `assessment-scoring.service.ts` | M-CHAT/CARS-2/ABC 채점 + 해석 + 발달수준 업데이트   |
+| `licenses.controller.ts`        | Admin CRUD + 가족 라이선스 조회 + 채점 엔드포인트   |
+| `license.guard.ts`              | `@RequiresLicense(tool)` 데코레이터로 라이선스 검증 |
+
+#### 라이선스 흐름
+
+```
+Admin 등록 (POST /admin/licenses)
+  → keyHash(SHA-256) 저장
+  → 가족용 LICENSED 질문지 자동 생성 (LicensedToolDataService)
+      ↓
+웹/모바일: 질문지 탭 → 도구 선택
+  → 라이선스 확인 (GET /families/:id/licenses/:tool)
+  → 동의 모달 (GET /consent/tool/:tool/document → POST /consent/tool/:tool)
+  → 평가 폼 (POST /children/:id/assessments)
+  → 채점 (POST /assessments/:id/score)
+      → child.developmentalLevel 자동 업데이트 (P5-018)
+      → 커리큘럼 다음 생성 시 점수 반영 (P5-017)
+```
+
+#### 채점 점수 매핑 (DB 1-5 스케일)
+
+| 도구       | UI 버튼               | DB 저장     | 해석             |
+| ---------- | --------------------- | ----------- | ---------------- |
+| M-CHAT-R/F | 예=정상 / 아니오=이상 | 2 / 4       | ≥3이면 fail      |
+| CARS-2     | 1~4 직접              | 1~4         | 합산 15-60점     |
+| ABC        | 0~3                   | 1~4 (shift) | 합산, 하위척도별 |
+
+#### 운영 전 필수 교체 항목
+
+- `CONSENT_DOCUMENTS` in `consent.service.ts` — 현재 데모 텍스트, 실제 저작권 문구로 교체
+- `TOOL_SCHEMAS` in `licensed-tool-data.service.ts` — 현재 데모 문항, 실제 도구 구매 후 교체
 
 ---
 
