@@ -102,6 +102,36 @@ export class CurriculumService {
         orderBy: { createdAt: 'desc' },
       });
 
+      const latestLicensedAssessments = await this.prisma.assessment.findMany({
+        where: {
+          childId,
+          totalScore: { not: null },
+          questionnaire: { type: 'LICENSED' },
+        },
+        include: { questionnaire: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+
+      const seenTools = new Set<string>();
+      const licensedScores = latestLicensedAssessments
+        .filter((a) => {
+          const tool = (a.questionnaire as { licensedTool?: string }).licensedTool;
+          if (!tool || seenTools.has(tool)) return false;
+          seenTools.add(tool);
+          return true;
+        })
+        .map((a) => {
+          const tool = (a.questionnaire as { licensedTool?: string }).licensedTool ?? 'UNKNOWN';
+          return {
+            tool,
+            totalScore: a.totalScore ?? 0,
+            maxPossibleScore: 0,
+            severity: 'UNSCORED',
+            interpretation: `${tool} 총점 ${a.totalScore}점`,
+          };
+        });
+
       const previousCurriculum = await this.prisma.curriculum.findFirst({
         where: { childId, status: { not: 'FAILED' } },
         orderBy: { date: 'desc' },
@@ -136,6 +166,7 @@ export class CurriculumService {
           }>) ?? undefined,
         sensoryProfile: latestSensory ?? undefined,
         recentMilestones: milestones,
+        licensedScores: licensedScores.length > 0 ? licensedScores : undefined,
       });
 
       const result = await this.aiService.generateStructured(

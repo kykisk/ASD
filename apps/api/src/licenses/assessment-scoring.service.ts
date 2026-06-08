@@ -55,7 +55,39 @@ export class AssessmentScoringService {
       data: { totalScore: result.totalScore },
     });
 
+    await this.updateDevelopmentalLevel(assessment.childId, result).catch(() => {});
+
     return result;
+  }
+
+  private async updateDevelopmentalLevel(childId: string, result: ScoringResult): Promise<void> {
+    const child = await this.prisma.child.findUnique({
+      where: { id: childId },
+      select: { developmentalLevel: true },
+    });
+    if (!child) return;
+
+    const existing = (child.developmentalLevel as Record<string, string>) ?? {};
+
+    const toolLabel: Record<string, string> = {
+      M_CHAT_R_F: 'M-CHAT-R/F',
+      CARS_2: 'CARS-2',
+      ABC: 'ABC',
+    };
+    const label = toolLabel[result.tool] ?? result.tool;
+    const updatedOverall = `${result.interpretation} [${label} ${new Date().toLocaleDateString('ko-KR')}]`;
+
+    await this.prisma.child.update({
+      where: { id: childId },
+      data: {
+        developmentalLevel: {
+          ...existing,
+          overall: updatedOverall,
+          [`${result.tool.toLowerCase()}_severity`]: result.severity,
+          [`${result.tool.toLowerCase()}_score`]: `${result.totalScore}/${result.maxPossibleScore}`,
+        },
+      },
+    });
   }
 
   private scoreMChat(scores: Array<{ domain: string; score: number }>): ScoringResult {

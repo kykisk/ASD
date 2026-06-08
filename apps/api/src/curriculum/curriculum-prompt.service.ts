@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import type { AIMessage } from '@auticare/ai-provider';
 
+export interface LicensedScoreSnapshot {
+  tool: string;
+  totalScore: number;
+  maxPossibleScore: number;
+  severity: string;
+  interpretation: string;
+}
+
 export interface CurriculumPromptParams {
   childAgeMonths: number;
   domainScores: Array<{
@@ -31,6 +39,7 @@ export interface CurriculumPromptParams {
     aiRecommendations?: string | null;
   };
   recentMilestones?: string[];
+  licensedScores?: LicensedScoreSnapshot[];
 }
 
 @Injectable()
@@ -114,6 +123,14 @@ ${domainText}`;
         userContent += `✅ ${m}\n`;
       });
       userContent += `위 마일스톤을 기반으로 다음 단계 활동을 포함해주세요.\n`;
+    }
+
+    if (params.licensedScores && params.licensedScores.length > 0) {
+      userContent += `\n\n표준화 임상 평가 결과:\n`;
+      for (const ls of params.licensedScores) {
+        userContent += `- [${ls.tool}] ${ls.interpretation} (${ls.totalScore}/${ls.maxPossibleScore}점, 중증도: ${ls.severity})\n`;
+      }
+      userContent += `위 임상 평가 결과를 반영하여 아이의 현재 기능 수준에 맞는 활동을 설계해주세요.\n`;
     }
 
     userContent += `\n오늘(${params.targetDate}) 커리큘럼을 생성해주세요.
