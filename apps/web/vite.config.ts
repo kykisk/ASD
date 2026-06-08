@@ -9,6 +9,7 @@ export default defineConfig(() => ({
   server: {
     port: 4200,
     host: '0.0.0.0',
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/v1': {
         target: 'http://localhost:3100',
@@ -19,6 +20,7 @@ export default defineConfig(() => ({
   preview: {
     port: 4201,
     host: '0.0.0.0',
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/v1': {
         target: 'http://localhost:3100',
