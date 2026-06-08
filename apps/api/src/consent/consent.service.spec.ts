@@ -16,10 +16,7 @@ describe('ConsentService', () => {
     vi.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ConsentService,
-        { provide: 'PrismaService', useValue: mockPrismaService },
-      ],
+      providers: [ConsentService, { provide: 'PrismaService', useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<ConsentService>(ConsentService);
@@ -70,11 +67,7 @@ describe('ConsentService', () => {
         consentVersion: '1.0',
       });
 
-      const result = await service.hasConsented(
-        'user-1',
-        'TERMS_OF_SERVICE',
-        '1.0',
-      );
+      const result = await service.hasConsented('user-1', 'TERMS_OF_SERVICE', '1.0');
 
       expect(result).toBe(true);
       expect(mockPrismaService.legalConsent.findFirst).toHaveBeenCalledWith({
@@ -89,11 +82,7 @@ describe('ConsentService', () => {
     it('should return false when consent is not found', async () => {
       mockPrismaService.legalConsent.findFirst.mockResolvedValue(null);
 
-      const result = await service.hasConsented(
-        'user-1',
-        'TERMS_OF_SERVICE',
-        '1.0',
-      );
+      const result = await service.hasConsented('user-1', 'TERMS_OF_SERVICE', '1.0');
 
       expect(result).toBe(false);
     });
@@ -101,11 +90,7 @@ describe('ConsentService', () => {
     it('should return false for different version', async () => {
       mockPrismaService.legalConsent.findFirst.mockResolvedValue(null);
 
-      const result = await service.hasConsented(
-        'user-1',
-        'TERMS_OF_SERVICE',
-        '2.0',
-      );
+      const result = await service.hasConsented('user-1', 'TERMS_OF_SERVICE', '2.0');
 
       expect(result).toBe(false);
       expect(mockPrismaService.legalConsent.findFirst).toHaveBeenCalledWith({
@@ -154,13 +139,15 @@ describe('ConsentService', () => {
   });
 
   describe('getCurrentVersions', () => {
-    it('should return current versions', () => {
+    it('should return current versions including licensed tool versions', () => {
       const versions = service.getCurrentVersions();
 
-      expect(versions).toEqual({
+      expect(versions).toMatchObject({
         TERMS_OF_SERVICE: '1.0',
         PRIVACY_POLICY: '1.0',
-        LICENSED_TOOL_USE: '1.0',
+        LICENSED_TOOL_USE_M_CHAT_R_F: '1.0',
+        LICENSED_TOOL_USE_CARS_2: '1.0',
+        LICENSED_TOOL_USE_ABC: '1.0',
       });
     });
   });
