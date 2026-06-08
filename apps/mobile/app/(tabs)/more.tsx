@@ -63,6 +63,11 @@ export default function MoreScreen() {
       <Text style={styles.sectionLabel}>치료 도구</Text>
       <View style={styles.section}>
         <MenuItem label="아이 프로필" icon="👤" onPress={() => router.push('/child-profile')} />
+        <MenuItem
+          label="라이선스 도구"
+          icon="🏥"
+          onPress={() => router.push('../licensed-assessment')}
+        />
         <MenuItem label="감각 프로파일" icon="🎯" onPress={() => router.push('/sensory-profile')} />
         <MenuItem label="보고서" icon="📊" onPress={() => router.push('/reports')} />
       </View>
