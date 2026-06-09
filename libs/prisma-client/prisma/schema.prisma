@@ -233,6 +233,7 @@ model Child {
   sensoryProfiles  SensoryProfile[]
   researchMatches  ResearchUserMatch[]
   researchDigests  ResearchDigest[]
+  clinicalReports  ClinicalReport[]
 
   @@index([familyId])
 }
@@ -764,4 +765,35 @@ model License {
   @@index([familyId])
   @@index([status])
   @@index([expiresAt])
+}
+
+// ============================================================
+// Phase 6 — Clinical Reports
+// ============================================================
+
+enum ClinicalReportSource {
+  MANUAL
+  IMAGE_IMPORT
+}
+
+model ClinicalReport {
+  id               String               @id @default(cuid())
+  childId          String
+  assessmentTool   String               // 예: "PRES", "K-WISC-V", "CARS-2", "언어발달검사"
+  assessmentDate   DateTime?
+  evaluatorType    String?              // 예: "언어치료사", "임상심리사", "소아과 전문의"
+  institution      String?              // 기관명
+  sectionScores    Json                 // [{ name: "표현어휘", score: 36, unit: "점", percentile: 5 }]
+  totalScore       Float?
+  totalScoreUnit   String?              // "점", "지수", "백분위"
+  clinicalFindings String?              // 소견 전문
+  source           ClinicalReportSource @default(MANUAL)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  child            Child                @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId])
+  @@index([assessmentDate])
+  @@index([createdAt])
 }

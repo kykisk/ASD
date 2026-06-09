@@ -9,6 +9,21 @@ export interface LicensedScoreSnapshot {
   interpretation: string;
 }
 
+export interface ClinicalReportSnapshot {
+  assessmentTool: string;
+  assessmentDate: string | null;
+  evaluatorType: string | null;
+  sectionScores: Array<{
+    name: string;
+    score: number | null;
+    unit?: string;
+    percentile?: number | null;
+  }>;
+  totalScore: number | null;
+  totalScoreUnit: string | null;
+  clinicalFindings: string | null;
+}
+
 export interface CurriculumPromptParams {
   childAgeMonths: number;
   domainScores: Array<{
@@ -40,6 +55,7 @@ export interface CurriculumPromptParams {
   };
   recentMilestones?: string[];
   licensedScores?: LicensedScoreSnapshot[];
+  clinicalReports?: ClinicalReportSnapshot[];
 }
 
 @Injectable()
@@ -131,6 +147,29 @@ ${domainText}`;
         userContent += `- [${ls.tool}] ${ls.interpretation} (${ls.totalScore}/${ls.maxPossibleScore}점, 중증도: ${ls.severity})\n`;
       }
       userContent += `위 임상 평가 결과를 반영하여 아이의 현재 기능 수준에 맞는 활동을 설계해주세요.\n`;
+    }
+
+    if (params.clinicalReports && params.clinicalReports.length > 0) {
+      userContent += `\n\n외부 기관 임상 평가 보고서:\n`;
+      for (const cr of params.clinicalReports) {
+        const date = cr.assessmentDate ? ` (${cr.assessmentDate})` : '';
+        const evaluator = cr.evaluatorType ? ` [${cr.evaluatorType}]` : '';
+        userContent += `- [${cr.assessmentTool}]${date}${evaluator}\n`;
+        if (cr.totalScore !== null && cr.totalScoreUnit) {
+          userContent += `  전체 점수: ${cr.totalScore}${cr.totalScoreUnit}\n`;
+        }
+        if (cr.sectionScores?.length) {
+          for (const s of cr.sectionScores.slice(0, 5)) {
+            const pct =
+              s.percentile !== null && s.percentile !== undefined ? ` (${s.percentile}백분위)` : '';
+            if (s.score !== null) userContent += `  ${s.name}: ${s.score}${s.unit ?? ''}${pct}\n`;
+          }
+        }
+        if (cr.clinicalFindings) {
+          userContent += `  소견: ${cr.clinicalFindings.slice(0, 150)}\n`;
+        }
+      }
+      userContent += `위 외부 평가 결과를 종합하여 치료 방향에 반영해주세요.\n`;
     }
 
     userContent += `\n오늘(${params.targetDate}) 커리큘럼을 생성해주세요.

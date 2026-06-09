@@ -137,6 +137,12 @@ export class CurriculumService {
         orderBy: { date: 'desc' },
       });
 
+      const recentClinicalReports = await this.prisma.clinicalReport.findMany({
+        where: { childId },
+        orderBy: [{ assessmentDate: 'desc' }, { createdAt: 'desc' }],
+        take: 3,
+      });
+
       const messages = this.promptService.buildCurriculumPrompt({
         childAgeMonths: ageMonths,
         domainScores: aggregated.domains.map((d) => ({
@@ -167,6 +173,26 @@ export class CurriculumService {
         sensoryProfile: latestSensory ?? undefined,
         recentMilestones: milestones,
         licensedScores: licensedScores.length > 0 ? licensedScores : undefined,
+        clinicalReports:
+          recentClinicalReports.length > 0
+            ? recentClinicalReports.map((r) => ({
+                assessmentTool: r.assessmentTool,
+                assessmentDate: r.assessmentDate
+                  ? r.assessmentDate.toISOString().split('T')[0]
+                  : null,
+                evaluatorType: r.evaluatorType,
+                sectionScores:
+                  (r.sectionScores as Array<{
+                    name: string;
+                    score: number | null;
+                    unit?: string;
+                    percentile?: number | null;
+                  }>) ?? [],
+                totalScore: r.totalScore,
+                totalScoreUnit: r.totalScoreUnit,
+                clinicalFindings: r.clinicalFindings,
+              }))
+            : undefined,
       });
 
       const result = await this.aiService.generateStructured(

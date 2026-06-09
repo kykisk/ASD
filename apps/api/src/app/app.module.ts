@@ -34,6 +34,7 @@ import { SensoryModule } from '../sensory/sensory.module.js';
 import { ResearchModule } from '../research/research.module.js';
 import { CollaborationModule } from '../collaboration/collaboration.module.js';
 import { LicensesModule } from '../licenses/licenses.module.js';
+import { ClinicalReportsModule } from '../clinical-reports/clinical-reports.module.js';
 import { CacheModule } from '../common/cache/cache.module.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
@@ -75,6 +76,7 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
     ResearchModule,
     CollaborationModule,
     LicensesModule,
+    ClinicalReportsModule,
   ],
   controllers: [AppController],
   providers: [
