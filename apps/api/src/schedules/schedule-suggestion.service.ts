@@ -73,12 +73,16 @@ export class ScheduleSuggestionService {
       trend: d.trend.direction,
     }));
 
-    const systemMessage = '당신은 자폐 아동 치료 스케줄 전문 컨설턴트입니다. JSON으로만 응답하세요.';
+    const systemMessage =
+      '당신은 자폐 아동 치료 스케줄 전문 컨설턴트입니다. 반드시 순수 JSON만 반환하세요. 마크다운이나 코드 블록을 사용하지 마세요.';
     const userMessage = `현재 주간 일정과 최근 발달 평가 데이터를 분석하여 스케줄 개선을 제안해주세요.
 
 현재 일정: ${JSON.stringify(scheduleList)}
 
-발달 추이: ${JSON.stringify(domainList)}`;
+발달 추이: ${JSON.stringify(domainList)}
+
+다음 JSON 형식으로 응답하세요:
+{"suggestions":[{"type":"ADD|MODIFY|REMOVE|REORDER","title":"제목","category":"THERAPY|EDUCATION|FREE_PLAY|MEAL|SLEEP|OTHER","reasoning":"제안 이유","suggestedTime":"HH:MM","suggestedDuration":30}],"summary":"전체 개선 방향 요약 한 문장"}`;
 
     return this.aiService.generateStructured(
       {

@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined,
@@ -130,6 +132,32 @@ function AdminDashboard() {
 }
 
 function ProtectedPage({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, setAuth, clearAuth } = useAdminAuthStore();
+  const REFRESH_THRESHOLD = 5 * 60 * 1000;
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const refresh = async () => {
+      const { tokenExpiresAt: exp, user } = useAdminAuthStore.getState();
+      if (!exp || exp - Date.now() > REFRESH_THRESHOLD) return;
+      try {
+        const { data } = await axios.post(
+          `${import.meta.env.VITE_API_URL || '/v1'}/auth/refresh`,
+          {},
+          { withCredentials: true },
+        );
+        const newToken = data.data?.accessToken || data.accessToken;
+        if (newToken && user) setAuth(newToken, user);
+      } catch (_) {
+        clearAuth();
+        window.location.href = '/login';
+      }
+    };
+    refresh();
+    const interval = setInterval(refresh, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, setAuth, clearAuth]);
+
   return (
     <ProtectedRoute>
       <AdminLayout>{children}</AdminLayout>
