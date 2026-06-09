@@ -2,7 +2,9 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module.js';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,6 +13,9 @@ async function bootstrap() {
 
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.getInstance().set('etag', false);
+
+  app.use(json({ limit: '20mb' }));
+  app.use(urlencoded({ limit: '20mb', extended: true }));
 
   app.use(
     helmet({
