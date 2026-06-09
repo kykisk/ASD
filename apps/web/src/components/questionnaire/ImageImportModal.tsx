@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMyFamily } from '../../hooks/use-families';
 import { useChildStore } from '../../stores/child.store';
 import {
@@ -23,6 +23,45 @@ interface ExtractionItem {
   domain: string;
   score: number | null;
   description?: string;
+}
+
+const ANALYSIS_STEPS = [
+  { delay: 0, icon: '📷', text: '이미지 업로드 중...' },
+  { delay: 1500, icon: '🔍', text: '문항을 인식하고 있습니다...' },
+  { delay: 4000, icon: '🧠', text: 'AI가 도메인을 분류하고 있습니다...' },
+  { delay: 7000, icon: '📝', text: '점수를 확인하고 있습니다...' },
+  { delay: 11000, icon: '✨', text: '거의 완료...' },
+];
+
+function AnalysisProgress() {
+  const [stepIdx, setStepIdx] = useState(0);
+
+  useEffect(() => {
+    const timers = ANALYSIS_STEPS.slice(1).map((s, i) =>
+      setTimeout(() => setStepIdx(i + 1), s.delay),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const current = ANALYSIS_STEPS[stepIdx];
+  const progress = Math.min(((stepIdx + 1) / ANALYSIS_STEPS.length) * 100, 95);
+
+  return (
+    <div className="px-4 py-5 rounded-[12px] bg-[#5B8A72]/[0.05] border border-[#5B8A72]/20">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-lg">{current.icon}</span>
+        <span className="text-sm font-medium text-[#5B8A72] transition-all duration-300">
+          {current.text}
+        </span>
+      </div>
+      <div className="h-1.5 bg-[#5B8A72]/10 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-[#5B8A72] rounded-full transition-all duration-1000 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 interface ImageImportModalProps {
@@ -349,18 +388,7 @@ export function ImageImportModal({ isOpen, onClose }: ImageImportModalProps) {
               )}
 
               {/* Loading state */}
-              {importFromImage.isPending && (
-                <div className="flex items-center gap-3 px-4 py-4 rounded-[12px] bg-[#5B8A72]/[0.05] border border-[#5B8A72]/20">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_infinite]" />
-                    <div className="w-2 h-2 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.2s_infinite]" />
-                    <div className="w-2 h-2 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.4s_infinite]" />
-                  </div>
-                  <span className="text-sm font-medium text-[#5B8A72]">
-                    AI가 이미지를 분석하고 있습니다...
-                  </span>
-                </div>
-              )}
+              {importFromImage.isPending && <AnalysisProgress />}
             </div>
           )}
 
