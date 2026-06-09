@@ -196,6 +196,7 @@ export function GrowthPage() {
   const { data: allAssessments } = useAssessments(selectedChildId);
 
   const [showReportModal, setShowReportModal] = useState(false);
+  const [clinicalSubTab, setClinicalSubTab] = useState<'licensed' | 'external'>('external');
   const { data: clinicalReports } = useClinicalReports(selectedChildId);
   const deleteReport = useDeleteClinicalReport(selectedChildId);
 
@@ -362,275 +363,340 @@ export function GrowthPage() {
 
       {!isLoading && selectedChildId && activeTab === 'clinical' && (
         <div style={{ display: 'grid', gap: 16 }}>
-          <div style={cardStyle}>
-            <div
-              style={{
-                marginBottom: 20,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>임상 평가 기록</h3>
-                <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                  라이선스 표준화 도구 (CARS-2, M-CHAT-R/F, ABC)
-                </p>
-              </div>
+          {/* 서브탭 */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              padding: '4px',
+              background: '#f1f5f9',
+              borderRadius: 12,
+            }}
+          >
+            {(
+              [
+                { key: 'external', label: '외부 평가 보고서', count: clinicalReports?.length ?? 0 },
+                { key: 'licensed', label: '라이선스 도구', count: licensedAssessments.length },
+              ] as const
+            ).map((tab) => (
               <button
-                onClick={() => navigate('/questionnaires')}
+                key={tab.key}
+                onClick={() => setClinicalSubTab(tab.key)}
                 style={{
-                  fontSize: 12,
-                  color: '#5B8A72',
-                  fontWeight: 600,
-                  background: 'none',
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 9,
                   border: 'none',
                   cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: clinicalSubTab === tab.key ? 600 : 400,
+                  background: clinicalSubTab === tab.key ? '#fff' : 'transparent',
+                  color: clinicalSubTab === tab.key ? '#1e293b' : '#64748b',
+                  boxShadow: clinicalSubTab === tab.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
               >
-                + 새 평가
+                {tab.label}
+                {tab.count > 0 && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '1px 7px',
+                      borderRadius: 99,
+                      background: clinicalSubTab === tab.key ? '#5B8A72' : '#cbd5e1',
+                      color: clinicalSubTab === tab.key ? '#fff' : '#475569',
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                )}
               </button>
-            </div>
-
-            {licensedAssessments.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🏥</div>
-                <p style={{ fontSize: 14, fontWeight: 500 }}>임상 평가 기록이 없습니다</p>
-                <p style={{ fontSize: 12, marginTop: 4 }}>
-                  질문지 탭에서 라이선스 도구로 평가를 시작해보세요
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {licensedAssessments.map((a: Assessment) => {
-                  const tool = a.questionnaire?.licensedTool ?? '';
-                  const toolLabel = TOOL_LABELS[tool] ?? tool;
-                  const sev = getLicensedSeverity(tool, a.totalScore ?? 0);
-                  const date = new Date(a.createdAt);
-                  const dateStr = `${date.getMonth() + 1}월 ${date.getDate()}일`;
-                  return (
-                    <div
-                      key={a.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 16px',
-                        borderRadius: 12,
-                        border: '1px solid #e8e4df',
-                        background: '#fdfbf7',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 10,
-                            background: '#9B8EC420',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 16,
-                          }}
-                        >
-                          🏥
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
-                            {toolLabel}
-                          </div>
-                          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                            {dateStr} · 총점 {a.totalScore}점
-                          </div>
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          padding: '4px 10px',
-                          borderRadius: 8,
-                          color: sev.color,
-                          background: sev.bg,
-                        }}
-                      >
-                        {sev.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            ))}
           </div>
 
-          {/* 외부 기관 평가 보고서 */}
-          <div style={cardStyle}>
-            <div
-              style={{
-                marginBottom: 20,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-                  외부 기관 평가 보고서
-                </h3>
-                <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                  언어, 인지, 작업치료 등 외부 평가 결과
-                </p>
-              </div>
-              <button
-                onClick={() => setShowReportModal(true)}
+          {/* 라이선스 도구 탭 */}
+          {clinicalSubTab === 'licensed' && (
+            <div style={cardStyle}>
+              <div
                 style={{
-                  fontSize: 12,
-                  color: '#5B8A72',
-                  fontWeight: 600,
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
+                  marginBottom: 20,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
                 }}
               >
-                + 보고서 추가
-              </button>
-            </div>
-
-            {!clinicalReports || clinicalReports.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
-                <p style={{ fontSize: 14, fontWeight: 500 }}>외부 평가 보고서가 없습니다</p>
-                <p style={{ fontSize: 12, marginTop: 4 }}>
-                  '+ 보고서 추가'로 임상 결과를 기록하세요.
-                </p>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
+                    임상 평가 기록
+                  </h3>
+                  <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                    라이선스 표준화 도구 (CARS-2, M-CHAT-R/F, ABC)
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/questionnaires')}
+                  style={{
+                    fontSize: 12,
+                    color: '#5B8A72',
+                    fontWeight: 600,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  + 새 평가
+                </button>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {clinicalReports.map((report: ClinicalReport) => {
-                  const dateStr = report.assessmentDate
-                    ? formatReportDate(report.assessmentDate)
-                    : '';
-                  const metaParts = [dateStr, report.evaluatorType, report.institution].filter(
-                    Boolean,
-                  );
-                  const totalLabel =
-                    report.totalScore !== null
-                      ? `${report.totalScore}${report.totalScoreUnit || '점'}`
-                      : null;
-                  const visibleSections = report.sectionScores.slice(0, 3);
 
-                  return (
-                    <div
-                      key={report.id}
-                      style={{
-                        padding: '14px 16px',
-                        borderRadius: 12,
-                        border: '1px solid #e8e4df',
-                        background: '#fdfbf7',
-                      }}
-                    >
+              {licensedAssessments.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🏥</div>
+                  <p style={{ fontSize: 14, fontWeight: 500 }}>임상 평가 기록이 없습니다</p>
+                  <p style={{ fontSize: 12, marginTop: 4 }}>
+                    질문지 탭에서 라이선스 도구로 평가를 시작해보세요
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {licensedAssessments.map((a: Assessment) => {
+                    const tool = a.questionnaire?.licensedTool ?? '';
+                    const toolLabel = TOOL_LABELS[tool] ?? tool;
+                    const sev = getLicensedSeverity(tool, a.totalScore ?? 0);
+                    const date = new Date(a.createdAt);
+                    const dateStr = `${date.getMonth() + 1}월 ${date.getDate()}일`;
+                    return (
                       <div
+                        key={a.id}
                         style={{
                           display: 'flex',
+                          alignItems: 'center',
                           justifyContent: 'space-between',
-                          alignItems: 'flex-start',
+                          padding: '12px 16px',
+                          borderRadius: 12,
+                          border: '1px solid #e8e4df',
+                          background: '#fdfbf7',
                         }}
                       >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
-                            {report.assessmentTool}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 10,
+                              background: '#9B8EC420',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 16,
+                            }}
+                          >
+                            🏥
                           </div>
-                          {metaParts.length > 0 && (
-                            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>
-                              {metaParts.join(' · ')}
-                              {totalLabel && (
-                                <span style={{ marginLeft: 6, color: '#5B8A72', fontWeight: 600 }}>
-                                  {totalLabel}
-                                </span>
-                              )}
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
+                              {toolLabel}
                             </div>
-                          )}
-                          {visibleSections.length > 0 && (
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: '#6B7B8D',
-                                marginTop: 6,
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: 4,
-                              }}
-                            >
-                              {visibleSections.map((s, i) => (
-                                <span
-                                  key={i}
-                                  style={{
-                                    padding: '2px 8px',
-                                    borderRadius: 6,
-                                    background: '#E8F5EE',
-                                    fontSize: 11,
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  {s.name} {s.score !== null ? `${s.score}${s.unit || '점'}` : ''}
-                                  {s.percentile !== null && s.percentile !== undefined
-                                    ? `(${s.percentile}%)`
-                                    : ''}
-                                </span>
-                              ))}
-                              {report.sectionScores.length > 3 && (
-                                <span
-                                  style={{ padding: '2px 6px', fontSize: 11, color: '#94a3b8' }}
-                                >
-                                  +{report.sectionScores.length - 3}
-                                </span>
-                              )}
+                            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                              {dateStr} · 총점 {a.totalScore}점
                             </div>
-                          )}
-                          {report.clinicalFindings && (
-                            <p
-                              style={{
-                                fontSize: 12,
-                                color: '#6B7B8D',
-                                marginTop: 6,
-                                lineHeight: 1.5,
-                                overflow: 'hidden',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                              }}
-                            >
-                              소견: "{report.clinicalFindings}"
-                            </p>
-                          )}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            if (window.confirm('이 보고서를 삭제하시겠습니까?')) {
-                              deleteReport.mutate(report.id);
-                            }
-                          }}
+                        <span
                           style={{
-                            marginLeft: 12,
-                            padding: '4px 8px',
-                            borderRadius: 6,
-                            border: 'none',
-                            background: 'none',
-                            fontSize: 11,
-                            color: '#94a3b8',
-                            cursor: 'pointer',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            padding: '4px 10px',
+                            borderRadius: 8,
+                            color: sev.color,
+                            background: sev.bg,
                           }}
                         >
-                          삭제
-                        </button>
+                          {sev.label}
+                        </span>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 외부 기관 평가 보고서 탭 */}
+          {clinicalSubTab === 'external' && (
+            <div style={cardStyle}>
+              <div
+                style={{
+                  marginBottom: 20,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
+                    외부 기관 평가 보고서
+                  </h3>
+                  <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                    언어, 인지, 작업치료 등 외부 평가 결과
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  style={{
+                    fontSize: 12,
+                    color: '#5B8A72',
+                    fontWeight: 600,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  + 보고서 추가
+                </button>
               </div>
-            )}
-          </div>
+
+              {!clinicalReports || clinicalReports.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                  <p style={{ fontSize: 14, fontWeight: 500 }}>외부 평가 보고서가 없습니다</p>
+                  <p style={{ fontSize: 12, marginTop: 4 }}>
+                    '+ 보고서 추가'로 임상 결과를 기록하세요.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {clinicalReports.map((report: ClinicalReport) => {
+                    const dateStr = report.assessmentDate
+                      ? formatReportDate(report.assessmentDate)
+                      : '';
+                    const metaParts = [dateStr, report.evaluatorType, report.institution].filter(
+                      Boolean,
+                    );
+                    const totalLabel =
+                      report.totalScore !== null
+                        ? `${report.totalScore}${report.totalScoreUnit || '점'}`
+                        : null;
+                    const visibleSections = report.sectionScores.slice(0, 3);
+
+                    return (
+                      <div
+                        key={report.id}
+                        style={{
+                          padding: '14px 16px',
+                          borderRadius: 12,
+                          border: '1px solid #e8e4df',
+                          background: '#fdfbf7',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
+                              {report.assessmentTool}
+                            </div>
+                            {metaParts.length > 0 && (
+                              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>
+                                {metaParts.join(' · ')}
+                                {totalLabel && (
+                                  <span
+                                    style={{ marginLeft: 6, color: '#5B8A72', fontWeight: 600 }}
+                                  >
+                                    {totalLabel}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {visibleSections.length > 0 && (
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  color: '#6B7B8D',
+                                  marginTop: 6,
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: 4,
+                                }}
+                              >
+                                {visibleSections.map((s, i) => (
+                                  <span
+                                    key={i}
+                                    style={{
+                                      padding: '2px 8px',
+                                      borderRadius: 6,
+                                      background: '#E8F5EE',
+                                      fontSize: 11,
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {s.name} {s.score !== null ? `${s.score}${s.unit || '점'}` : ''}
+                                    {s.percentile !== null && s.percentile !== undefined
+                                      ? `(${s.percentile}%)`
+                                      : ''}
+                                  </span>
+                                ))}
+                                {report.sectionScores.length > 3 && (
+                                  <span
+                                    style={{ padding: '2px 6px', fontSize: 11, color: '#94a3b8' }}
+                                  >
+                                    +{report.sectionScores.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {report.clinicalFindings && (
+                              <p
+                                style={{
+                                  fontSize: 12,
+                                  color: '#6B7B8D',
+                                  marginTop: 6,
+                                  lineHeight: 1.5,
+                                  overflow: 'hidden',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                }}
+                              >
+                                소견: "{report.clinicalFindings}"
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('이 보고서를 삭제하시겠습니까?')) {
+                                deleteReport.mutate(report.id);
+                              }
+                            }}
+                            style={{
+                              marginLeft: 12,
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              border: 'none',
+                              background: 'none',
+                              fontSize: 11,
+                              color: '#94a3b8',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
