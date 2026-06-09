@@ -130,11 +130,15 @@ export class ImageImportService {
         credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretKey },
       });
 
+      const { model: modelId, ...bodyWithoutModel } = body as {
+        model: string;
+        [key: string]: unknown;
+      };
       const command = new InvokeModelCommand({
-        modelId: (body as { model: string }).model,
+        modelId,
         contentType: 'application/json',
         accept: 'application/json',
-        body: JSON.stringify({ ...(body as object), anthropic_version: 'bedrock-2023-05-31' }),
+        body: JSON.stringify({ ...bodyWithoutModel, anthropic_version: 'bedrock-2023-05-31' }),
       });
 
       const response = await client.send(command);
