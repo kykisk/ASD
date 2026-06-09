@@ -338,8 +338,11 @@ export function ImageImportModal({ isOpen, onClose }: ImageImportModalProps) {
                 onChange={(e) => handleFileSelect(e.target.files)}
               />
 
+              {/* Analysis progress - shown right after upload area */}
+              {importFromImage.isPending && <AnalysisProgress />}
+
               {/* Selected files */}
-              {selectedFiles.length > 0 && (
+              {selectedFiles.length > 0 && !importFromImage.isPending && (
                 <div className="space-y-2">
                   {selectedFiles.map((file, idx) => (
                     <div
@@ -386,9 +389,6 @@ export function ImageImportModal({ isOpen, onClose }: ImageImportModalProps) {
                   ))}
                 </div>
               )}
-
-              {/* Loading state */}
-              {importFromImage.isPending && <AnalysisProgress />}
             </div>
           )}
 
