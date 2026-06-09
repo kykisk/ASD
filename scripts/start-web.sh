@@ -31,7 +31,7 @@ sleep 1
 
 echo "🌐 Web 서버 시작 중..."
 cd "$ROOT"
-nohup env NX_PLUGIN_NO_TIMEOUTS=true NX_DAEMON=false pnpm nx serve web --port=4200 --host=0.0.0.0 > "$LOG" 2>&1 &
+nohup env NX_PLUGIN_NO_TIMEOUTS=true NX_DAEMON=false NODE_OPTIONS="--max-old-space-size=2048" pnpm nx serve web --port=4200 --host=0.0.0.0 > "$LOG" 2>&1 &
 echo $! > "$PID_FILE"
 
 echo "  백그라운드 실행됨 (PID: $(cat $PID_FILE))"
