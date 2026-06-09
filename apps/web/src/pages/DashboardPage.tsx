@@ -416,14 +416,23 @@ export function DashboardPage() {
           {alerts.map((alert, idx) => (
             <div
               key={idx}
-              className={`px-4 py-3 rounded-xl text-sm flex items-center gap-2 ${
+              className={`px-4 py-3 rounded-xl text-sm flex items-start gap-2 ${
                 alert.severity === 'warning'
                   ? 'bg-amber-50 border border-amber-200/60 text-amber-800'
                   : 'bg-primary-50 border border-primary-200/60 text-primary-800'
               }`}
             >
-              <span>{alert.severity === 'warning' ? '⚠️' : 'ℹ️'}</span>
-              {alert.message}
+              <span className="shrink-0 mt-0.5">
+                {alert.type === 'RE_EVALUATION_DUE'
+                  ? '🏥'
+                  : alert.severity === 'warning'
+                    ? '⚠️'
+                    : 'ℹ️'}
+              </span>
+              <div>
+                <span className="font-medium">{alert.message}</span>
+                {alert.detail && <p className="text-xs mt-0.5 opacity-75">{alert.detail}</p>}
+              </div>
             </div>
           ))}
         </div>

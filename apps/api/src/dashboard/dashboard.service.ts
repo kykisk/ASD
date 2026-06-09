@@ -17,9 +17,10 @@ export interface TodaySchedule {
 }
 
 export interface DashboardAlert {
-  type: 'ASSESSMENT_DUE' | 'MILESTONE' | 'NO_SCHEDULE';
+  type: 'ASSESSMENT_DUE' | 'MILESTONE' | 'NO_SCHEDULE' | 'RE_EVALUATION_DUE';
   message: string;
   severity: 'info' | 'warning';
+  detail?: string;
 }
 
 export interface DashboardData {
@@ -304,6 +305,61 @@ export class DashboardService {
         type: 'NO_SCHEDULE',
         message: '오늘 예정된 일정이 없어요',
         severity: 'info',
+      });
+    }
+
+    const REEVAL_INTERVALS: Record<string, { months: number; label: string }> = {
+      M_CHAT_R_F: { months: 3, label: 'M-CHAT-R/F' },
+      CARS_2: { months: 6, label: 'CARS-2' },
+      ABC: { months: 12, label: 'ABC' },
+    };
+
+    for (const [tool, { months, label }] of Object.entries(REEVAL_INTERVALS)) {
+      const cutoff = new Date(Date.now() - months * 30 * 24 * 60 * 60 * 1000);
+      const last = await this.prisma.assessment.findFirst({
+        where: {
+          childId,
+          questionnaire: { licensedTool: tool as never },
+          totalScore: { not: null },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!last || last.createdAt < cutoff) {
+        const monthsAgo = last
+          ? Math.round((Date.now() - last.createdAt.getTime()) / (30 * 24 * 60 * 60 * 1000))
+          : null;
+        alerts.push({
+          type: 'RE_EVALUATION_DUE',
+          message: `${label} 재평가가 필요합니다`,
+          severity: 'warning',
+          detail: last
+            ? `마지막 평가: ${monthsAgo}개월 전 (${months}개월 주기 권고)`
+            : `아직 ${label} 평가 기록이 없습니다`,
+        });
+      }
+    }
+
+    const reportCutoff = new Date(Date.now() - 12 * 30 * 24 * 60 * 60 * 1000);
+    const lastReport = await this.prisma.clinicalReport.findFirst({
+      where: { childId },
+      orderBy: [{ assessmentDate: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    if (!lastReport || (lastReport.assessmentDate ?? lastReport.createdAt) < reportCutoff) {
+      const monthsAgo = lastReport
+        ? Math.round(
+            (Date.now() - (lastReport.assessmentDate ?? lastReport.createdAt).getTime()) /
+              (30 * 24 * 60 * 60 * 1000),
+          )
+        : null;
+      alerts.push({
+        type: 'RE_EVALUATION_DUE',
+        message: '외부 기관 임상 평가 업데이트를 권고합니다',
+        severity: 'info',
+        detail: lastReport
+          ? `마지막 평가: ${monthsAgo}개월 전 (연 1회 권고)`
+          : '외부 기관 평가 보고서가 없습니다',
       });
     }
 

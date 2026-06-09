@@ -100,6 +100,112 @@ export function ClinicalPage() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
       <PageHeader title="임상 평가" subtitle="공인 평가 도구 및 외부 기관 결과서 관리" />
 
+      {/* Timeline Section */}
+      <section>
+        <h2 className="text-lg font-bold text-neutral-800 mb-4 flex items-center gap-2">
+          <span>🕐</span> 임상 평가 타임라인
+        </h2>
+        <div className="rounded-2xl border border-[#E8E4DF] bg-white p-6 shadow-[0_2px_16px_rgba(91,138,114,0.06)]">
+          {(() => {
+            interface TimelineEvent {
+              id: string;
+              date: Date;
+              kind: 'licensed' | 'external';
+              title: string;
+              score: number | null;
+              scoreUnit?: string;
+              severity?: { label: string; color: string; bg: string };
+            }
+
+            const licensedItems = (allAssessments ?? []).filter(
+              (a: Assessment) => a.questionnaire?.type === 'LICENSED',
+            );
+
+            const events: TimelineEvent[] = [
+              ...licensedItems.map((a: Assessment) => ({
+                id: a.id,
+                date: new Date(a.createdAt),
+                kind: 'licensed' as const,
+                title:
+                  TOOL_LABELS[a.questionnaire?.licensedTool ?? ''] ??
+                  a.questionnaire?.name ??
+                  '평가',
+                score: a.totalScore,
+                severity:
+                  a.totalScore != null
+                    ? getLicensedSeverity(a.questionnaire?.licensedTool ?? '', a.totalScore)
+                    : undefined,
+              })),
+              ...(clinicalReports ?? []).map((r: ClinicalReport) => ({
+                id: r.id,
+                date: new Date(r.assessmentDate ?? r.createdAt),
+                kind: 'external' as const,
+                title: r.assessmentTool,
+                score: r.totalScore,
+                scoreUnit: r.totalScoreUnit ?? undefined,
+              })),
+            ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+            if (events.length === 0) {
+              return (
+                <div className="text-center py-8">
+                  <div className="text-3xl mb-2">🕐</div>
+                  <p className="text-sm font-medium text-neutral-500">임상 평가 이력이 없습니다</p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    평가를 완료하거나 외부 보고서를 추가하면 타임라인에 표시됩니다
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="border-l-2 border-dashed border-neutral-200 ml-3">
+                {events.map((event) => {
+                  const dateStr = `${event.date.getFullYear()}.${String(event.date.getMonth() + 1).padStart(2, '0')}.${String(event.date.getDate()).padStart(2, '0')}`;
+                  const icon = event.kind === 'licensed' ? '📊' : '📄';
+                  const dotColor = event.severity?.color ?? '#5B8A72';
+
+                  return (
+                    <div key={event.id} className="relative pl-6 pb-4">
+                      <span
+                        className="absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: dotColor }}
+                      />
+                      <div className="text-xs text-neutral-400 mb-0.5">{dateStr}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm">{icon}</span>
+                        <span className="text-sm font-semibold text-neutral-800">
+                          {event.title}
+                        </span>
+                        {event.kind === 'external' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0f4f8] text-neutral-500 font-medium">
+                            외부 보고서
+                          </span>
+                        )}
+                        {event.score != null && (
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-[#f8f6f3] text-neutral-600 font-medium">
+                            {event.score}
+                            {event.scoreUnit ?? '점'}
+                          </span>
+                        )}
+                        {event.severity && (
+                          <span
+                            className="text-xs font-semibold px-2 py-0.5 rounded-md"
+                            style={{ color: event.severity.color, background: event.severity.bg }}
+                          >
+                            {event.severity.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      </section>
+
       {/* Section 1: 평가 도구 Launcher */}
       <section>
         <h2 className="text-lg font-bold text-neutral-800 mb-4 flex items-center gap-2">

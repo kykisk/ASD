@@ -16,9 +16,10 @@ export interface DomainScore {
 }
 
 export interface DashboardAlert {
-  type: string;
+  type: 'ASSESSMENT_DUE' | 'MILESTONE' | 'NO_SCHEDULE' | 'RE_EVALUATION_DUE';
   message: string;
   severity: 'info' | 'warning';
+  detail?: string;
 }
 
 export interface DashboardData {
