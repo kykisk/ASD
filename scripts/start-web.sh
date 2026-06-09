@@ -30,8 +30,9 @@ done
 
 sleep 1
 
-echo "🌐 Web 서버 시작 중 (정적 빌드)..."
-nohup npx serve "$DIST" -l 4200 --no-clipboard --single > "$LOG" 2>&1 &
+echo "🌐 Web 서버 시작 중 (vite preview + proxy)..."
+cd "$ROOT"
+nohup env NX_DAEMON=false pnpm nx run web:preview > "$LOG" 2>&1 &
 echo $! > "$PID_FILE"
 
 echo "  백그라운드 실행됨 (PID: $(cat $PID_FILE))"
@@ -39,7 +40,7 @@ echo "  로그: tail -f $LOG"
 echo ""
 
 echo "  시작 대기 중..."
-for i in $(seq 1 10); do
+for i in $(seq 1 20); do
   if curl -sf http://localhost:4200 -o /dev/null 2>/dev/null; then
     echo "  ✅ Web 서버 준비됨 → http://localhost:4200"
     exit 0

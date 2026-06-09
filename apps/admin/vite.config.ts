@@ -17,7 +17,7 @@ export default defineConfig(() => ({
     },
   },
   preview: {
-    port: 4301,
+    port: 4300,
     host: '0.0.0.0',
     proxy: {
       '/v1': {

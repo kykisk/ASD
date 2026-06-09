@@ -30,8 +30,9 @@ done
 
 sleep 1
 
-echo "🔧 Admin 서버 시작 중 (정적 빌드)..."
-nohup npx serve "$DIST" -l 4300 --no-clipboard --single > "$LOG" 2>&1 &
+echo "🔧 Admin 서버 시작 중 (vite preview + proxy)..."
+cd "$ROOT"
+nohup env NX_DAEMON=false pnpm nx run admin:preview > "$LOG" 2>&1 &
 echo $! > "$PID_FILE"
 
 echo "  백그라운드 실행됨 (PID: $(cat $PID_FILE))"
