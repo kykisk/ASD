@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useChildStore } from '../../stores/child.store';
 import { useCreateAssessment } from '../../hooks/use-assessments';
 import { useMyFamily } from '../../hooks/use-families';
@@ -21,29 +22,44 @@ const scaleOptions = [
 ];
 
 const questions: Record<string, { id: string; text: string }[]> = {
-  communication: [
-    { id: 'comm-1', text: '오늘 아이의 의사소통 능력은 어떠했나요?' },
-  ],
-  social: [
-    { id: 'social-1', text: '오늘 아이의 사회적 상호작용은 어떠했나요?' },
-  ],
-  motor: [
-    { id: 'motor-1', text: '오늘 아이의 운동 능력은 어떠했나요?' },
-  ],
-  cognitive: [
-    { id: 'cognitive-1', text: '오늘 아이의 인지 발달은 어떠했나요?' },
-  ],
-  emotional: [
-    { id: 'emotional-1', text: '오늘 아이의 정서 상태는 어떠했나요?' },
-  ],
+  communication: [{ id: 'comm-1', text: '오늘 아이의 의사소통 능력은 어떠했나요?' }],
+  social: [{ id: 'social-1', text: '오늘 아이의 사회적 상호작용은 어떠했나요?' }],
+  motor: [{ id: 'motor-1', text: '오늘 아이의 운동 능력은 어떠했나요?' }],
+  cognitive: [{ id: 'cognitive-1', text: '오늘 아이의 인지 발달은 어떠했나요?' }],
+  emotional: [{ id: 'emotional-1', text: '오늘 아이의 정서 상태는 어떠했나요?' }],
 };
 
 const DEFAULT_QUESTIONNAIRE_ITEMS = [
-  { domain: 'COMMUNICATION' as const, text: '오늘 아이의 의사소통 능력은 어떠했나요?', orderIndex: 0, weight: 1 },
-  { domain: 'SOCIAL' as const, text: '오늘 아이의 사회적 상호작용은 어떠했나요?', orderIndex: 1, weight: 1 },
-  { domain: 'MOTOR' as const, text: '오늘 아이의 운동 능력은 어떠했나요?', orderIndex: 2, weight: 1 },
-  { domain: 'COGNITIVE' as const, text: '오늘 아이의 인지 발달은 어떠했나요?', orderIndex: 3, weight: 1 },
-  { domain: 'EMOTIONAL' as const, text: '오늘 아이의 정서 상태는 어떠했나요?', orderIndex: 4, weight: 1 },
+  {
+    domain: 'COMMUNICATION' as const,
+    text: '오늘 아이의 의사소통 능력은 어떠했나요?',
+    orderIndex: 0,
+    weight: 1,
+  },
+  {
+    domain: 'SOCIAL' as const,
+    text: '오늘 아이의 사회적 상호작용은 어떠했나요?',
+    orderIndex: 1,
+    weight: 1,
+  },
+  {
+    domain: 'MOTOR' as const,
+    text: '오늘 아이의 운동 능력은 어떠했나요?',
+    orderIndex: 2,
+    weight: 1,
+  },
+  {
+    domain: 'COGNITIVE' as const,
+    text: '오늘 아이의 인지 발달은 어떠했나요?',
+    orderIndex: 3,
+    weight: 1,
+  },
+  {
+    domain: 'EMOTIONAL' as const,
+    text: '오늘 아이의 정서 상태는 어떠했나요?',
+    orderIndex: 4,
+    weight: 1,
+  },
 ];
 
 interface DomainAnswer {
@@ -66,11 +82,14 @@ export function AssessmentForm() {
   const familyId = family?.id ?? null;
   const { data: questionnaires, isLoading: questionnairesLoading } = useQuestionnaires(familyId);
   const createQuestionnaire = useCreateQuestionnaire(familyId);
+  const location = useLocation();
+  const preselectedQuestionnaireId =
+    (location.state as { questionnaireId?: string } | null)?.questionnaireId ?? null;
 
   const [step, setStep] = useState<Step>('select');
   const [currentDomainIndex, setCurrentDomainIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, DomainAnswer>>(() =>
-    Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '' }]))
+    Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '' }])),
   );
   const [overallNotes, setOverallNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
@@ -85,7 +104,9 @@ export function AssessmentForm() {
   useEffect(() => {
     if (!familyId || questionnairesLoading || questionnaireCreatedRef.current) return;
     if (questionnaires && questionnaires.length > 0) {
-      const q = questionnaires[0];
+      const q = preselectedQuestionnaireId
+        ? (questionnaires.find((x) => x.id === preselectedQuestionnaireId) ?? questionnaires[0])
+        : questionnaires[0];
       const itemsMap: Record<string, string> = {};
       for (const item of q.items) {
         const domainLower = item.domain.toLowerCase();
@@ -115,7 +136,7 @@ export function AssessmentForm() {
             }
             setQuestionnaireState({ id: created.id, items: itemsMap });
           },
-        }
+        },
       );
     }
   }, [familyId, questionnaires, questionnairesLoading, createQuestionnaire]);
@@ -197,7 +218,10 @@ export function AssessmentForm() {
             <h1 className="assessment-title">오늘의 평가</h1>
             <p className="assessment-subtitle">아이의 하루를 기록해주세요</p>
           </div>
-          <div className="assessment-card assessment-animate-in" style={{ animationDelay: '120ms', textAlign: 'center', padding: '32px 24px' }}>
+          <div
+            className="assessment-card assessment-animate-in"
+            style={{ animationDelay: '120ms', textAlign: 'center', padding: '32px 24px' }}
+          >
             <p style={{ color: '#6B7B8D', fontSize: 15 }}>아이를 먼저 선택해주세요</p>
           </div>
         </div>
@@ -220,12 +244,22 @@ export function AssessmentForm() {
             <div className="assessment-questionnaire-icon">📋</div>
             <div>
               <h3 className="assessment-questionnaire-name">일일 발달 평가</h3>
-              <p className="assessment-questionnaire-desc">
-                5개 영역 · 약 3분 소요
-              </p>
+              <p className="assessment-questionnaire-desc">5개 영역 · 약 3분 소요</p>
             </div>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ marginLeft: 'auto' }}>
-              <path d="M7 5l5 5-5 5" stroke="#5B8A72" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              style={{ marginLeft: 'auto' }}
+            >
+              <path
+                d="M7 5l5 5-5 5"
+                stroke="#5B8A72"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
         </div>
@@ -259,16 +293,10 @@ export function AssessmentForm() {
                     className="assessment-summary-item assessment-animate-in"
                     style={{ animationDelay: `${i * 80}ms` }}
                   >
-                    <div
-                      className="assessment-summary-dot"
-                      style={{ background: d.color }}
-                    />
+                    <div className="assessment-summary-dot" style={{ background: d.color }} />
                     <span className="assessment-summary-domain">{d.name}</span>
                     {option && (
-                      <span
-                        className="assessment-summary-score"
-                        style={{ color: option.color }}
-                      >
+                      <span className="assessment-summary-score" style={{ color: option.color }}>
                         {option.emoji} {option.label}
                       </span>
                     )}
@@ -285,7 +313,7 @@ export function AssessmentForm() {
               setStep('select');
               setCurrentDomainIndex(0);
               setAnswers(
-                Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '' }]))
+                Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '' }])),
               );
               setOverallNotes('');
             }}
@@ -311,7 +339,8 @@ export function AssessmentForm() {
               className="assessment-overall-circle"
               style={{
                 borderColor: overallScore > 0 ? scaleOptions[overallScore - 1].color : '#E8E4DF',
-                background: overallScore > 0 ? `${scaleOptions[overallScore - 1].color}15` : '#F8F8F8',
+                background:
+                  overallScore > 0 ? `${scaleOptions[overallScore - 1].color}15` : '#F8F8F8',
               }}
             >
               <span style={{ fontSize: 32 }}>
@@ -322,7 +351,9 @@ export function AssessmentForm() {
               <div className="assessment-overall-label">전체 평균</div>
               <div
                 className="assessment-overall-value"
-                style={{ color: overallScore > 0 ? scaleOptions[overallScore - 1].color : '#94A3B4' }}
+                style={{
+                  color: overallScore > 0 ? scaleOptions[overallScore - 1].color : '#94A3B4',
+                }}
               >
                 {overallScore > 0 ? scaleOptions[overallScore - 1].label : '미완료'}
               </div>
@@ -358,7 +389,10 @@ export function AssessmentForm() {
           </div>
         </div>
 
-        <div className="assessment-card assessment-animate-in" style={{ animationDelay: '160ms', marginTop: 16 }}>
+        <div
+          className="assessment-card assessment-animate-in"
+          style={{ animationDelay: '160ms', marginTop: 16 }}
+        >
           <label className="assessment-notes-label">전체 메모 (선택사항)</label>
           <textarea
             className="assessment-textarea"
@@ -370,7 +404,13 @@ export function AssessmentForm() {
         </div>
 
         <div className="assessment-nav" style={{ marginTop: 20 }}>
-          <button className="assessment-btn-secondary" onClick={() => { setStep('assess'); setCurrentDomainIndex(domains.length - 1); }}>
+          <button
+            className="assessment-btn-secondary"
+            onClick={() => {
+              setStep('assess');
+              setCurrentDomainIndex(domains.length - 1);
+            }}
+          >
             ← 이전
           </button>
           <button
@@ -381,8 +421,8 @@ export function AssessmentForm() {
             {createAssessment.isPending
               ? '제출 중...'
               : !questionnaireState
-              ? '준비 중...'
-              : '제출하기'}
+                ? '준비 중...'
+                : '제출하기'}
           </button>
         </div>
       </div>
@@ -415,11 +455,11 @@ export function AssessmentForm() {
         </div>
       </div>
 
-      <div className="assessment-card assessment-animate-in" style={{ animationDelay: '100ms', padding: '28px 24px' }}>
-        <div
-          className="assessment-domain-badge"
-          style={{ background: `${currentDomain.color}20` }}
-        >
+      <div
+        className="assessment-card assessment-animate-in"
+        style={{ animationDelay: '100ms', padding: '28px 24px' }}
+      >
+        <div className="assessment-domain-badge" style={{ background: `${currentDomain.color}20` }}>
           <span style={{ fontSize: 24 }}>{currentDomain.icon}</span>
         </div>
 
@@ -436,18 +476,18 @@ export function AssessmentForm() {
                 width: 56,
                 height: 56,
                 borderRadius: '50%',
-                border: currentAnswer.score === option.score
-                  ? `3px solid ${option.color}`
-                  : '2px solid #E8E4DF',
+                border:
+                  currentAnswer.score === option.score
+                    ? `3px solid ${option.color}`
+                    : '2px solid #E8E4DF',
                 background: currentAnswer.score === option.score ? option.bg : 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 24,
                 cursor: 'pointer',
-                boxShadow: currentAnswer.score === option.score
-                  ? `0 4px 12px ${option.color}40`
-                  : 'none',
+                boxShadow:
+                  currentAnswer.score === option.score ? `0 4px 12px ${option.color}40` : 'none',
                 transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
               }}
             >
@@ -473,7 +513,16 @@ export function AssessmentForm() {
             onClick={handlePhotoClick}
             title="사진/영상 첨부"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B8A72" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#5B8A72"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21,15 16,10 5,21" />
@@ -486,21 +535,32 @@ export function AssessmentForm() {
             accept="image/*,video/*"
             capture="environment"
             style={{ display: 'none' }}
-            onChange={() => {/* disabled */}}
+            onChange={() => {
+              /* disabled */
+            }}
           />
           {photoMessage && (
-            <span className="assessment-animate-in" style={{ fontSize: 12, color: '#6B7B8D', marginLeft: 8 }}>
+            <span
+              className="assessment-animate-in"
+              style={{ fontSize: 12, color: '#6B7B8D', marginLeft: 8 }}
+            >
               사진 첨부는 프로덕션 환경에서 사용 가능합니다
             </span>
           )}
         </div>
 
         <div className="assessment-notes-section">
-          <button
-            className="assessment-notes-toggle"
-            onClick={() => setShowNotes(!showNotes)}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <button className="assessment-notes-toggle" onClick={() => setShowNotes(!showNotes)}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
@@ -524,11 +584,12 @@ export function AssessmentForm() {
             key={d.id}
             className="assessment-dot"
             style={{
-              background: i === currentDomainIndex
-                ? d.color
-                : answers[d.id].score !== null
-                  ? `${d.color}80`
-                  : '#E8E4DF',
+              background:
+                i === currentDomainIndex
+                  ? d.color
+                  : answers[d.id].score !== null
+                    ? `${d.color}80`
+                    : '#E8E4DF',
               transform: i === currentDomainIndex ? 'scale(1.4)' : 'scale(1)',
             }}
           />
