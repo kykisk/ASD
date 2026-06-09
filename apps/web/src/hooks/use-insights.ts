@@ -19,7 +19,7 @@ export function useWeeklyInsight(childId: string | null) {
       const { data } = await api.get<{ success: true; data: InsightRecord }>(
         `/children/${childId}/insights/weekly`,
       );
-      return data.data;
+      return data.data ?? null;
     },
     enabled: !!childId,
     staleTime: 30 * 60 * 1000,

@@ -45,15 +45,24 @@ export class InsightsService {
 
     await this.cacheService.set(cacheKey, insight, 86400); // 24h TTL
 
-    const child = await this.prisma.child.findUnique({ where: { id: childId }, select: { familyId: true } });
+    const child = await this.prisma.child.findUnique({
+      where: { id: childId },
+      select: { familyId: true },
+    });
     if (child?.familyId) {
-      this.notificationTrigger.triggerWeeklyInsightReady(childId, child.familyId, userId).catch(() => {});
+      this.notificationTrigger
+        .triggerWeeklyInsightReady(childId, child.familyId, userId)
+        .catch(() => {});
     }
 
     return insight;
   }
 
-  async getInsightHistory(childId: string, userId: string, weeks: number = 4): Promise<InsightRecord[]> {
+  async getInsightHistory(
+    childId: string,
+    userId: string,
+    weeks: number = 4,
+  ): Promise<InsightRecord[]> {
     await this.verifyAccess(childId, userId);
 
     const results: InsightRecord[] = [];
@@ -140,7 +149,10 @@ export class InsightsService {
     );
 
     const domainSummary = aggregated.domains
-      .map((d) => `${d.label}(${d.domain}): ${d.currentScore}/${d.maxScore} (${d.percentage}%) 추세: ${d.trend.direction}`)
+      .map(
+        (d) =>
+          `${d.label}(${d.domain}): ${d.currentScore}/${d.maxScore} (${d.percentage}%) 추세: ${d.trend.direction}`,
+      )
       .join('\n');
 
     const result = await this.aiService.generateStructured(
@@ -153,7 +165,7 @@ export class InsightsService {
           },
           {
             role: 'user',
-            content: `이번 주 발달 데이터 분석:\n${domainSummary || '데이터 없음'}\n\n전체 점수: ${aggregated.overallScore}/5\n평가 횟수: ${aggregated.assessmentCount}\n\n긍정적 측면, 집중 영역, 추천 활동을 알려주세요.`,
+            content: `이번 주 발달 데이터:\n${domainSummary || '데이터 없음'}\n전체 점수: ${aggregated.overallScore}/5, 평가 횟수: ${aggregated.assessmentCount}\n\n다음 JSON 형식으로만 응답하세요 (코드 블록 없이):\n{"summary":"전체 요약 한 문장","highlights":["긍정1","긍정2"],"concerns":["집중영역1","집중영역2"],"recommendations":["추천활동1","추천활동2"],"overallTrend":"IMPROVING"}`,
           },
         ],
       },
@@ -204,7 +216,9 @@ export class InsightsService {
     // ISO week calculation
     d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
     const week1 = new Date(d.getFullYear(), 0, 4);
-    const weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+    const weekNum =
+      1 +
+      Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
     return `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
   }
 }
