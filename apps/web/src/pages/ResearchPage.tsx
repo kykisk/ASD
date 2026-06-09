@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useChildStore } from '../stores/child.store';
 import {
   useResearchFeed,
@@ -207,6 +207,44 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
   );
 }
 
+const DIGEST_STEPS = [
+  { delay: 0, icon: '📚', text: '북마크 논문 분석 중...' },
+  { delay: 2000, icon: '🧬', text: '아이 프로파일과 매칭 중...' },
+  { delay: 5000, icon: '🤖', text: 'AI가 맞춤 요약을 작성하고 있습니다...' },
+  { delay: 10000, icon: '✨', text: '거의 완료...' },
+];
+
+function DigestProgress() {
+  const [stepIdx, setStepIdx] = useState(0);
+
+  useEffect(() => {
+    const timers = DIGEST_STEPS.slice(1).map((s, i) =>
+      setTimeout(() => setStepIdx(i + 1), s.delay),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const current = DIGEST_STEPS[stepIdx];
+  const progress = Math.min(((stepIdx + 1) / DIGEST_STEPS.length) * 100, 95);
+
+  return (
+    <div className="px-4 py-4 rounded-xl bg-primary-50 border border-primary-100">
+      <div className="flex items-center gap-2.5 mb-3">
+        <span className="text-base">{current.icon}</span>
+        <span className="text-sm font-medium text-primary-600 transition-all duration-300">
+          {current.text}
+        </span>
+      </div>
+      <div className="h-1.5 bg-primary-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-primary-500 rounded-full transition-all duration-1000 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ResearchPage() {
   const { selectedChildId } = useChildStore();
   const [tab, setTab] = useState<'feed' | 'bookmarks' | 'archived' | 'history'>('feed');
@@ -288,6 +326,9 @@ export function ResearchPage() {
           ) : undefined
         }
       />
+
+      {/* AI Digest Progress */}
+      {generateDigest.isPending && <DigestProgress />}
 
       {/* AI Digest Card */}
       {digest && (

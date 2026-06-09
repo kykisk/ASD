@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   addMonths,
   subMonths,
@@ -25,7 +25,11 @@ import {
   useDeleteSchedule,
   CreateScheduleInput,
 } from '../hooks/use-schedules';
-import { useScheduleSuggestions, useAcceptSuggestion, type ScheduleSuggestion } from '../hooks/use-schedule-ai';
+import {
+  useScheduleSuggestions,
+  useAcceptSuggestion,
+  type ScheduleSuggestion,
+} from '../hooks/use-schedule-ai';
 import { useChildStore } from '../stores/child.store';
 import { CalendarHeader } from '../components/calendar/CalendarHeader';
 import { MonthView } from '../components/calendar/MonthView';
@@ -43,17 +47,57 @@ const ALL_CATEGORIES: ScheduleCategory[] = [
   'OTHER',
 ];
 
+const SCHEDULE_STEPS = [
+  { delay: 0, icon: '📊', text: '최근 일정 분석 중...' },
+  { delay: 3000, icon: '🧠', text: 'AI가 패턴을 파악하고 있습니다...' },
+  { delay: 8000, icon: '💡', text: '개선 제안을 생성하고 있습니다...' },
+  { delay: 15000, icon: '✅', text: '거의 완료...' },
+];
+
+function ScheduleAnalysisProgress() {
+  const [stepIdx, setStepIdx] = useState(0);
+
+  useEffect(() => {
+    const timers = SCHEDULE_STEPS.slice(1).map((s, i) =>
+      setTimeout(() => setStepIdx(i + 1), s.delay),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const current = SCHEDULE_STEPS[stepIdx];
+  const progress = Math.min(((stepIdx + 1) / SCHEDULE_STEPS.length) * 100, 95);
+
+  return (
+    <div className="py-4 px-1">
+      <div className="flex items-center gap-2.5 mb-3">
+        <span className="text-base">{current.icon}</span>
+        <span className="text-sm font-medium text-[#5B8A72] transition-all duration-300">
+          {current.text}
+        </span>
+      </div>
+      <div className="h-1.5 bg-[#5B8A72]/10 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-[#5B8A72] rounded-full transition-all duration-1000 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
   const [activeCategories, setActiveCategories] = useState<Set<ScheduleCategory>>(
-    new Set(ALL_CATEGORIES)
+    new Set(ALL_CATEGORIES),
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<Date | undefined>();
   const [modalDefaultTime, setModalDefaultTime] = useState<string | undefined>();
-  const [pendingSave, setPendingSave] = useState<(CreateScheduleInput & { id: string }) | null>(null);
+  const [pendingSave, setPendingSave] = useState<(CreateScheduleInput & { id: string }) | null>(
+    null,
+  );
   const [showRecurringDialog, setShowRecurringDialog] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
@@ -153,9 +197,13 @@ export function SchedulePage() {
     (data: CreateScheduleInput) => {
       if (data.id) {
         const realId = data.id.includes('_') ? data.id.split('_')[0] : data.id;
-        const originalSchedule = schedules?.find(s => s.id.split('_')[0] === realId);
+        const originalSchedule = schedules?.find((s) => s.id.split('_')[0] === realId);
 
-        if (originalSchedule && originalSchedule.recurrenceType !== 'NONE' && data.id.includes('_')) {
+        if (
+          originalSchedule &&
+          originalSchedule.recurrenceType !== 'NONE' &&
+          data.id.includes('_')
+        ) {
           setPendingSave(data as CreateScheduleInput & { id: string });
           setShowRecurringDialog(true);
           handleModalClose();
@@ -171,16 +219,24 @@ export function SchedulePage() {
         });
       }
     },
-    [schedules, createSchedule, updateSchedule, handleModalClose]
+    [schedules, createSchedule, updateSchedule, handleModalClose],
   );
 
-  const handleRecurringChoice = useCallback((mode: 'THIS_ONLY' | 'ALL') => {
-    if (!pendingSave) return;
-    setShowRecurringDialog(false);
-    updateSchedule.mutate({ ...pendingSave, editMode: mode }, {
-      onSuccess: () => { setPendingSave(null); },
-    });
-  }, [pendingSave, updateSchedule]);
+  const handleRecurringChoice = useCallback(
+    (mode: 'THIS_ONLY' | 'ALL') => {
+      if (!pendingSave) return;
+      setShowRecurringDialog(false);
+      updateSchedule.mutate(
+        { ...pendingSave, editMode: mode },
+        {
+          onSuccess: () => {
+            setPendingSave(null);
+          },
+        },
+      );
+    },
+    [pendingSave, updateSchedule],
+  );
 
   const handleToggleAiPanel = useCallback(() => {
     setShowAiPanel((prev) => {
@@ -196,24 +252,26 @@ export function SchedulePage() {
     setDismissedSuggestions((prev) => new Set(prev).add(id));
   }, []);
 
-  const handleAcceptSuggestion = useCallback((suggestion: ScheduleSuggestion) => {
-    const today = new Date().toISOString().split('T')[0];
-    setAcceptingId(suggestion.id);
-    acceptSuggestion.mutate(
-      { suggestion, targetDate: today },
-      {
-        onSuccess: () => {
-          handleDismissSuggestion(suggestion.id);
-          setAcceptingId(null);
+  const handleAcceptSuggestion = useCallback(
+    (suggestion: ScheduleSuggestion) => {
+      const today = new Date().toISOString().split('T')[0];
+      setAcceptingId(suggestion.id);
+      acceptSuggestion.mutate(
+        { suggestion, targetDate: today },
+        {
+          onSuccess: () => {
+            handleDismissSuggestion(suggestion.id);
+            setAcceptingId(null);
+          },
+          onError: () => setAcceptingId(null),
         },
-        onError: () => setAcceptingId(null),
-      },
-    );
-  }, [acceptSuggestion, handleDismissSuggestion]);
+      );
+    },
+    [acceptSuggestion, handleDismissSuggestion],
+  );
 
-  const visibleSuggestions = suggestions.data?.suggestions.filter(
-    (s) => !dismissedSuggestions.has(s.id),
-  ) || [];
+  const visibleSuggestions =
+    suggestions.data?.suggestions.filter((s) => !dismissedSuggestions.has(s.id)) || [];
 
   const handleDeleteSchedule = useCallback(
     (id: string) => {
@@ -221,7 +279,7 @@ export function SchedulePage() {
         onSuccess: () => handleModalClose(),
       });
     },
-    [deleteSchedule, handleModalClose]
+    [deleteSchedule, handleModalClose],
   );
 
   const allActive = activeCategories.size === ALL_CATEGORIES.length;
@@ -297,20 +355,16 @@ export function SchedulePage() {
           </div>
 
           <div className="p-4">
-            {suggestions.isFetching && (
-              <div className="py-6 flex flex-col items-center gap-3">
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_infinite]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.2s_infinite]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#5B8A72] animate-[pulse_1s_ease-in-out_0.4s_infinite]" />
-                </div>
-                <p className="text-sm text-[#6B7B8D]">분석 중입니다...</p>
-              </div>
-            )}
+            {suggestions.isFetching && <ScheduleAnalysisProgress />}
 
-            {suggestions.isError && (
+            {suggestions.isError && !suggestions.isFetching && (
               <div className="py-6 text-center">
-                <p className="text-sm text-red-600 mb-3">제안을 불러올 수 없습니다.</p>
+                <p className="text-sm text-red-600 mb-1">제안을 불러올 수 없습니다.</p>
+                <p className="text-xs text-[#94A3B4] mb-3">
+                  {(suggestions.error as { response?: { data?: { error?: { message?: string } } } })
+                    ?.response?.data?.error?.message ??
+                    'AI 서비스가 응답하지 않았습니다. 잠시 후 다시 시도해주세요.'}
+                </p>
                 <button
                   onClick={() => suggestions.refetch()}
                   className="px-4 py-2 text-sm font-medium text-[#5B8A72] hover:bg-[#5B8A72]/[0.08] rounded-[8px] transition-colors"
@@ -323,7 +377,9 @@ export function SchedulePage() {
             {!suggestions.isFetching && !suggestions.isError && visibleSuggestions.length === 0 && (
               <div className="py-6 text-center">
                 <p className="text-sm text-[#94A3B4]">
-                  {suggestions.data ? '모든 제안을 확인했어요' : '분석할 일정이나 평가 데이터가 없어요'}
+                  {suggestions.data
+                    ? '모든 제안을 확인했어요'
+                    : '분석할 일정이나 평가 데이터가 없어요'}
                 </p>
               </div>
             )}
@@ -337,14 +393,18 @@ export function SchedulePage() {
                   >
                     <div className="flex items-start gap-2.5 mb-2">
                       <span className="text-base shrink-0">
-                        {suggestion.type === 'ADD' ? '➕' : suggestion.type === 'MODIFY' ? '✏️' : '🗑️'}
+                        {suggestion.type === 'ADD'
+                          ? '➕'
+                          : suggestion.type === 'MODIFY'
+                            ? '✏️'
+                            : '🗑️'}
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-[#2C3E50]">{suggestion.title}</p>
                         <p className="text-xs text-[#6B7B8D] mt-0.5">{suggestion.reason}</p>
-                        {suggestion.suggestedDay && suggestion.suggestedTime && (
+                        {suggestion.suggestedTime && (
                           <p className="text-xs text-[#94A3B4] mt-1">
-                            {suggestion.suggestedDay} {suggestion.suggestedTime}
+                            {suggestion.suggestedTime}
                             {suggestion.durationMinutes && ` · ${suggestion.durationMinutes}분`}
                           </p>
                         )}
@@ -376,7 +436,8 @@ export function SchedulePage() {
             {suggestions.data?.summary && visibleSuggestions.length > 0 && (
               <div className="mt-4 pt-3 border-t border-[#E8E4DF]">
                 <p className="text-xs text-[#6B7B8D]">
-                  <span className="font-medium text-[#2C3E50]">전체 요약:</span> {suggestions.data.summary}
+                  <span className="font-medium text-[#2C3E50]">전체 요약:</span>{' '}
+                  {suggestions.data.summary}
                 </p>
               </div>
             )}
@@ -413,7 +474,13 @@ export function SchedulePage() {
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-lg shadow-primary-300/40 hover:bg-primary-600 hover:scale-105 active:scale-95 transition-all duration-150 flex items-center justify-center z-40"
         aria-label="일정 추가"
       >
-        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <svg
+          className="w-7 h-7"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
       </button>
@@ -424,7 +491,7 @@ export function SchedulePage() {
         onSave={handleSave}
         onDelete={handleDeleteSchedule}
         editSchedule={editingSchedule}
-        childId={childId}
+        childId={childId ?? ''}
         existingSchedules={schedules}
         defaultDate={modalDefaultDate}
         defaultTime={modalDefaultTime}
@@ -433,7 +500,10 @@ export function SchedulePage() {
       <RecurringEditDialog
         isOpen={showRecurringDialog}
         onSelect={handleRecurringChoice}
-        onCancel={() => { setShowRecurringDialog(false); setPendingSave(null); }}
+        onCancel={() => {
+          setShowRecurringDialog(false);
+          setPendingSave(null);
+        }}
       />
     </div>
   );
