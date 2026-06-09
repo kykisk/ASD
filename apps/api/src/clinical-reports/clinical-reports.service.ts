@@ -189,13 +189,31 @@ export class ClinicalReportsService {
   }
 
   private parseExtraction(rawText: string): ImageExtractionResult {
+    if (!rawText?.trim()) {
+      throw new ApiException(
+        422,
+        'AI_VISION_004',
+        '이미지에서 내용을 추출하지 못했습니다. 선명한 이미지를 사용해주세요.',
+      );
+    }
     const stripped = rawText.trim();
     const fenceMatch = stripped.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*$/);
-    const jsonStr = fenceMatch
-      ? fenceMatch[1].trim()
-      : (stripped.match(/\{[\s\S]*\}/)?.[0] ?? stripped);
+    const inlineFence = stripped.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const braceMatch = stripped.match(/\{[\s\S]*\}/);
+    const jsonStr =
+      fenceMatch?.[1]?.trim() ?? inlineFence?.[1]?.trim() ?? braceMatch?.[0] ?? stripped;
     try {
-      return JSON.parse(jsonStr) as ImageExtractionResult;
+      const parsed = JSON.parse(jsonStr) as ImageExtractionResult;
+      return {
+        assessmentTool: parsed.assessmentTool || '평가 결과서',
+        assessmentDate: parsed.assessmentDate || null,
+        evaluatorType: parsed.evaluatorType || null,
+        institution: parsed.institution || null,
+        sectionScores: Array.isArray(parsed.sectionScores) ? parsed.sectionScores : [],
+        totalScore: typeof parsed.totalScore === 'number' ? parsed.totalScore : null,
+        totalScoreUnit: parsed.totalScoreUnit || null,
+        clinicalFindings: parsed.clinicalFindings || null,
+      };
     } catch {
       throw new ApiException(
         422,
