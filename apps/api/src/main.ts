@@ -14,8 +14,8 @@ async function bootstrap() {
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.getInstance().set('etag', false);
 
-  app.use(json({ limit: '20mb' }));
-  app.use(urlencoded({ limit: '20mb', extended: true }));
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ limit: '50mb', extended: true }));
 
   app.use(
     helmet({

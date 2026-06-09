@@ -25,6 +25,8 @@ export default defineConfig(() => ({
       '/v1': {
         target: 'http://localhost:3100',
         changeOrigin: true,
+        proxyTimeout: 120000,
+        timeout: 120000,
       },
     },
   },
