@@ -5,10 +5,10 @@
 
 | 항목          | 내용                            |
 | ------------- | ------------------------------- |
-| 현재 Phase    | **Phase 5 완료 + 테스트 완료**  |
-| 최종 업데이트 | 2026-06-08                      |
-| 총 커밋       | 174개                           |
-| 테스트        | 264개 통과 (3개 기존 사전 실패) |
+| 현재 Phase    | **Phase 5 완료 + UX 구조 개선** |
+| 최종 업데이트 | 2026-06-09                      |
+| 총 커밋       | 203개                           |
+| 테스트        | 267개 통과 (3개 기존 사전 실패) |
 
 ---
 
@@ -797,6 +797,102 @@ Admin 등록 (POST /admin/licenses)
 
 - `CONSENT_DOCUMENTS` in `consent.service.ts` — 현재 데모 텍스트, 실제 저작권 문구로 교체
 - `TOOL_SCHEMAS` in `licensed-tool-data.service.ts` — 현재 데모 문항, 실제 도구 구매 후 교체
+
+---
+
+## 18. 이번 세션 주요 변경사항 (2026-06-09)
+
+### 18.1 이미지 → 질문지 AI Vision 변환
+
+| 항목           | 내용                                                            |
+| -------------- | --------------------------------------------------------------- |
+| 백엔드         | `ImageImportService` — Claude Vision (Direct + Bedrock)         |
+| 엔드포인트     | `POST /families/:id/questionnaires/from-image`                  |
+| 웹 UI          | `ImageImportModal.tsx` — 업로드 + 분석 진행률 + 미리보기 + 저장 |
+| 이미지 압축    | 전송 전 1920px 리사이즈 + JPEG 85% (50MB 제한)                  |
+| AI feature key | `IMAGE_QUESTIONNAIRE`                                           |
+
+### 18.2 임상 평가 보고서 (ClinicalReport)
+
+새 Prisma 모델 및 완전한 기능 구현:
+
+```
+ClinicalReport
+├── assessmentTool (도구명)
+├── assessmentDate (평가 실시일)
+├── evaluatorType (직종)
+├── sectionScores: Json (섹션별 점수 배열)
+├── totalScore + totalScoreUnit
+├── clinicalFindings (소견)
+└── source: MANUAL | IMAGE_IMPORT
+```
+
+**API**: `GET/POST /children/:id/clinical-reports`, `POST from-image`, `DELETE :id`
+
+**커리큘럼 AI 연동**: `generateAlerts()` + `buildCurriculumPrompt()` 에 임상 보고서 데이터 반영
+
+### 18.3 메뉴 구조 대폭 개선 (일상 관찰 vs 임상 평가 분리)
+
+**핵심 결정**: 부모의 매일 관찰 체크와 공인 임상 평가 도구를 완전히 분리
+
+```
+치료 관리 (일상 루틴)          임상 평가 (전문 데이터)
+├── 대시보드                  ├── 임상 평가 (/clinical)
+├── 커리큘럼                  │     탭: 평가 실행 | 외부 보고서 | 타임라인
+├── 일정                      └── 질문지 관리 (/questionnaires)
+├── 일일 발달 체크 (구: 평가 입력)
+├── 성장 기록 (추이/도메인/마일스톤만)
+└── AI 분석
+```
+
+**변경 이유**:
+
+- `평가 입력` → `일일 발달 체크` (부모의 비공식 매일 관찰)
+- `성장 기록` → 일상 관찰 기반만 (임상 탭 제거)
+- `질문지` → `질문지 관리` (커스텀 질문지만, 라이선스 탭 제거)
+- 신규 `/clinical` 페이지 → 라이선스 도구 + 외부 보고서 통합
+
+### 18.4 임상 평가 기능 강화
+
+| 기능               | 내용                                                     |
+| ------------------ | -------------------------------------------------------- |
+| **3탭 구조**       | 평가 실행 (도구카드+이력) / 외부 평가 보고서 / 타임라인  |
+| **임상 타임라인**  | 라이선스 도구 평가 + 외부 보고서 통합 시간순 뷰          |
+| **재평가 알림**    | M-CHAT 3개월, CARS-2 6개월, ABC/외부보고서 12개월 주기   |
+| **대시보드 알림**  | `RE_EVALUATION_DUE` 타입 추가, 🏥 아이콘 + detail 텍스트 |
+| **AssessmentForm** | 질문지 선택 제거 → 5개 도메인 일일 체크만                |
+
+### 18.5 대시보드 개선
+
+| 항목           | 내용                                                                          |
+| -------------- | ----------------------------------------------------------------------------- |
+| 도메인 한글화  | `COMMUNICATION→의사소통`, `SOCIAL→사회성`, `OTHER→기타` 등 대소문자 모두 처리 |
+| 일정 시간 표시 | `TodaySchedule.time` (KST HH:MM) 필드 추가                                    |
+| 재평가 알림    | 임상 도구별 주기 초과 시 대시보드에 자동 표시                                 |
+
+### 18.6 인프라 개선
+
+| 항목              | 내용                                                         |
+| ----------------- | ------------------------------------------------------------ |
+| 정적 서빙 전환    | `nx serve` → `vite preview` (메모리 1-2GB → ~100MB, 안정적)  |
+| Watchdog          | 5분마다 web/admin 헬스체크, 죽으면 자동 재시작 (cron)        |
+| JWT 갱신          | 웹/Admin 모두 5분 전 자동 갱신 (탭 복귀 시도 포함)           |
+| API body 제한     | 20MB → 50MB (이미지 업로드)                                  |
+| 터널 지원         | `.trycloudflare.com` allowedHosts 추가, 120초 proxy timeout  |
+| Cloudflare Tunnel | `scripts/tunnel.sh` start/stop/status, 테스트 환경 외부 공유 |
+
+### 18.7 핵심 패턴 (신규)
+
+```
+질문지 관리 (/questionnaires)   ← 커스텀 질문지 라이브러리
+임상 평가 (/clinical)           ← 라이선스 도구 + 외부 보고서
+
+일일 발달 체크 (/assessment)    ← 부모 매일 관찰 (5도메인 체크만)
+성장 기록 (/growth)             ← 일상 데이터 기반 추이/마일스톤
+
+vite preview = 빌드 후 정적 서빙 + /v1 proxy
+코드 변경 후: rebuild-web.sh → restart-fe.sh
+```
 
 ---
 
