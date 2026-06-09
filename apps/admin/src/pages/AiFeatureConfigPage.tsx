@@ -16,6 +16,12 @@ const FEATURE_LABELS: Record<string, string> = {
   SCHEDULE_SUGGEST: '스케줄 제안',
   QUESTIONNAIRE_GENERATE: '질문지 AI 생성',
   QUESTIONNAIRE_FILTER: '질문지 라이선스 필터',
+  IMAGE_QUESTIONNAIRE: '이미지 → 질문지 변환',
+  RESEARCH_SUMMARIZE: '연구 논문 AI 요약',
+  RESEARCH_DIGEST: '연구 AI 맞춤 요약',
+  WELLBEING: '웰빙 격려 메시지',
+  SENSORY: '감각 활동 추천',
+  EMERGENCY: '비상 패턴 분석',
 };
 
 const FEATURE_RECOMMENDATIONS: Record<string, { tier: 'QUALITY' | 'FAST'; reason: string }> = {
@@ -24,6 +30,12 @@ const FEATURE_RECOMMENDATIONS: Record<string, { tier: 'QUALITY' | 'FAST'; reason
   SCHEDULE_SUGGEST: { tier: 'FAST', reason: '구조적 입출력, 복잡한 추론 불필요' },
   QUESTIONNAIRE_GENERATE: { tier: 'FAST', reason: '패턴 기반 질문 생성' },
   QUESTIONNAIRE_FILTER: { tier: 'QUALITY', reason: '저작권 유사도 뉘앙스 판단 필요' },
+  IMAGE_QUESTIONNAIRE: { tier: 'QUALITY', reason: 'Vision 모델 필수 (Claude Sonnet 이상 권장)' },
+  RESEARCH_SUMMARIZE: { tier: 'FAST', reason: '반복적 요약 작업, 속도 우선' },
+  RESEARCH_DIGEST: { tier: 'QUALITY', reason: '개인화 분석 + 따뜻한 한국어 톤' },
+  WELLBEING: { tier: 'FAST', reason: '짧은 격려 메시지, 빠른 응답 우선' },
+  SENSORY: { tier: 'FAST', reason: '구조화된 활동 목록 생성' },
+  EMERGENCY: { tier: 'QUALITY', reason: '패턴 감지 + 임상 맥락 이해 필요' },
 };
 
 export function AiFeatureConfigPage() {
@@ -41,9 +53,7 @@ export function AiFeatureConfigPage() {
   }, [featureConfig]);
 
   const handleChange = (feature: string, configId: string | null) => {
-    setMappings((prev) =>
-      prev.map((m) => (m.feature === feature ? { ...m, configId } : m)),
-    );
+    setMappings((prev) => prev.map((m) => (m.feature === feature ? { ...m, configId } : m)));
   };
 
   const handleSave = async () => {
@@ -84,9 +94,13 @@ export function AiFeatureConfigPage() {
         const rec = FEATURE_RECOMMENDATIONS[feature];
         if (!rec) return '-';
         return rec.tier === 'QUALITY' ? (
-          <Tag icon={<StarOutlined />} color="blue">Quality</Tag>
+          <Tag icon={<StarOutlined />} color="blue">
+            Quality
+          </Tag>
         ) : (
-          <Tag icon={<ThunderboltOutlined />} color="green">Fast</Tag>
+          <Tag icon={<ThunderboltOutlined />} color="green">
+            Fast
+          </Tag>
         );
       },
     },
@@ -122,10 +136,12 @@ export function AiFeatureConfigPage() {
         description={
           <div style={{ fontSize: 13 }}>
             <p style={{ margin: '4px 0' }}>
-              <Tag color="blue">Quality</Tag> <b>Sonnet급</b> — 품질 중심. 느리지만 정확 (8~15초). 커리큘럼, 인사이트, 필터링에 적합.
+              <Tag color="blue">Quality</Tag> <b>Sonnet급</b> — 품질 중심. 느리지만 정확 (8~15초).
+              커리큘럼, 인사이트, 필터링에 적합.
             </p>
             <p style={{ margin: '4px 0' }}>
-              <Tag color="green">Fast</Tag> <b>Haiku급</b> — 속도 중심. 빠르고 저렴 (2~5초). 구조적 생성, 간단한 분석에 적합.
+              <Tag color="green">Fast</Tag> <b>Haiku급</b> — 속도 중심. 빠르고 저렴 (2~5초). 구조적
+              생성, 간단한 분석에 적합.
             </p>
             <p style={{ margin: '4px 0', color: '#6B7B8D' }}>
               미지정 시 ★ 기본 프로바이더가 사용됩니다.
