@@ -10,10 +10,12 @@ import { CacheService } from '../common/cache/cache.service.js';
 export interface TodaySchedule {
   id: string;
   title: string;
+  time: string;
   startTime: string;
   endTime: string;
   category: string;
   isCompleted: boolean;
+  completed: boolean;
 }
 
 export interface DashboardAlert {
@@ -114,14 +116,23 @@ export class DashboardService {
       .flatMap((s) => this.schedulesService.expandRecurrences(s, todayStart, todayEnd))
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-    const upcomingSchedules: TodaySchedule[] = todayOccurrences.slice(0, 3).map((s) => ({
-      id: s.id,
-      title: s.title,
-      startTime: s.startTime.toISOString(),
-      endTime: s.endTime.toISOString(),
-      category: s.category,
-      isCompleted: s.endTime < now,
-    }));
+    const upcomingSchedules: TodaySchedule[] = todayOccurrences.slice(0, 3).map((s) => {
+      const isDone = s.endTime < now;
+      const kstMs = s.startTime.getTime() + 9 * 60 * 60 * 1000;
+      const kst = new Date(kstMs);
+      const hh = String(kst.getUTCHours()).padStart(2, '0');
+      const mm = String(kst.getUTCMinutes()).padStart(2, '0');
+      return {
+        id: s.id,
+        title: s.title,
+        time: `${hh}:${mm}`,
+        startTime: s.startTime.toISOString(),
+        endTime: s.endTime.toISOString(),
+        category: s.category,
+        isCompleted: isDone,
+        completed: isDone,
+      };
+    });
 
     const completedCount = todayOccurrences.filter((s) => s.endTime < now).length;
 

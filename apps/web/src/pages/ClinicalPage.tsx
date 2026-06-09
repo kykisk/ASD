@@ -7,11 +7,11 @@ import type { ClinicalReport } from '../hooks/use-clinical-reports';
 import { ClinicalReportModal } from '../components/clinical/ClinicalReportModal';
 import { PageHeader } from '../components/ui';
 
-type ClinicalTab = 'tools' | 'history' | 'timeline';
+type ClinicalTab = 'tools' | 'external' | 'timeline';
 
 const TABS: { key: ClinicalTab; label: string }[] = [
   { key: 'tools', label: '평가 실행' },
-  { key: 'history', label: '이력 & 보고서' },
+  { key: 'external', label: '외부 평가 보고서' },
   { key: 'timeline', label: '타임라인' },
 ];
 
@@ -220,13 +220,8 @@ export function ClinicalPage() {
               법적 동의 필요: 라이선스 도구 사용 시 저작권자 동의 및 전문가 자격 확인이 필요합니다.
             </p>
           </div>
-        </section>
-      )}
 
-      {/* Tab 2: 이력 & 보고서 */}
-      {activeTab === 'history' && (
-        <div className="space-y-8">
-          {/* 평가 결과 이력 */}
+          {/* 평가 결과 이력 (도구 탭 하단) */}
           <section>
             <h2 className="text-lg font-bold text-neutral-800 mb-4 flex items-center gap-2">
               <span>📊</span> 평가 결과 이력
@@ -279,7 +274,12 @@ export function ClinicalPage() {
               )}
             </div>
           </section>
+        </section>
+      )}
 
+      {/* Tab 2: 외부 평가 보고서 */}
+      {activeTab === 'external' && (
+        <div className="space-y-8">
           {/* 외부 평가 보고서 */}
           <section>
             <div className="flex items-center justify-between mb-4">
