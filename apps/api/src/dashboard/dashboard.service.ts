@@ -3,6 +3,7 @@ import { PrismaService } from '@auticare/prisma-client';
 import { EncryptionService } from '@auticare/encryption';
 import { TrendService } from '../assessments/trend.service.js';
 import type { TrendDirection } from '../assessments/trend.service.js';
+import { SchedulesService } from '../schedules/schedules.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { CacheService } from '../common/cache/cache.service.js';
 
@@ -52,6 +53,7 @@ export class DashboardService {
     private prisma: PrismaService,
     private encryptionService: EncryptionService,
     private trendService: TrendService,
+    private schedulesService: SchedulesService,
     private cacheService: CacheService,
   ) {}
 
@@ -93,30 +95,34 @@ export class DashboardService {
       ? Math.floor((now.getTime() - firstAssessment.createdAt.getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
-    // Get today's schedules
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const todaySchedules = await this.prisma.schedule.findMany({
+    const allSchedules = await this.prisma.schedule.findMany({
       where: {
         childId,
-        startTime: { gte: todayStart, lte: todayEnd },
+        OR: [
+          { startTime: { gte: todayStart, lte: todayEnd } },
+          { recurrenceType: { not: 'NONE' }, startTime: { lt: todayEnd } },
+        ],
       },
       orderBy: { startTime: 'asc' },
     });
 
-    const upcomingSchedules: TodaySchedule[] = todaySchedules
-      .slice(0, 3)
-      .map((s) => ({
-        id: s.id,
-        title: s.title,
-        startTime: s.startTime.toISOString(),
-        endTime: s.endTime.toISOString(),
-        category: s.category,
-        isCompleted: s.endTime < now,
-      }));
+    const todayOccurrences = allSchedules
+      .flatMap((s) => this.schedulesService.expandRecurrences(s, todayStart, todayEnd))
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-    const completedCount = todaySchedules.filter((s) => s.endTime < now).length;
+    const upcomingSchedules: TodaySchedule[] = todayOccurrences.slice(0, 3).map((s) => ({
+      id: s.id,
+      title: s.title,
+      startTime: s.startTime.toISOString(),
+      endTime: s.endTime.toISOString(),
+      category: s.category,
+      isCompleted: s.endTime < now,
+    }));
+
+    const completedCount = todayOccurrences.filter((s) => s.endTime < now).length;
 
     // Get most recent assessment with domain scores
     const recentAssessment = await this.getRecentAssessment(childId);
@@ -125,7 +131,7 @@ export class DashboardService {
     const weeklyProgress = await this.calculateWeeklyProgress(childId);
 
     // Generate alerts
-    const alerts = await this.generateAlerts(childId, todaySchedules.length);
+    const alerts = await this.generateAlerts(childId, todayOccurrences.length);
 
     const result: DashboardData = {
       child: {
@@ -137,7 +143,7 @@ export class DashboardService {
       today: {
         schedules: upcomingSchedules,
         completedCount,
-        totalCount: todaySchedules.length,
+        totalCount: todayOccurrences.length,
       },
       recentAssessment,
       weeklyProgress,
@@ -150,8 +156,8 @@ export class DashboardService {
   }
 
   private calculateAgeMonths(birthDate: Date, now: Date): number {
-    const months = (now.getFullYear() - birthDate.getFullYear()) * 12
-      + (now.getMonth() - birthDate.getMonth());
+    const months =
+      (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth());
     return Math.max(0, months);
   }
 
@@ -268,7 +274,10 @@ export class DashboardService {
     return streak;
   }
 
-  private async generateAlerts(childId: string, todayScheduleCount: number): Promise<DashboardAlert[]> {
+  private async generateAlerts(
+    childId: string,
+    todayScheduleCount: number,
+  ): Promise<DashboardAlert[]> {
     const alerts: DashboardAlert[] = [];
 
     // Check if no assessment in 3+ days
