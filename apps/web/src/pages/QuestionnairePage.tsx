@@ -7,8 +7,6 @@ import {
   type Domain,
 } from '../hooks/use-questionnaires';
 import { useMyFamily } from '../hooks/use-families';
-import { useChildStore } from '../stores/child.store';
-import { useAssessments, type Assessment } from '../hooks/use-assessments';
 import { QuestionnaireFormModal } from '../components/questionnaire/QuestionnaireFormModal';
 import { ImportModal } from '../components/questionnaire/ImportModal';
 import { AiGenerateModal } from '../components/questionnaire/AiGenerateModal';
@@ -25,62 +23,16 @@ const DOMAIN_LABELS: Record<Domain, { label: string; color: string }> = {
   OTHER: { label: '기타', color: '#C4B5A0' },
 };
 
-const LICENSED_TOOLS = [
-  {
-    id: 'M_CHAT_R_F',
-    name: 'M-CHAT-R/F',
-    description: '18~24개월 자폐 조기 선별 체크리스트',
-    available: true,
-  },
-  { id: 'CARS_2', name: 'CARS-2', description: '아동기 자폐 평가 척도 2판', available: true },
-  { id: 'ABC', name: 'ABC', description: '이상행동 체크리스트', available: true },
-  { id: 'ADOS_2', name: 'ADOS-2', description: '자폐 관찰 진단 (전문가 전용)', available: false },
-  { id: 'SCQ', name: 'SCQ', description: '사회적 의사소통 질문지', available: false },
-];
-
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function getLicensedSeverity(
-  tool: string,
-  score: number,
-): { label: string; color: string; bg: string } {
-  if (tool === 'CARS_2') {
-    if (score < 30) return { label: '비자폐', color: '#5B8A72', bg: '#e8f5ee' };
-    if (score < 37) return { label: '경증-중등도', color: '#D4A800', bg: '#fef9e7' };
-    return { label: '중증', color: '#E88B8B', bg: '#fef2f2' };
-  }
-  if (tool === 'M_CHAT_R_F') {
-    if (score <= 2) return { label: '낮은 위험', color: '#5B8A72', bg: '#e8f5ee' };
-    if (score <= 7) return { label: '중간 위험', color: '#D4A800', bg: '#fef9e7' };
-    return { label: '높은 위험', color: '#E88B8B', bg: '#fef2f2' };
-  }
-  if (tool === 'ABC') {
-    return score > 0
-      ? { label: '유의미', color: '#F0A86E', bg: '#fff7ed' }
-      : { label: '정상 범위', color: '#5B8A72', bg: '#e8f5ee' };
-  }
-  return { label: `${score}점`, color: '#94A3B8', bg: '#f8fafc' };
-}
-
 export function QuestionnairePage() {
   const navigate = useNavigate();
   const { data: family } = useMyFamily();
-  const { selectedChildId } = useChildStore();
   const { data: questionnaires, isLoading, isError, refetch } = useQuestionnaires(family?.id);
   const deleteQuestionnaire = useDeleteQuestionnaire(family?.id);
-  const { data: allAssessments } = useAssessments(selectedChildId);
-
-  const latestByTool = (allAssessments ?? [])
-    .filter((a: Assessment) => a.questionnaire?.type === 'LICENSED' && a.totalScore !== null)
-    .reduce<Record<string, Assessment>>((acc, a) => {
-      const t = a.questionnaire?.licensedTool ?? '';
-      if (!t) return acc;
-      if (!acc[t] || new Date(a.createdAt) > new Date(acc[t].createdAt)) acc[t] = a;
-      return acc;
-    }, {});
 
   const [activeTab, setActiveTab] = useState<'custom' | 'licensed'>('custom');
   const [showFormModal, setShowFormModal] = useState(false);
@@ -141,23 +93,9 @@ export function QuestionnairePage() {
       <div className="flex gap-1 p-1 rounded-[14px] bg-neutral-50 border border-neutral-200 w-fit">
         <button
           onClick={() => setActiveTab('custom')}
-          className={`px-5 py-2.5 text-sm font-semibold rounded-[11px] transition-all min-h-[44px] ${
-            activeTab === 'custom'
-              ? 'bg-white text-primary-600 shadow-sage-sm'
-              : 'text-neutral-500 hover:text-neutral-800'
-          }`}
+          className="px-5 py-2.5 text-sm font-semibold rounded-[11px] transition-all min-h-[44px] bg-white text-primary-600 shadow-sage-sm"
         >
-          비라이선스
-        </button>
-        <button
-          onClick={() => setActiveTab('licensed')}
-          className={`px-5 py-2.5 text-sm font-semibold rounded-[11px] transition-all min-h-[44px] ${
-            activeTab === 'licensed'
-              ? 'bg-white text-primary-600 shadow-sage-sm'
-              : 'text-neutral-500 hover:text-neutral-800'
-          }`}
-        >
-          라이선스 도구
+          질문지 목록
         </button>
       </div>
 
@@ -344,99 +282,6 @@ export function QuestionnairePage() {
               action={{ label: '새 질문지 만들기', onClick: openCreate }}
             />
           )}
-        </div>
-      )}
-
-      {activeTab === 'licensed' && (
-        <div className="space-y-5 animate-fade-in">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {LICENSED_TOOLS.map((tool) => (
-              <div
-                key={tool.id}
-                onClick={() => tool.available && navigate(`/assessment/licensed/${tool.id}`)}
-                className={`bg-white rounded-xl border p-5 transition-all duration-200 ${
-                  tool.available
-                    ? 'border-neutral-200 shadow-sage-sm hover:shadow-sage hover:border-primary-200 cursor-pointer group'
-                    : 'border-neutral-100 opacity-60 cursor-not-allowed'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3
-                    className={`text-base font-semibold ${
-                      tool.available
-                        ? 'text-neutral-800 group-hover:text-primary-600 transition-colors'
-                        : 'text-neutral-500'
-                    }`}
-                  >
-                    {tool.name}
-                  </h3>
-                  {tool.available ? (
-                    <span className="shrink-0 w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center text-primary-500 group-hover:bg-primary-100 transition-colors">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
-                        />
-                      </svg>
-                    </span>
-                  ) : (
-                    <span className="shrink-0 px-2.5 py-1 rounded-lg bg-neutral-200/60 text-xs font-medium text-neutral-500">
-                      준비중
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-neutral-500">{tool.description}</p>
-                {tool.available &&
-                  latestByTool[tool.id] &&
-                  (() => {
-                    const latest = latestByTool[tool.id];
-                    const sev = getLicensedSeverity(tool.id, latest.totalScore ?? 0);
-                    return (
-                      <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
-                        <span className="text-xs text-neutral-400">
-                          최근 {formatDate(latest.createdAt)} · {latest.totalScore}점
-                        </span>
-                        <span
-                          className="text-xs font-semibold px-2 py-0.5 rounded-md"
-                          style={{ color: sev.color, background: sev.bg }}
-                        >
-                          {sev.label}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                {tool.available && !latestByTool[tool.id] && (
-                  <p className="mt-2 text-xs text-neutral-300">아직 평가 기록 없음</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200/60">
-            <p className="text-xs text-amber-700 font-medium flex items-center gap-1.5">
-              <svg
-                className="w-3.5 h-3.5 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                />
-              </svg>
-              법적 동의 필요: 라이선스 도구 사용 시 저작권자 동의 및 전문가 자격 확인이 필요합니다.
-            </p>
-          </div>
         </div>
       )}
 
