@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useChildStore } from '../../stores/child.store';
 import { useCreateAssessment } from '../../hooks/use-assessments';
 import { useMyFamily } from '../../hooks/use-families';
@@ -20,16 +19,6 @@ const scaleOptions = [
   { score: 4, emoji: '🙂', color: '#5BAA5B', bg: '#EEF8EE', label: '좋음' },
   { score: 5, emoji: '😊', color: '#5B8A72', bg: '#E8F5EE', label: '매우 좋음' },
 ];
-
-const DOMAIN_DISPLAY: Record<string, string> = {
-  COMMUNICATION: '의사소통',
-  SOCIAL: '사회성',
-  MOTOR: '운동',
-  COGNITIVE: '인지',
-  EMOTIONAL: '정서',
-  DAILY_LIVING: '일상생활',
-  OTHER: '기타',
-};
 
 const questions: Record<string, { id: string; text: string }[]> = {
   communication: [{ id: 'comm-1', text: '오늘 아이의 의사소통 능력은 어떠했나요?' }],
@@ -92,9 +81,6 @@ export function AssessmentForm() {
   const familyId = family?.id ?? null;
   const { data: questionnaires, isLoading: questionnairesLoading } = useQuestionnaires(familyId);
   const createQuestionnaire = useCreateQuestionnaire(familyId);
-  const location = useLocation();
-  const preselectedQuestionnaireId =
-    (location.state as { questionnaireId?: string } | null)?.questionnaireId ?? null;
 
   const [step, setStep] = useState<Step>('select');
   const [currentDomainIndex, setCurrentDomainIndex] = useState(0);
@@ -105,9 +91,6 @@ export function AssessmentForm() {
   const [showNotes, setShowNotes] = useState(false);
   const [photoMessage, setPhotoMessage] = useState(false);
   const [questionnaireState, setQuestionnaireState] = useState<QuestionnaireState | null>(null);
-  const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState<string>('');
-  const [itemScores, setItemScores] = useState<Record<string, number | null>>({});
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const questionnaireCreatedRef = useRef(false);
 
@@ -117,9 +100,7 @@ export function AssessmentForm() {
   useEffect(() => {
     if (!familyId || questionnairesLoading || questionnaireCreatedRef.current) return;
     if (questionnaires && questionnaires.length > 0) {
-      const q = preselectedQuestionnaireId
-        ? (questionnaires.find((x) => x.id === preselectedQuestionnaireId) ?? questionnaires[0])
-        : questionnaires[0];
+      const q = questionnaires[0];
       const itemsMap: Record<string, string> = {};
       for (const item of q.items) {
         const domainLower = item.domain.toLowerCase();
@@ -128,7 +109,6 @@ export function AssessmentForm() {
         }
       }
       setQuestionnaireState({ id: q.id, items: itemsMap });
-      setSelectedQuestionnaireId(q.id);
       questionnaireCreatedRef.current = true;
     } else if (questionnaires && questionnaires.length === 0) {
       questionnaireCreatedRef.current = true;
@@ -149,33 +129,11 @@ export function AssessmentForm() {
               }
             }
             setQuestionnaireState({ id: created.id, items: itemsMap });
-            setSelectedQuestionnaireId(created.id);
           },
         },
       );
     }
   }, [familyId, questionnaires, questionnairesLoading, createQuestionnaire]);
-
-  const handleQuestionnaireChange = (qId: string) => {
-    setSelectedQuestionnaireId(qId);
-    setItemScores({});
-    setCurrentItemIndex(0);
-    const q = questionnaires?.find((x) => x.id === qId);
-    if (q) {
-      const itemsMap: Record<string, string> = {};
-      for (const item of q.items) {
-        const dl = item.domain.toLowerCase();
-        if (!itemsMap[dl] && item.id) itemsMap[dl] = item.id;
-      }
-      setQuestionnaireState({ id: q.id, items: itemsMap });
-    }
-  };
-
-  const selectedQuestionnaire = questionnaires?.find((q) => q.id === selectedQuestionnaireId);
-  const isCustomMode =
-    !!selectedQuestionnaire &&
-    selectedQuestionnaire.name !== '일일 발달 평가' &&
-    selectedQuestionnaire.items.length > 0;
 
   const handleScoreSelect = (score: number) => {
     setAnswers((prev) => ({
@@ -273,78 +231,14 @@ export function AssessmentForm() {
 
         <div
           className="assessment-card assessment-animate-in"
-          style={{ animationDelay: '120ms', padding: '24px' }}
-        >
-          <label
-            style={{
-              display: 'block',
-              fontSize: 13,
-              fontWeight: 600,
-              color: '#6B7B8D',
-              marginBottom: 8,
-            }}
-          >
-            평가 질문지
-          </label>
-          <select
-            value={selectedQuestionnaireId}
-            onChange={(e) => handleQuestionnaireChange(e.target.value)}
-            style={{
-              width: '100%',
-              border: '1.5px solid #E8E4DF',
-              borderRadius: 12,
-              padding: '10px 14px',
-              fontSize: 14,
-              background: 'white',
-              color: '#2c3e50',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            {questionnaires?.map((q) => (
-              <option key={q.id} value={q.id}>
-                {q.name}
-                {q.name === '일일 발달 평가' ? ' (기본)' : ''}
-              </option>
-            ))}
-          </select>
-
-          {selectedQuestionnaire && (
-            <p
-              style={{
-                fontSize: 12,
-                color: '#94A3B4',
-                marginTop: 8,
-                marginBottom: 0,
-              }}
-            >
-              {isCustomMode
-                ? `${selectedQuestionnaire.items.length}개 문항`
-                : '5개 영역 · 약 3분 소요'}
-            </p>
-          )}
-        </div>
-
-        <div
-          className="assessment-card assessment-animate-in"
           style={{ animationDelay: '200ms', cursor: 'pointer', marginTop: 12 }}
-          onClick={() => {
-            if (isCustomMode) {
-              setCurrentItemIndex(0);
-              setItemScores({});
-            }
-            setStep('assess');
-          }}
+          onClick={() => setStep('assess')}
         >
           <div className="assessment-questionnaire-card">
             <div className="assessment-questionnaire-icon">📋</div>
             <div>
-              <h3 className="assessment-questionnaire-name">
-                {isCustomMode ? selectedQuestionnaire?.name : '일일 발달 평가'}
-              </h3>
-              <p className="assessment-questionnaire-desc">
-                {isCustomMode ? '문항별 점수 입력' : '영역별 점수 입력'}
-              </p>
+              <h3 className="assessment-questionnaire-name">일일 발달 평가</h3>
+              <p className="assessment-questionnaire-desc">5개 영역 · 약 3분 소요</p>
             </div>
             <svg
               width="20"
@@ -416,8 +310,6 @@ export function AssessmentForm() {
                 Object.fromEntries(domains.map((d) => [d.id, { score: null, notes: '' }])),
               );
               setOverallNotes('');
-              setItemScores({});
-              setCurrentItemIndex(0);
             }}
           >
             새 평가 시작
@@ -427,7 +319,7 @@ export function AssessmentForm() {
     );
   }
 
-  if (step === 'summary' && !isCustomMode) {
+  if (step === 'summary') {
     return (
       <div className="assessment-root">
         <div className="assessment-animate-in" style={{ marginBottom: 24 }}>
@@ -531,282 +423,7 @@ export function AssessmentForm() {
     );
   }
 
-  // --- Custom Mode (item-by-item) ---
-  if (isCustomMode && selectedQuestionnaire) {
-    const items = selectedQuestionnaire.items;
-    const currentItem = items[currentItemIndex];
-    const totalItems = items.length;
-    const scoredCount = Object.values(itemScores).filter((s) => s != null).length;
-    const currentItemScore = currentItem?.id ? itemScores[currentItem.id] : null;
-    const currentScoreOption = currentItemScore ? scaleOptions[currentItemScore - 1] : null;
-
-    const handleCustomSubmit = async () => {
-      if (!selectedChildId || !selectedQuestionnaire) return;
-      const scores = items
-        .filter((item) => item.id && itemScores[item.id] != null)
-        .map((item) => ({
-          itemId: item.id!,
-          domain: item.domain,
-          score: itemScores[item.id!]!,
-        }));
-      if (scores.length === 0) {
-        alert('최소 1개 이상 채점해주세요');
-        return;
-      }
-      try {
-        await createAssessment.mutateAsync({
-          childId: selectedChildId,
-          input: {
-            questionnaireId: selectedQuestionnaire.id,
-            notes: overallNotes || undefined,
-            scores,
-          },
-        });
-        setStep('done');
-      } catch {
-        /* no-op */
-      }
-    };
-
-    // Custom summary step
-    if (step === 'summary') {
-      return (
-        <div className="assessment-root">
-          <div className="assessment-animate-in" style={{ marginBottom: 24 }}>
-            <h1 className="assessment-title">평가 요약</h1>
-            <p className="assessment-subtitle">
-              {selectedQuestionnaire.name} · {scoredCount}/{totalItems} 응답
-            </p>
-          </div>
-
-          <div className="assessment-card assessment-animate-in" style={{ animationDelay: '80ms' }}>
-            <div className="assessment-summary-grid">
-              {items.map((item, i) => {
-                const score = item.id ? itemScores[item.id] : null;
-                const option = score ? scaleOptions[score - 1] : null;
-                return (
-                  <div
-                    key={item.id ?? i}
-                    className="assessment-summary-item assessment-animate-in"
-                    style={{ animationDelay: `${i * 40}ms` }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: '#5B8A72',
-                        background: '#E8F5EE',
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        marginRight: 8,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {DOMAIN_DISPLAY[item.domain] ?? item.domain}
-                    </span>
-                    <span className="assessment-summary-domain" style={{ flex: 1, fontSize: 12 }}>
-                      {item.text.length > 30 ? item.text.slice(0, 30) + '…' : item.text}
-                    </span>
-                    {option ? (
-                      <span className="assessment-summary-score" style={{ color: option.color }}>
-                        {option.emoji} {score}점
-                      </span>
-                    ) : (
-                      <span className="assessment-summary-score" style={{ color: '#94A3B4' }}>
-                        미응답
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div
-            className="assessment-card assessment-animate-in"
-            style={{ animationDelay: '160ms', marginTop: 16 }}
-          >
-            <label className="assessment-notes-label">전체 메모 (선택사항)</label>
-            <textarea
-              className="assessment-textarea"
-              placeholder="오늘 전체적으로 특별한 점이 있었나요?"
-              rows={3}
-              value={overallNotes}
-              onChange={(e) => setOverallNotes(e.target.value)}
-            />
-          </div>
-
-          <div className="assessment-nav" style={{ marginTop: 20 }}>
-            <button
-              className="assessment-btn-secondary"
-              onClick={() => {
-                setStep('assess');
-                setCurrentItemIndex(totalItems - 1);
-              }}
-            >
-              ← 이전
-            </button>
-            <button
-              className="assessment-btn-primary"
-              onClick={handleCustomSubmit}
-              disabled={createAssessment.isPending}
-            >
-              {createAssessment.isPending ? '제출 중...' : '제출하기'}
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // Custom assess step (item-by-item)
-    return (
-      <div className="assessment-root">
-        <div className="assessment-animate-in" style={{ marginBottom: 28 }}>
-          <div className="assessment-progress-header">
-            <span className="assessment-progress-text">
-              {scoredCount}/{totalItems} 문항 완료
-            </span>
-            <span className="assessment-progress-current">
-              {currentItemIndex + 1} / {totalItems}
-            </span>
-          </div>
-          <div className="assessment-progress-track">
-            <div
-              className="assessment-progress-bar"
-              style={{
-                width: `${((currentItemIndex + 1) / totalItems) * 100}%`,
-                background: '#5B8A72',
-              }}
-            />
-          </div>
-        </div>
-
-        <div
-          className="assessment-card assessment-animate-in"
-          style={{ animationDelay: '100ms', padding: '28px 24px' }}
-        >
-          <div
-            style={{
-              display: 'inline-block',
-              fontSize: 11,
-              fontWeight: 600,
-              color: '#5B8A72',
-              background: '#E8F5EE',
-              padding: '4px 10px',
-              borderRadius: 8,
-              marginBottom: 16,
-            }}
-          >
-            {DOMAIN_DISPLAY[currentItem?.domain ?? ''] ?? currentItem?.domain}
-          </div>
-
-          <h2 className="assessment-question-text">{currentItem?.text ?? ''}</h2>
-          {currentItem?.description && (
-            <p className="assessment-question-hint">{currentItem.description}</p>
-          )}
-
-          <div className="assessment-scale">
-            {scaleOptions.map((option) => (
-              <button
-                key={option.score}
-                className="assessment-scale-btn"
-                onClick={() => {
-                  if (currentItem?.id) {
-                    setItemScores((prev) => ({ ...prev, [currentItem.id!]: option.score }));
-                  }
-                }}
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  border:
-                    currentItemScore === option.score
-                      ? `3px solid ${option.color}`
-                      : '2px solid #E8E4DF',
-                  background: currentItemScore === option.score ? option.bg : 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 24,
-                  cursor: 'pointer',
-                  boxShadow:
-                    currentItemScore === option.score ? `0 4px 12px ${option.color}40` : 'none',
-                  transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                }}
-              >
-                {option.emoji}
-              </button>
-            ))}
-          </div>
-
-          {currentScoreOption && (
-            <div
-              className="assessment-selected-label assessment-animate-in"
-              style={{ background: `${currentScoreOption.color}15` }}
-            >
-              <span style={{ fontSize: 14, fontWeight: 600, color: currentScoreOption.color }}>
-                {currentScoreOption.label}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="assessment-dots assessment-animate-in" style={{ animationDelay: '180ms' }}>
-          {items.map((item, i) => (
-            <div
-              key={item.id ?? i}
-              className="assessment-dot"
-              style={{
-                background:
-                  i === currentItemIndex
-                    ? '#5B8A72'
-                    : item.id && itemScores[item.id] != null
-                      ? '#5B8A7280'
-                      : '#E8E4DF',
-                transform: i === currentItemIndex ? 'scale(1.4)' : 'scale(1)',
-                cursor: 'pointer',
-              }}
-              onClick={() => setCurrentItemIndex(i)}
-            />
-          ))}
-        </div>
-
-        <div className="assessment-nav">
-          <button
-            className="assessment-btn-secondary"
-            onClick={() => {
-              if (currentItemIndex > 0) {
-                setCurrentItemIndex((i) => i - 1);
-              } else {
-                setStep('select');
-              }
-            }}
-            style={{ opacity: 1 }}
-          >
-            {currentItemIndex === 0 ? '← 목록' : '← 이전'}
-          </button>
-          <button
-            className="assessment-btn-primary"
-            onClick={() => {
-              if (currentItemIndex < totalItems - 1) {
-                setCurrentItemIndex((i) => i + 1);
-              } else {
-                setStep('summary');
-              }
-            }}
-            disabled={currentItemScore === null || currentItemScore === undefined}
-            style={{
-              opacity: currentItemScore === null || currentItemScore === undefined ? 0.5 : 1,
-            }}
-          >
-            {currentItemIndex === totalItems - 1 ? '요약 보기' : '다음 문항 →'}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // --- Default Mode (5-domain) ---
+  // --- Default 5-domain assessment ---
   const currentAnswer = answers[currentDomain.id];
   const currentQuestion = questions[currentDomain.id][0];
   const selectedOption = currentAnswer.score ? scaleOptions[currentAnswer.score - 1] : null;

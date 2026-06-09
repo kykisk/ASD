@@ -28,6 +28,13 @@ const DOMAIN_LABELS: Record<string, string> = {
   Motor: '운동',
   Cognitive: '인지',
   Emotional: '정서',
+  COMMUNICATION: '의사소통',
+  SOCIAL: '사회성',
+  MOTOR: '운동',
+  COGNITIVE: '인지',
+  EMOTIONAL: '정서',
+  DAILY_LIVING: '일상생활',
+  OTHER: '기타',
 };
 
 function getGreeting(): string {
