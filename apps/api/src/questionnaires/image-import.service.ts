@@ -166,28 +166,27 @@ export class ImageImportService {
       };
     }
 
-    const activeConfigs = await this.aiConfigService.getActiveConfigs();
-    const claudeConfig = activeConfigs.find(
-      (c) => c.provider === 'CLAUDE_DIRECT' || c.provider === 'CLAUDE_BEDROCK',
-    );
-
-    if (!claudeConfig) {
-      throw new ApiException(
-        503,
-        'AI_VISION_003',
-        'Vision AI를 사용하려면 Claude 프로바이더가 필요합니다',
-      );
+    try {
+      const decrypted = await this.aiConfigService.getDecryptedDefaultConfig();
+      if (decrypted.provider === 'CLAUDE_DIRECT' || decrypted.provider === 'CLAUDE_BEDROCK') {
+        return {
+          provider: decrypted.provider,
+          apiKey: decrypted.apiKey ?? undefined,
+          region: decrypted.region ?? undefined,
+          accessKeyId: decrypted.accessKeyId ?? undefined,
+          secretKey: decrypted.secretKey ?? undefined,
+          modelId: decrypted.modelId ?? undefined,
+        };
+      }
+    } catch (_) {
+      void _;
     }
 
-    const decrypted = await this.aiConfigService.getDecryptedConfig(claudeConfig.id);
-    return {
-      provider: decrypted.provider,
-      apiKey: decrypted.apiKey ?? undefined,
-      region: decrypted.region ?? undefined,
-      accessKeyId: decrypted.accessKeyId ?? undefined,
-      secretKey: decrypted.secretKey ?? undefined,
-      modelId: decrypted.modelId ?? undefined,
-    };
+    throw new ApiException(
+      503,
+      'AI_VISION_003',
+      'Vision AI를 사용하려면 Claude 프로바이더가 필요합니다. Admin에서 IMAGE_QUESTIONNAIRE에 Claude를 매핑하세요.',
+    );
   }
 
   private parseResponse(rawText: string): ImageExtractionResult {
