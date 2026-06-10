@@ -16,12 +16,18 @@ interface MonthViewProps {
   currentDate: Date;
   schedules: Schedule[];
   onEventClick?: (schedule: Schedule) => void;
+  onFeedbackClick?: (schedule: Schedule) => void;
 }
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const MAX_VISIBLE_EVENTS = 3;
 
-export function MonthView({ currentDate, schedules, onEventClick }: MonthViewProps) {
+export function MonthView({
+  currentDate,
+  schedules,
+  onEventClick,
+  onFeedbackClick,
+}: MonthViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
@@ -42,11 +48,7 @@ export function MonthView({ currentDate, schedules, onEventClick }: MonthViewPro
           <div
             key={name}
             className={`px-2 py-2.5 text-center text-xs font-semibold ${
-              i === 0
-                ? 'text-red-500'
-                : i === 6
-                ? 'text-blue-500'
-                : 'text-neutral-600'
+              i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-neutral-600'
             } bg-neutral-50`}
           >
             {name}
@@ -74,12 +76,12 @@ export function MonthView({ currentDate, schedules, onEventClick }: MonthViewPro
                     today
                       ? 'bg-primary-500 text-white font-bold'
                       : !isCurrentMonth
-                      ? 'text-neutral-300'
-                      : dayOfWeek === 0
-                      ? 'text-red-500 font-medium'
-                      : dayOfWeek === 6
-                      ? 'text-blue-500 font-medium'
-                      : 'text-neutral-700 font-medium'
+                        ? 'text-neutral-300'
+                        : dayOfWeek === 0
+                          ? 'text-red-500 font-medium'
+                          : dayOfWeek === 6
+                            ? 'text-blue-500 font-medium'
+                            : 'text-neutral-700 font-medium'
                   }`}
                 >
                   {format(day, 'd')}
@@ -93,6 +95,7 @@ export function MonthView({ currentDate, schedules, onEventClick }: MonthViewPro
                     schedule={event}
                     compact
                     onClick={onEventClick}
+                    onFeedbackClick={onFeedbackClick}
                   />
                 ))}
                 {events.length > MAX_VISIBLE_EVENTS && (

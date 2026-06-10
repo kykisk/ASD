@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useChildStore } from '../../stores/child.store.js';
 import { useSchedules, useCreateSchedule, useDeleteSchedule } from '../../hooks/use-schedules.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
@@ -230,7 +231,10 @@ function ScheduleCard({
   schedule: ScheduleOccurrence;
   onDelete: () => void;
 }) {
+  const router = useRouter();
   const color = schedule.color || CATEGORY_COLORS[schedule.category] || CATEGORY_COLORS.OTHER;
+  const isPast = new Date(schedule.startTime) < new Date();
+
   return (
     <View style={[styles.scheduleCard, { borderLeftColor: color }]}>
       <View style={styles.scheduleInfo}>
@@ -244,6 +248,14 @@ function ScheduleCard({
           </Text>
         </View>
         {schedule.location && <Text style={styles.scheduleLocation}>📍 {schedule.location}</Text>}
+        {isPast && (
+          <TouchableOpacity
+            style={styles.feedbackBtn}
+            onPress={() => router.push('../session-feedback')}
+          >
+            <Text style={styles.feedbackBtnText}>피드백 📝</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
         <Text style={styles.deleteBtnText}>✕</Text>
@@ -489,6 +501,15 @@ const styles = StyleSheet.create({
   },
   categoryText: { fontSize: fontSize.xs, fontWeight: '600' },
   scheduleLocation: { fontSize: fontSize.xs, color: colors.textMuted },
+  feedbackBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.full,
+    marginTop: 4,
+  },
+  feedbackBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: '600' },
   deleteBtn: { padding: spacing.xs },
   deleteBtnText: { fontSize: fontSize.md, color: colors.error },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

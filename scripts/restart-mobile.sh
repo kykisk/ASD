@@ -29,7 +29,7 @@ sleep 1
 echo "  📦 빌드 중... (1~2분)"
 rm -rf "$DIST"
 
-EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-http://3.35.36.62:3100/v1}"
+EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-http://3.38.146.1:3100/v1}"
 cd "$ROOT/apps/mobile"
 CI=1 EXPO_PUBLIC_API_URL="$EXPO_PUBLIC_API_URL" \
   npx expo export --platform web --output-dir "$DIST" 2>&1 | tail -5
@@ -51,7 +51,7 @@ sleep 1
 if kill -0 "$(cat $PID_FILE)" 2>/dev/null; then
   echo "  ✅ 준비됨 (PID: $(cat $PID_FILE))"
   echo "     http://localhost:$PORT"
-  echo "     http://3.35.36.62:$PORT"
+  echo "     http://3.38.146.1:$PORT"
 else
   echo "  ❌ 서버 시작 실패. 로그: tail -f $LOG"
   exit 1

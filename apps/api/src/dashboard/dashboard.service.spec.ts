@@ -9,7 +9,12 @@ describe('DashboardService', () => {
   let service: DashboardService;
   let prisma: Record<string, Record<string, ReturnType<typeof vi.fn>>>;
   let encryptionService: { decryptPii: ReturnType<typeof vi.fn> };
-  let cacheService: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn>; del: ReturnType<typeof vi.fn>; delByPattern: ReturnType<typeof vi.fn> };
+  let cacheService: {
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    del: ReturnType<typeof vi.fn>;
+    delByPattern: ReturnType<typeof vi.fn>;
+  };
   let trendService: TrendService;
 
   const mockChild = {
@@ -30,6 +35,12 @@ describe('DashboardService', () => {
       familyMember: { findUnique: vi.fn() },
       assessment: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
       schedule: { findMany: vi.fn() },
+      clinicalReport: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValue({ id: 'r1', assessmentDate: new Date(), createdAt: new Date() }),
+      },
+      sessionFeedback: { count: vi.fn().mockResolvedValue(1) },
     };
 
     encryptionService = {
@@ -154,18 +165,17 @@ describe('DashboardService', () => {
     today.setHours(12, 0, 0, 0);
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
-    prisma.assessment.findMany.mockImplementation((args: { where?: { createdAt?: { gte?: Date } }; take?: number }) => {
-      if (args?.take === 30) {
+    prisma.assessment.findMany.mockImplementation(
+      (args: { where?: { createdAt?: { gte?: Date } }; take?: number }) => {
+        if (args?.take === 30) {
+          return Promise.resolve([{ createdAt: today }, { createdAt: yesterday }]);
+        }
         return Promise.resolve([
-          { createdAt: today },
-          { createdAt: yesterday },
+          { id: 'a1', createdAt: today, completedAt: today },
+          { id: 'a2', createdAt: yesterday, completedAt: yesterday },
         ]);
-      }
-      return Promise.resolve([
-        { id: 'a1', createdAt: today, completedAt: today },
-        { id: 'a2', createdAt: yesterday, completedAt: yesterday },
-      ]);
-    });
+      },
+    );
     prisma.assessment.count.mockResolvedValue(2);
 
     const result = await service.getDashboardData('child-1', 'user-1');
@@ -216,27 +226,21 @@ describe('DashboardService', () => {
     expect(result.recentAssessment).toBeNull();
     expect(result.weeklyProgress.assessmentCount).toBe(0);
     expect(result.weeklyProgress.streak).toBe(0);
-    expect(result.alerts).toContainEqual(
-      expect.objectContaining({ type: 'ASSESSMENT_DUE' }),
-    );
-    expect(result.alerts).toContainEqual(
-      expect.objectContaining({ type: 'NO_SCHEDULE' }),
-    );
+    expect(result.alerts).toContainEqual(expect.objectContaining({ type: 'ASSESSMENT_DUE' }));
+    expect(result.alerts).toContainEqual(expect.objectContaining({ type: 'NO_SCHEDULE' }));
   });
 
   it('should throw 404 if child not found', async () => {
     prisma.child.findUnique.mockResolvedValue(null);
 
-    await expect(service.getDashboardData('nonexistent', 'user-1'))
-      .rejects.toThrow();
+    await expect(service.getDashboardData('nonexistent', 'user-1')).rejects.toThrow();
   });
 
   it('should throw 403 if user is not family member', async () => {
     prisma.child.findUnique.mockResolvedValue(mockChild);
     prisma.familyMember.findUnique.mockResolvedValue(null);
 
-    await expect(service.getDashboardData('child-1', 'user-2'))
-      .rejects.toThrow();
+    await expect(service.getDashboardData('child-1', 'user-2')).rejects.toThrow();
   });
 
   it('should return cached result on cache hit without calling DB', async () => {

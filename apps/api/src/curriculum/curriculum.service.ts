@@ -5,6 +5,7 @@ import { AIService } from '../ai/ai.service.js';
 import { CurriculumPromptService } from './curriculum-prompt.service.js';
 import { DomainAggregationService } from '../assessments/domain-aggregation.service.js';
 import { NotificationTriggerService } from '../notifications/notification-trigger.service.js';
+import { SessionFeedbacksService } from '../session-feedbacks/session-feedbacks.service.js';
 import { curriculumOutputSchema } from '../ai/schemas/curriculum.schema.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { Curriculum } from '@prisma/client';
@@ -20,12 +21,19 @@ export class CurriculumService {
     private domainAggregation: DomainAggregationService,
     private encryptionService: EncryptionService,
     private notificationTrigger: NotificationTriggerService,
+    private sessionFeedbacksService: SessionFeedbacksService,
   ) {}
 
   async generateForChild(
     childId: string,
     userId: string,
     targetDate?: string,
+    userInput?: {
+      extraActivities?: string;
+      dailyGoal?: string;
+      weeklyGoal?: string;
+      monthlyGoal?: string;
+    },
   ): Promise<Curriculum> {
     const child = await this.prisma.child.findUnique({ where: { id: childId } });
     if (!child) {
@@ -143,6 +151,10 @@ export class CurriculumService {
         take: 3,
       });
 
+      const sessionFeedbackSummary = await this.sessionFeedbacksService
+        .buildPromptSummary(childId, 7)
+        .catch(() => null);
+
       const messages = this.promptService.buildCurriculumPrompt({
         childAgeMonths: ageMonths,
         domainScores: aggregated.domains.map((d) => ({
@@ -193,6 +205,8 @@ export class CurriculumService {
                 clinicalFindings: r.clinicalFindings,
               }))
             : undefined,
+        sessionFeedbackSummary: sessionFeedbackSummary ?? undefined,
+        userInput: userInput ?? undefined,
       });
 
       const result = await this.aiService.generateStructured(

@@ -24,6 +24,8 @@ import { ResearchPage } from './pages/ResearchPage';
 import { FamilyCollaborationPage } from './pages/FamilyCollaborationPage';
 import { LicensedAssessmentPage } from './pages/LicensedAssessmentPage';
 import { ClinicalPage } from './pages/ClinicalPage';
+import { SessionFeedbackPage } from './pages/SessionFeedbackPage';
+import { MedicationPage } from './pages/MedicationPage';
 import { DesignPreviewIndex } from './pages/design-preview/index';
 import { DesignPreviewLogin } from './pages/design-preview/DesignPreviewLogin';
 import { DesignPreviewRegister } from './pages/design-preview/DesignPreviewRegister';
@@ -67,6 +69,8 @@ export default function App() {
         <Route path="collaboration" element={<FamilyCollaborationPage />} />
         <Route path="assessment/licensed/:tool" element={<LicensedAssessmentPage />} />
         <Route path="clinical" element={<ClinicalPage />} />
+        <Route path="session-feedback" element={<SessionFeedbackPage />} />
+        <Route path="medication" element={<MedicationPage />} />
       </Route>
       <Route path="/design-preview" element={<DesignPreviewIndex />} />
       <Route path="/design-preview/login" element={<DesignPreviewLogin />} />

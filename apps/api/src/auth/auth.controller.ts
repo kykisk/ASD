@@ -64,10 +64,7 @@ export class AuthController {
   @Public()
   @Throttle({ auth: { ttl: 60000, limit: 5 } })
   @Post('refresh')
-  async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const isMobile = this.isMobileClient(req);
     const refreshToken = isMobile
       ? (req.body as { refreshToken?: string })?.refreshToken
@@ -81,17 +78,19 @@ export class AuthController {
     this.setRefreshCookie(res, req, result.refreshToken);
 
     if (isMobile) {
-      return { accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user };
+      return {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: result.user,
+      };
     }
     return { accessToken: result.accessToken, user: result.user };
   }
 
   @Post('logout')
-  async logout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const refreshToken = req.cookies?.['__auticare_rt'] || (req.body as { refreshToken?: string })?.refreshToken;
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken =
+      req.cookies?.['__auticare_rt'] || (req.body as { refreshToken?: string })?.refreshToken;
     const accessToken = req.headers.authorization?.replace('Bearer ', '');
     await this.authService.logout(refreshToken, accessToken);
     res.clearCookie('__auticare_rt', { path: '/v1/auth' });
@@ -99,10 +98,7 @@ export class AuthController {
   }
 
   @Post('logout-all')
-  async logoutAll(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logoutAll(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const accessToken = req.headers.authorization?.replace('Bearer ', '');
     const user = (req as Request & { user?: { id: string } }).user;
     if (!user) {
@@ -127,10 +123,7 @@ export class AuthController {
   @Public()
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  googleCallback(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): void {
+  googleCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response): void {
     const oauthUser = req.user as { accessToken: string; refreshToken: string };
     this.setRefreshCookie(res, req, oauthUser.refreshToken);
     const webUrl = this.configService.get<string>('WEB_URL', 'http://localhost:4200');
@@ -147,10 +140,7 @@ export class AuthController {
   @Public()
   @Get('kakao/callback')
   @UseGuards(AuthGuard('kakao'))
-  kakaoCallback(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): void {
+  kakaoCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response): void {
     const oauthUser = req.user as { accessToken: string; refreshToken: string };
     this.setRefreshCookie(res, req, oauthUser.refreshToken);
     const webUrl = this.configService.get<string>('WEB_URL', 'http://localhost:4200');
@@ -158,7 +148,7 @@ export class AuthController {
   }
 
   @Public()
-  @Post('apple')
+  @Get('apple')
   @UseGuards(AuthGuard('apple'))
   appleLogin(): void {
     return;
@@ -167,10 +157,7 @@ export class AuthController {
   @Public()
   @Post('apple/callback')
   @UseGuards(AuthGuard('apple'))
-  appleCallback(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): void {
+  appleCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response): void {
     const oauthUser = req.user as { accessToken: string; refreshToken: string };
     this.setRefreshCookie(res, req, oauthUser.refreshToken);
     const webUrl = this.configService.get<string>('WEB_URL', 'http://localhost:4200');

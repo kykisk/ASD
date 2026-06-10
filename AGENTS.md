@@ -3,12 +3,12 @@
 > AI 에이전트가 이 프로젝트에서 작업할 때 반드시 읽어야 하는 문서입니다.
 > 이 프로젝트는 자폐 아동 가정치료 지원 시스템입니다.
 
-| 항목          | 내용                            |
-| ------------- | ------------------------------- |
-| 현재 Phase    | **Phase 5 완료 + UX 구조 개선** |
-| 최종 업데이트 | 2026-06-09                      |
-| 총 커밋       | 203개                           |
-| 테스트        | 267개 통과 (3개 기존 사전 실패) |
+| 항목          | 내용                                       |
+| ------------- | ------------------------------------------ |
+| 현재 Phase    | **Phase 5 완료 + 수업 피드백 + 복약 관리** |
+| 최종 업데이트 | 2026-06-10                                 |
+| 총 커밋       | 203개                                      |
+| 테스트        | 282개 통과 (3개 기존 사전 실패)            |
 
 ---
 
@@ -893,6 +893,181 @@ ClinicalReport
 vite preview = 빌드 후 정적 서빙 + /v1 proxy
 코드 변경 후: rebuild-web.sh → restart-fe.sh
 ```
+
+---
+
+## 19. 모바일 임상 평가 UI (2026-06-09)
+
+### 19.1 구현 내용
+
+| 항목        | 내용                                               |
+| ----------- | -------------------------------------------------- |
+| 화면 파일   | `apps/mobile/app/clinical.tsx`                     |
+| 훅 파일     | `apps/mobile/hooks/use-clinical-reports.ts`        |
+| 라우팅      | More 탭 → "임상 평가" → `/clinical` (Stack push)   |
+| 탭 구조     | 평가 실행 / 외부 보고서 / 타임라인 (웹과 동일 3탭) |
+| 의존성 추가 | `expo-image-picker` (이미지 업로드)                |
+
+### 19.2 기능 상세
+
+**탭 1 (평가 실행):**
+
+- 5개 도구 카드 (M-CHAT-R/F, CARS-2, ABC 사용 가능 / ADOS-2, SCQ 준비중)
+- 카드 탭 → `licensed-assessment` 화면으로 이동 (기존 위저드 재사용)
+- 최신 점수 + 심각도 배지 표시
+- 저작권 경고 배너
+- 라이선스 평가 결과 이력 목록
+
+**탭 2 (외부 보고서):**
+
+- 보고서 목록 (도구명, 날짜, 평가자, 기관, 총점, 섹션 점수, 소견)
+- 수동 입력 폼 (펼치기/접기)
+- 사진 촬영/갤러리 → AI Vision 추출 (`expo-image-picker` + `from-image` API)
+- AI 추출 결과 미리보기 + 수정 후 저장
+- 삭제 (Platform 분기 confirm)
+
+**탭 3 (타임라인):**
+
+- 라이선스 도구 평가 + 외부 보고서 통합 시간순 뷰
+- 세로 점선 + 컬러 도트 (라이선스=primary, 외부=info)
+- 날짜, 도구명, 점수, 심각도 배지
+
+### 19.3 메뉴 변경
+
+- More 탭: "라이선스 도구" → "임상 평가" 로 변경 (통합 페이지가 라이선스 도구 포함)
+- 아이콘 동일 유지 (🏥)
+
+---
+
+## 20. 수업 피드백 기능 (2026-06-10)
+
+### 20.1 개요
+
+매일 ABA/언어치료/감각통합 등 수업 후 치료사 피드백을 부모가 기록하는 기능.
+3계층 AI 파이프라인으로 방대한 일일 데이터를 커리큘럼 AI에 효율적으로 주입.
+
+### 20.2 신규 Prisma 모델
+
+| 모델              | 목적                                                                  |
+| ----------------- | --------------------------------------------------------------------- |
+| `SessionFeedback` | 수업별 피드백 (rating 1-5, content, progress, challenges, homeWork)   |
+| `FeedbackDigest`  | 주간 AI 요약 캐시 (weekKey 기준 upsert, @@unique([childId, weekKey])) |
+
+### 20.3 API 엔드포인트
+
+| Method   | Path                                           | 설명                                           |
+| -------- | ---------------------------------------------- | ---------------------------------------------- |
+| `POST`   | `/children/:id/session-feedbacks`              | 피드백 생성                                    |
+| `GET`    | `/children/:id/session-feedbacks`              | 목록 (페이지네이션, from/to/sessionType 필터)  |
+| `GET`    | `/children/:id/session-feedbacks/stats`        | 수업별 통계 (30일)                             |
+| `GET`    | `/children/:id/session-feedbacks/autocomplete` | sessionType/therapistName/institution 자동완성 |
+| `PATCH`  | `/session-feedbacks/:id`                       | 수정 (본인만)                                  |
+| `DELETE` | `/session-feedbacks/:id`                       | 삭제 (본인만)                                  |
+| `GET`    | `/children/:id/feedback-digests`               | 주간 요약 목록                                 |
+| `POST`   | `/children/:id/feedback-digests/generate`      | 수동 AI 요약 생성                              |
+
+### 20.4 AI 파이프라인
+
+```
+Layer 1 (Raw)     → SessionFeedback DB 저장 (매일 입력)
+Layer 2 (Weekly)  → FeedbackDigestBatchService (일요일 21:00)
+                    최소 3건 이상 → sessionType별 그룹핑 + truncation → AI 호출
+                    결과: FeedbackDigest upsert (weekKey 기준)
+Layer 3 (Prompt)  → CurriculumPromptService 8번째 소스
+                    buildPromptSummary(childId, 7일) → ≤200 토큰으로 압축 주입
+```
+
+AI feature key: `FEEDBACK_DIGEST` (Haiku 추천)
+
+### 20.5 대시보드 연동
+
+- `FEEDBACK_REMINDER` alert 타입 추가: 최근 3일 피드백 없으면 표시
+
+### 20.6 모듈 위치
+
+```
+apps/api/src/session-feedbacks/
+├── session-feedbacks.service.ts      ← CRUD + buildPromptSummary
+├── session-feedbacks.controller.ts   ← 8개 엔드포인트
+├── session-feedbacks.module.ts
+├── feedback-digest.service.ts        ← AI 요약 생성 + weekKey 관리
+├── feedback-digest-batch.service.ts  ← node-cron 0 21 * * 0
+└── session-feedbacks.service.spec.ts ← 18개 테스트
+```
+
+### 20.7 웹 UI
+
+- `/session-feedback` 페이지 (2탭: 피드백 목록 + AI 주간 요약)
+- `SessionFeedbackModal.tsx` — 작성 모달 (필수/선택 필드 + 자동완성)
+- 사이드바 "치료 관리" 그룹에 "수업 피드백" 메뉴 추가
+- `SchedulePage.tsx` — 일정 카드에 "피드백 작성" CTA 버튼
+
+### 20.8 모바일 UI
+
+- `apps/mobile/app/session-feedback.tsx` — 3탭 (최근/전체/AI요약) + 인라인 작성폼
+- More 탭 치료 도구 섹션에 "수업 피드백 📝" 메뉴 추가
+- `apps/mobile/app/(tabs)/schedule.tsx` — 지난 일정 카드에 피드백 버튼
+
+---
+
+## 21. 복약 관리 기능 (2026-06-10)
+
+### 21.1 개요
+
+의사가 처방한 약물 복용 기록 보조 도구. AI 약물 추천/처방 제안은 절대 금지.
+면책 고지 문구 필수 표시.
+
+### 21.2 신규 Prisma 모델
+
+| 모델                 | 목적                                               |
+| -------------------- | -------------------------------------------------- |
+| `Medication`         | 약물 정보 (soft delete: isActive=false)            |
+| `MedicationLog`      | 일별 복용 기록 (@@unique([medicationId, logDate])) |
+| `MedicationReaction` | 복용 후 반응 관찰 (기분 척도, 이상반응 체크리스트) |
+
+### 21.3 API 엔드포인트
+
+| Method   | Path                               | 설명                             |
+| -------- | ---------------------------------- | -------------------------------- |
+| `POST`   | `/children/:id/medications`        | 약물 등록                        |
+| `GET`    | `/children/:id/medications`        | 목록 (activeOnly 필터)           |
+| `PATCH`  | `/medications/:id`                 | 수정 (isActive 포함)             |
+| `DELETE` | `/medications/:id`                 | soft delete (isActive=false)     |
+| `POST`   | `/medications/:id/logs`            | 복용 기록 upsert (날짜 기준)     |
+| `GET`    | `/children/:id/medication-logs`    | 기간별 복용 이력                 |
+| `POST`   | `/medications/:id/reactions`       | 반응 기록                        |
+| `GET`    | `/medications/:id/reactions`       | 반응 이력                        |
+| `GET`    | `/children/:id/medication-summary` | 복용률 + 반응 집계 (진료 요약용) |
+
+### 21.4 모듈 위치
+
+```
+apps/api/src/medications/
+├── medications.service.ts    ← CRUD + logs + reactions + summary
+├── medications.controller.ts ← 9개 엔드포인트
+└── medications.module.ts
+```
+
+### 21.5 웹 UI
+
+- 사이드바 "건강 관리" 그룹 (신규) → "복약 관리" (`/medication`)
+- 3탭: 약물 목록 / 복용 기록 / 진료 요약
+- 면책 고지 배너 상단 상시 노출
+- 진료 요약: 복용률 차트 + 이상반응 이력 → 클립보드 복사
+
+### 21.6 모바일 UI
+
+- More 탭 "건강 관리" 그룹 (신규) → "복약 관리 💊"
+- 3탭: 오늘 / 기록 / 약물 관리
+- 오늘 탭: 오늘 복용 여부 원탭 체크
+
+### 21.7 이상반응 체크리스트
+
+발진, 식욕감소, 수면변화, 과잉행동, 무기력, 구토, 기타
+
+### 21.8 면책 고지 문구 (CRITICAL)
+
+> ⚠️ 이 기능은 의사가 처방한 약물의 복용을 기록하는 보조 도구입니다. 약물 추가 또는 변경은 반드시 전문 의료진과 상담하세요.
 
 ---
 

@@ -34,23 +34,33 @@ export function useTodayCurriculum(childId: string | null) {
   });
 }
 
+export interface GenerateCurriculumInput {
+  extraActivities?: string;
+  dailyGoal?: string;
+  weeklyGoal?: string;
+  monthlyGoal?: string;
+}
+
 export function useGenerateCurriculum() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (childId: string) => {
+    mutationFn: async ({
+      childId,
+      input,
+    }: {
+      childId: string;
+      input?: GenerateCurriculumInput;
+    }) => {
       const { data } = await api.post<{ success: true; data: Curriculum }>(
         `/children/${childId}/curriculum/generate`,
+        input ?? {},
       );
       return data.data;
     },
-    onSuccess: (result, childId) => {
-      queryClient.invalidateQueries({
-        queryKey: ['curriculum', 'today', childId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['curriculum', 'history', childId],
-      });
+    onSuccess: (result, { childId }) => {
+      queryClient.invalidateQueries({ queryKey: ['curriculum', 'today', childId] });
+      queryClient.invalidateQueries({ queryKey: ['curriculum', 'history', childId] });
     },
   });
 }
@@ -72,10 +82,13 @@ export function useLogActivity() {
       result: ActivityResult;
       notes?: string;
     }) => {
-      const { data } = await api.post<{ success: true; data: ActivityLog }>(
-        `/activities`,
-        { curriculumId, activityIndex, activityTitle, result, notes },
-      );
+      const { data } = await api.post<{ success: true; data: ActivityLog }>(`/activities`, {
+        curriculumId,
+        activityIndex,
+        activityTitle,
+        result,
+        notes,
+      });
       return data.data;
     },
     onSuccess: () => {

@@ -14,13 +14,14 @@ interface WeekViewProps {
   currentDate: Date;
   schedules: Schedule[];
   onEventClick?: (schedule: Schedule) => void;
+  onFeedbackClick?: (schedule: Schedule) => void;
 }
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const HOUR_HEIGHT = 48;
 
-export function WeekView({ currentDate, schedules, onEventClick }: WeekViewProps) {
+export function WeekView({ currentDate, schedules, onEventClick, onFeedbackClick }: WeekViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -86,13 +87,17 @@ export function WeekView({ currentDate, schedules, onEventClick }: WeekViewProps
           {weekDays.map((day, i) => {
             const dayAllDay = getEventsForDay(day, allDayEvents);
             return (
-              <div key={i} className="border-r border-neutral-100 last:border-r-0 p-0.5 space-y-0.5">
+              <div
+                key={i}
+                className="border-r border-neutral-100 last:border-r-0 p-0.5 space-y-0.5"
+              >
                 {dayAllDay.map((event) => (
                   <EventBlock
                     key={event.id}
                     schedule={event}
                     compact
                     onClick={onEventClick}
+                    onFeedbackClick={onFeedbackClick}
                   />
                 ))}
               </div>

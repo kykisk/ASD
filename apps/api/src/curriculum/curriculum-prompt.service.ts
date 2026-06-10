@@ -56,6 +56,13 @@ export interface CurriculumPromptParams {
   recentMilestones?: string[];
   licensedScores?: LicensedScoreSnapshot[];
   clinicalReports?: ClinicalReportSnapshot[];
+  sessionFeedbackSummary?: string;
+  userInput?: {
+    extraActivities?: string;
+    dailyGoal?: string;
+    weeklyGoal?: string;
+    monthlyGoal?: string;
+  };
 }
 
 @Injectable()
@@ -170,6 +177,25 @@ ${domainText}`;
         }
       }
       userContent += `위 외부 평가 결과를 종합하여 치료 방향에 반영해주세요.\n`;
+    }
+
+    if (params.sessionFeedbackSummary) {
+      userContent += `\n\n최근 수업 피드백 요약 (치료사 피드백 기반):\n${params.sessionFeedbackSummary}\n위 수업 피드백을 참고하여 센터 치료와 연계된 가정 활동을 설계해주세요.\n`;
+    }
+
+    if (params.userInput) {
+      const ui = params.userInput;
+      const hasGoals = ui.dailyGoal || ui.weeklyGoal || ui.monthlyGoal;
+      const hasExtra = ui.extraActivities;
+
+      if (hasGoals || hasExtra) {
+        userContent += `\n\n부모 요청사항 (최우선 반영):\n`;
+        if (ui.monthlyGoal) userContent += `- 월간 목표: ${ui.monthlyGoal}\n`;
+        if (ui.weeklyGoal) userContent += `- 주간 목표: ${ui.weeklyGoal}\n`;
+        if (ui.dailyGoal) userContent += `- 오늘의 목표: ${ui.dailyGoal}\n`;
+        if (ui.extraActivities) userContent += `- 포함해달라는 활동/공부: ${ui.extraActivities}\n`;
+        userContent += `위 부모의 요청사항을 활동 설계에 반드시 반영해주세요.\n`;
+      }
     }
 
     userContent += `\n오늘(${params.targetDate}) 커리큘럼을 생성해주세요.

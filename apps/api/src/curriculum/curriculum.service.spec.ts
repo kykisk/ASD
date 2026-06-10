@@ -54,6 +54,12 @@ const mockPrismaService = {
   sensoryProfile: {
     findFirst: vi.fn(),
   },
+  clinicalReport: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  sessionFeedback: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
 };
 
 const mockAiService = {
@@ -70,6 +76,10 @@ const mockDomainAggregation = {
 
 const mockNotificationTrigger = {
   triggerCurriculumReady: vi.fn().mockResolvedValue(undefined),
+};
+
+const mockSessionFeedbacksService = {
+  buildPromptSummary: vi.fn().mockResolvedValue(null),
 };
 
 const defaultAggregationResult = {
@@ -141,6 +151,9 @@ describe('CurriculumService', () => {
     Object.defineProperty(service, 'domainAggregation', { value: mockDomainAggregation });
     Object.defineProperty(service, 'encryptionService', { value: mockEncryptionService });
     Object.defineProperty(service, 'notificationTrigger', { value: mockNotificationTrigger });
+    Object.defineProperty(service, 'sessionFeedbacksService', {
+      value: mockSessionFeedbacksService,
+    });
   });
 
   describe('generateForChild', () => {

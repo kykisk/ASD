@@ -1,9 +1,16 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body } from '@nestjs/common';
 import { UserRole } from '@auticare/prisma-client';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { CurriculumService } from './curriculum.service.js';
 import { CurriculumBatchService } from './curriculum-batch.service.js';
+
+export interface GenerateCurriculumInput {
+  extraActivities?: string;
+  dailyGoal?: string;
+  weeklyGoal?: string;
+  monthlyGoal?: string;
+}
 
 @Controller()
 export class CurriculumController {
@@ -13,8 +20,12 @@ export class CurriculumController {
   ) {}
 
   @Post('children/:childId/curriculum/generate')
-  async generate(@Param('childId') childId: string, @CurrentUser() user: { id: string }) {
-    return this.curriculumService.generateForChild(childId, user.id);
+  async generate(
+    @Param('childId') childId: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: GenerateCurriculumInput = {},
+  ) {
+    return this.curriculumService.generateForChild(childId, user.id, undefined, body);
   }
 
   @Get('children/:childId/curriculum/today')

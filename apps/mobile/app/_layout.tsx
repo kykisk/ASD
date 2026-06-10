@@ -126,6 +126,18 @@ export default function RootLayout() {
             name="research"
             options={{ headerShown: true, title: '연구 브리핑', presentation: 'card' }}
           />
+          <Stack.Screen
+            name="clinical"
+            options={{ headerShown: true, title: '임상 평가', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="medication"
+            options={{ headerShown: true, title: '복약 관리', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="session-feedback"
+            options={{ headerShown: true, title: '수업 피드백', presentation: 'card' }}
+          />
         </Stack>
       </AuthGate>
       <StatusBar style="dark" />

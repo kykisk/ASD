@@ -19,7 +19,7 @@ export interface TodaySchedule {
 }
 
 export interface DashboardAlert {
-  type: 'ASSESSMENT_DUE' | 'MILESTONE' | 'NO_SCHEDULE' | 'RE_EVALUATION_DUE';
+  type: 'ASSESSMENT_DUE' | 'MILESTONE' | 'NO_SCHEDULE' | 'RE_EVALUATION_DUE' | 'FEEDBACK_REMINDER';
   message: string;
   severity: 'info' | 'warning';
   detail?: string;
@@ -371,6 +371,20 @@ export class DashboardService {
         detail: lastReport
           ? `마지막 평가: ${monthsAgo}개월 전 (연 1회 권고)`
           : '외부 기관 평가 보고서가 없습니다',
+      });
+    }
+
+    const threeDaysAgoFeedback = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const recentFeedbackCount = await this.prisma.sessionFeedback.count({
+      where: { childId, sessionDate: { gte: threeDaysAgoFeedback } },
+    });
+    if (recentFeedbackCount === 0) {
+      alerts.push({
+        type: 'FEEDBACK_REMINDER',
+        message: '수업 피드백을 입력해주세요',
+        severity: 'info',
+        detail:
+          '최근 3일간 수업 피드백이 없어요. 치료사 피드백을 기록하면 AI 커리큘럼이 더 정확해집니다.',
       });
     }
 

@@ -37,6 +37,7 @@ import { WeekView } from '../components/calendar/WeekView';
 import { DayView } from '../components/calendar/DayView';
 import { ScheduleFormModal } from '../components/calendar/ScheduleFormModal';
 import { RecurringEditDialog } from '../components/calendar/RecurringEditDialog';
+import { SessionFeedbackModal } from '../components/session-feedback/SessionFeedbackModal';
 
 const ALL_CATEGORIES: ScheduleCategory[] = [
   'THERAPY',
@@ -102,6 +103,8 @@ export function SchedulePage() {
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackScheduleId, setFeedbackScheduleId] = useState<string | null>(null);
 
   const { selectedChildId } = useChildStore();
   const childId = selectedChildId;
@@ -282,6 +285,12 @@ export function SchedulePage() {
     [deleteSchedule, handleModalClose],
   );
 
+  const handleFeedbackClick = useCallback((schedule: Schedule) => {
+    const realId = schedule.id.includes('_') ? schedule.id.split('_')[0] : schedule.id;
+    setFeedbackScheduleId(realId);
+    setShowFeedbackModal(true);
+  }, []);
+
   const allActive = activeCategories.size === ALL_CATEGORIES.length;
 
   return (
@@ -296,16 +305,27 @@ export function SchedulePage() {
           <h1 className="text-2xl font-bold text-neutral-800">일정</h1>
           <p className="text-sm text-neutral-500 mt-0.5">아이의 일정을 관리하세요</p>
         </div>
-        <button
-          onClick={handleToggleAiPanel}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] text-sm font-semibold transition-all ${
-            showAiPanel
-              ? 'bg-[#5B8A72] text-white shadow-[0_4px_12px_rgba(91,138,114,0.25)]'
-              : 'bg-[#5B8A72]/[0.08] text-[#5B8A72] hover:bg-[#5B8A72]/[0.15]'
-          }`}
-        >
-          <span>🤖</span> AI 스케줄 제안
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setFeedbackScheduleId(null);
+              setShowFeedbackModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] text-sm font-semibold bg-[#e8f5ee] text-[#5B8A72] hover:bg-[#d4edde] transition-all"
+          >
+            <span>📝</span> 수업 피드백 추가
+          </button>
+          <button
+            onClick={handleToggleAiPanel}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] text-sm font-semibold transition-all ${
+              showAiPanel
+                ? 'bg-[#5B8A72] text-white shadow-[0_4px_12px_rgba(91,138,114,0.25)]'
+                : 'bg-[#5B8A72]/[0.08] text-[#5B8A72] hover:bg-[#5B8A72]/[0.15]'
+            }`}
+          >
+            <span>🤖</span> AI 스케줄 제안
+          </button>
+        </div>
       </div>
 
       <CalendarHeader
@@ -451,6 +471,7 @@ export function SchedulePage() {
             currentDate={currentDate}
             schedules={filteredSchedules}
             onEventClick={handleEventClick}
+            onFeedbackClick={handleFeedbackClick}
           />
         )}
         {viewMode === 'week' && (
@@ -458,6 +479,7 @@ export function SchedulePage() {
             currentDate={currentDate}
             schedules={filteredSchedules}
             onEventClick={handleEventClick}
+            onFeedbackClick={handleFeedbackClick}
           />
         )}
         {viewMode === 'day' && (
@@ -465,6 +487,7 @@ export function SchedulePage() {
             currentDate={currentDate}
             schedules={filteredSchedules}
             onEventClick={handleEventClick}
+            onFeedbackClick={handleFeedbackClick}
           />
         )}
       </div>
@@ -504,6 +527,15 @@ export function SchedulePage() {
           setShowRecurringDialog(false);
           setPendingSave(null);
         }}
+      />
+
+      <SessionFeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => {
+          setShowFeedbackModal(false);
+          setFeedbackScheduleId(null);
+        }}
+        defaultScheduleId={feedbackScheduleId}
       />
     </div>
   );

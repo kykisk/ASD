@@ -14,6 +14,7 @@ const FEATURES = [
   'SENSORY',
   'EMERGENCY',
   'CLINICAL_REPORT_IMPORT',
+  'FEEDBACK_DIGEST',
 ];
 
 @Injectable()

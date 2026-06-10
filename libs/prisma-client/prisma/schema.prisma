@@ -44,6 +44,7 @@ model User {
   activityComments  ActivityComment[]
   roleAssignments   RoleAssignment[]  @relation("AssignedToUser")
   createdRoleAssignments RoleAssignment[] @relation("AssignedByUser")
+  sessionFeedbacks  SessionFeedback[]
 
   @@index([email])
   @@index([role])
@@ -178,6 +179,11 @@ model Family {
   researchDigests  ResearchDigest[]
   roleAssignments  RoleAssignment[]
   licenses         License[]
+  sessionFeedbacks SessionFeedback[]
+  feedbackDigests  FeedbackDigest[]
+  medications      Medication[]
+  medicationLogs   MedicationLog[]
+  medicationReactions MedicationReaction[]
 }
 
 model FamilyMember {
@@ -234,6 +240,11 @@ model Child {
   researchMatches  ResearchUserMatch[]
   researchDigests  ResearchDigest[]
   clinicalReports  ClinicalReport[]
+  sessionFeedbacks SessionFeedback[]
+  feedbackDigests  FeedbackDigest[]
+  medications      Medication[]
+  medicationLogs   MedicationLog[]
+  medicationReactions MedicationReaction[]
 
   @@index([familyId])
 }
@@ -267,6 +278,7 @@ model Schedule {
 
   child          Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
   family         Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  feedbacks      SessionFeedback[]
 
   @@index([childId])
   @@index([familyId])
@@ -796,4 +808,145 @@ model ClinicalReport {
   @@index([childId])
   @@index([assessmentDate])
   @@index([createdAt])
+}
+
+// ============================================================
+// Phase 6 — Session Feedback
+// ============================================================
+
+model SessionFeedback {
+  id            String    @id @default(cuid())
+  childId       String
+  familyId      String
+  userId        String    // 작성자 (부모)
+
+  // 수업 정보
+  sessionDate   DateTime  // 수업 실시일
+  sessionType   String    // 'ABA', '언어치료', '감각통합', '작업치료', '행동치료', 기타
+  therapistName String?   // 선생님 이름 (자동완성용)
+  institution   String?   // 센터명 (자동완성용)
+  durationMin   Int?      // 수업 시간 (분)
+
+  // 일정 연결 (옵션)
+  scheduleId    String?   // 기존 Schedule과 연결 (null=비등록 수업)
+
+  // 피드백 핵심
+  rating        Int       // 1-5 전반적 수업 만족도
+  content       String    // 치료사 피드백 본문
+  progress      String?   // 잘한 점 / 진전사항
+  challenges    String?   // 어려웠던 점
+  homeWork      String?   // 가정 연습 과제
+  parentNote    String?   // 부모 추가 메모
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  child         Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family        Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedule      Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([childId, sessionDate])
+  @@index([familyId, sessionDate])
+  @@index([childId, sessionType])
+}
+
+model FeedbackDigest {
+  id              String   @id @default(cuid())
+  childId         String
+  familyId        String
+  weekKey         String   // '2026-W24' 형식
+
+  // AI 생성 요약
+  summary         String
+  bySessionType   Json     // { "ABA": { count, avgRating, keyProgress, keyChallenges }, ... }
+  highlights      String[]
+  concerns        String[]
+  homeWorkSummary String?
+
+  feedbackCount   Int
+  periodStart     DateTime
+  periodEnd       DateTime
+
+  createdAt       DateTime @default(now())
+
+  child           Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family          Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, weekKey])
+  @@index([familyId, weekKey])
+}
+
+// ============================================================
+// Phase 7 — Medication Management
+// ============================================================
+
+model Medication {
+  id             String    @id @default(cuid())
+  childId        String
+  familyId       String
+
+  name           String
+  dosage         String?
+  method         String?
+  prescribedBy   String?
+  startDate      DateTime
+  endDate        DateTime?
+  frequency      String?
+  notes          String?
+  isActive       Boolean   @default(true)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  child          Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family         Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  logs           MedicationLog[]
+  reactions      MedicationReaction[]
+
+  @@index([childId, isActive])
+  @@index([familyId])
+}
+
+model MedicationLog {
+  id             String    @id @default(cuid())
+  medicationId   String
+  childId        String
+  familyId       String
+
+  logDate        DateTime
+  taken          Boolean
+  takenAt        DateTime?
+  skippedReason  String?
+
+  createdAt      DateTime  @default(now())
+
+  medication     Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  child          Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family         Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([medicationId, logDate])
+  @@index([childId, logDate])
+}
+
+model MedicationReaction {
+  id              String    @id @default(cuid())
+  medicationId    String
+  childId         String
+  familyId        String
+
+  observedAt      DateTime
+  moodScore       Int?
+  notes           String?
+  sideEffects     String[]
+  hasAnySideEffect Boolean  @default(false)
+
+  createdAt       DateTime  @default(now())
+
+  medication      Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  child           Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family          Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([medicationId, observedAt])
+  @@index([childId, observedAt])
 }
