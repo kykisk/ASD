@@ -400,12 +400,7 @@ export function ResearchPage() {
     loadMore: feedLoadMore,
     isLoading: feedLoading,
     isInitialLoading: feedInitialLoading,
-    resetAndFetch: feedReset,
   } = useResearchFeedPaginated(debouncedSearch);
-
-  useEffect(() => {
-    feedReset();
-  }, [feedReset]);
 
   const {
     data: bookmarks,

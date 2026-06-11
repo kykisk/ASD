@@ -95,11 +95,9 @@ export function useResearchFeedPaginated(search?: string, limit = 20) {
     [search, limit],
   );
 
-  const resetAndFetch = useCallback(() => {
+  useEffect(() => {
     setItems([]);
     setOffset(0);
-    setTotal(0);
-    setHasMore(false);
     setIsInitialLoading(true);
     fetchPage(0, false);
   }, [fetchPage]);
@@ -110,7 +108,7 @@ export function useResearchFeedPaginated(search?: string, limit = 20) {
     }
   }, [isLoading, hasMore, offset, fetchPage]);
 
-  return { items, total, hasMore, loadMore, isLoading, isInitialLoading, resetAndFetch };
+  return { items, total, hasMore, loadMore, isLoading, isInitialLoading };
 }
 
 export function useBookmarks() {
