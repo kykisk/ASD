@@ -49,63 +49,6 @@ export function useResearchFeed(childId?: string | null, search?: string, limit 
   });
 }
 
-export function useResearchFeedPaginated(search?: string, limit = 20) {
-  const [items, setItems] = useState<ResearchMatch[]>([]);
-  const [offset, setOffset] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-
-  const fetchPage = useCallback(
-    async (pageOffset: number, append: boolean) => {
-      setIsLoading(true);
-      try {
-        const searchParams = new URLSearchParams();
-        if (search) searchParams.set('search', search);
-        searchParams.set('limit', String(limit));
-        searchParams.set('offset', String(pageOffset));
-        const qs = searchParams.toString();
-        const { data } = await api.get<{ success: true; data: ResearchFeedResponse }>(
-          `/research/feed?${qs}`,
-        );
-        const raw = data.data as ResearchFeedResponse | ResearchMatch[];
-        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
-        const total = Array.isArray(raw) ? raw.length : (raw?.total ?? 0);
-        const hasMoreFlag = Array.isArray(raw) ? false : (raw?.hasMore ?? false);
-        const newOffset = pageOffset + items.length;
-        setTotal(total);
-        setHasMore(hasMoreFlag);
-        setOffset(newOffset);
-        if (append) {
-          setItems((prev) => [...prev, ...items]);
-        } else {
-          setItems(items);
-        }
-      } finally {
-        setIsLoading(false);
-        setIsInitialLoading(false);
-      }
-    },
-    [search, limit],
-  );
-
-  useEffect(() => {
-    setItems([]);
-    setOffset(0);
-    setIsInitialLoading(true);
-    fetchPage(0, false);
-  }, [fetchPage]);
-
-  const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      fetchPage(offset, true);
-    }
-  }, [isLoading, hasMore, offset, fetchPage]);
-
-  return { items, total, hasMore, loadMore, isLoading, isInitialLoading };
-}
-
 export function useBookmarks() {
   return useQuery({
     queryKey: ['research', 'bookmarks'],
