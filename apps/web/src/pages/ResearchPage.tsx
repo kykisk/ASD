@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useChildStore } from '../stores/child.store';
 import {
-  useResearchFeedPaginated,
+  useResearchFeed,
   useBookmarks,
   useBookmarkArticle,
   useMarkAsRead,
@@ -387,20 +387,23 @@ export function ResearchPage() {
   const [digest, setDigest] = useState<AiDigestResult | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [feedLimit, setFeedLimit] = useState(20);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setFeedLimit(20);
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const {
-    items: feedItems,
-    total: feedTotal,
-    hasMore: feedHasMore,
-    loadMore: feedLoadMore,
-    isLoading: feedLoading,
-    isInitialLoading: feedInitialLoading,
-  } = useResearchFeedPaginated(debouncedSearch);
+  const { data: feedItems = [], isLoading: feedInitialLoading } = useResearchFeed(
+    undefined,
+    debouncedSearch ? { search: debouncedSearch, limit: feedLimit } : { limit: feedLimit },
+  );
+
+  const feedHasMore = feedItems.length === feedLimit;
+  const feedLoadMore = () => setFeedLimit((prev) => prev + 20);
 
   const {
     data: bookmarks,
@@ -554,7 +557,7 @@ export function ResearchPage() {
         />
         {debouncedSearch && (tab === 'feed' || tab === 'bookmarks') && (
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-neutral-500">
-            {tab === 'feed' ? feedTotal : (filteredBookmarks?.length ?? 0)}건 결과
+            {tab === 'feed' ? feedItems.length : (filteredBookmarks?.length ?? 0)}건 결과
           </span>
         )}
       </div>
@@ -591,10 +594,10 @@ export function ResearchPage() {
             {feedHasMore && (
               <button
                 onClick={feedLoadMore}
-                disabled={feedLoading}
+                disabled={feedInitialLoading}
                 className="w-full py-3 rounded-xl border border-[#e8e4df] text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
               >
-                {feedLoading ? (
+                {feedInitialLoading ? (
                   <>
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle
