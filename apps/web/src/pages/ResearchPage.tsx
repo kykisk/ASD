@@ -80,15 +80,30 @@ function DigestHistoryCard({
                 <button
                   key={i}
                   onClick={() => onOpenArticle(a.pubmedId)}
-                  className="w-full flex gap-2 text-sm text-left hover:bg-primary-100 rounded-lg p-1 -m-1 transition-colors"
+                  className="w-full flex gap-2 text-sm text-left hover:bg-primary-100 rounded-lg p-1.5 transition-colors group"
                 >
                   <span className="w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">
                     {i + 1}
                   </span>
-                  <div>
-                    <p className="font-medium text-neutral-800 line-clamp-1 hover:underline">
-                      {a.title}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p className="font-medium text-[#5B8A72] underline underline-offset-2 decoration-[#5B8A72]/40 line-clamp-1 group-hover:decoration-[#5B8A72]">
+                        {a.title}
+                      </p>
+                      <svg
+                        className="w-3 h-3 text-[#5B8A72] shrink-0 opacity-60"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                        />
+                      </svg>
+                    </div>
                     {a.reason && <p className="text-neutral-500 text-xs mt-0.5">{a.reason}</p>}
                   </div>
                 </button>
@@ -533,15 +548,30 @@ export function ResearchPage() {
                 <button
                   key={i}
                   onClick={() => handleOpenArticle(a.pubmedId)}
-                  className="w-full flex gap-2 text-sm text-left hover:bg-primary-100 rounded-lg p-1 -m-1 transition-colors"
+                  className="w-full flex gap-2 text-sm text-left hover:bg-primary-100 rounded-lg p-1.5 transition-colors group"
                 >
                   <span className="shrink-0 w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">
                     {i + 1}
                   </span>
-                  <div>
-                    <p className="font-medium text-neutral-800 line-clamp-1 hover:underline">
-                      {a.title}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p className="font-medium text-[#5B8A72] underline underline-offset-2 decoration-[#5B8A72]/40 line-clamp-1 group-hover:decoration-[#5B8A72]">
+                        {a.title}
+                      </p>
+                      <svg
+                        className="w-3 h-3 text-[#5B8A72] shrink-0 opacity-60"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                        />
+                      </svg>
+                    </div>
                     <p className="text-neutral-500 text-xs mt-0.5">{a.reason}</p>
                   </div>
                 </button>
