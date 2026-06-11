@@ -23,12 +23,14 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
+pkill -f "vite preview" 2>/dev/null || true
+
 for PORT in 4200 4201 4202; do
   PIDS=$(lsof -ti :$PORT 2>/dev/null || true)
   [ -n "$PIDS" ] && kill -9 $PIDS 2>/dev/null || true
 done
 
-sleep 1
+sleep 2
 
 echo "🌐 Web 서버 시작 중 (vite preview + proxy)..."
 cd "$ROOT"
