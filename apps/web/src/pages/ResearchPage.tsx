@@ -17,9 +17,15 @@ import {
 } from '../hooks/use-research';
 import { PageHeader, ErrorState, EmptyState, LoadingSpinner } from '../components/ui';
 
-function DigestHistoryCard({ item }: { item: DigestHistoryItem }) {
+function DigestHistoryCard({
+  item,
+  onOpenArticle,
+}: {
+  item: DigestHistoryItem;
+  onOpenArticle: (pubmedId: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
-  const topArticles = item.topArticles as { title: string; reason: string }[];
+  const topArticles = item.topArticles as { pubmedId: string; title: string; reason: string }[];
 
   return (
     <div className="bg-white rounded-xl border border-[#E8E4DF] overflow-hidden">
@@ -71,15 +77,21 @@ function DigestHistoryCard({ item }: { item: DigestHistoryItem }) {
                 TOP 추천 논문
               </p>
               {topArticles.map((a, i) => (
-                <div key={i} className="flex gap-2 text-sm">
-                  <span className="w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold shrink-0">
+                <button
+                  key={i}
+                  onClick={() => onOpenArticle(a.pubmedId)}
+                  className="w-full flex gap-2 text-sm text-left hover:bg-primary-100 rounded-lg p-1 -m-1 transition-colors"
+                >
+                  <span className="w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">
                     {i + 1}
                   </span>
                   <div>
-                    <p className="font-medium text-neutral-800 line-clamp-1">{a.title}</p>
+                    <p className="font-medium text-neutral-800 line-clamp-1 hover:underline">
+                      {a.title}
+                    </p>
                     {a.reason && <p className="text-neutral-500 text-xs mt-0.5">{a.reason}</p>}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -414,6 +426,17 @@ export function ResearchPage() {
   const unarchiveMutation = useUnarchiveArticle();
   const deleteArchivedMutation = useDeleteArchived();
 
+  const handleOpenArticle = (pubmedId: string) => {
+    const match =
+      feed?.find((item) => item.article.pubmedId === pubmedId) ??
+      bookmarks?.find((item) => item.article.pubmedId === pubmedId);
+    if (match) {
+      setSelectedArticle(match);
+    } else {
+      window.open(`https://pubmed.ncbi.nlm.nih.gov/${pubmedId}/`, '_blank');
+    }
+  };
+
   const isLoading =
     tab === 'feed'
       ? feedLoading
@@ -507,15 +530,21 @@ export function ResearchPage() {
                 TOP 추천 논문
               </p>
               {digest.topArticles.map((a, i) => (
-                <div key={i} className="flex gap-2 text-sm">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">
+                <button
+                  key={i}
+                  onClick={() => handleOpenArticle(a.pubmedId)}
+                  className="w-full flex gap-2 text-sm text-left hover:bg-primary-100 rounded-lg p-1 -m-1 transition-colors"
+                >
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">
                     {i + 1}
                   </span>
                   <div>
-                    <p className="font-medium text-neutral-800 line-clamp-1">{a.title}</p>
+                    <p className="font-medium text-neutral-800 line-clamp-1 hover:underline">
+                      {a.title}
+                    </p>
                     <p className="text-neutral-500 text-xs mt-0.5">{a.reason}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -658,7 +687,9 @@ export function ResearchPage() {
       {tab === 'history' && (
         <div className="space-y-3">
           {digests?.length ? (
-            digests.map((d: DigestHistoryItem) => <DigestHistoryCard key={d.id} item={d} />)
+            digests.map((d: DigestHistoryItem) => (
+              <DigestHistoryCard key={d.id} item={d} onOpenArticle={handleOpenArticle} />
+            ))
           ) : (
             <EmptyState
               title="AI 요약 히스토리가 없습니다"
