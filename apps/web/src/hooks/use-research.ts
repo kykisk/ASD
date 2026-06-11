@@ -28,10 +28,6 @@ export interface AiDigestResult {
   generatedAt: string;
 }
 
-export interface ArchivedMatch extends ResearchMatch {
-  isArchived: boolean;
-}
-
 export function useResearchFeed(childId?: string | null, search?: string, limit = 20) {
   return useQuery({
     queryKey: ['research', 'feed', childId, search, limit],
@@ -42,7 +38,7 @@ export function useResearchFeed(childId?: string | null, search?: string, limit 
       if (search) sp.set('search', search);
       sp.set('limit', String(limit));
       const { data } = await api.get<{ success: true; data: ResearchMatch[] }>(
-        `/research/feed${sp.toString() ? `?${sp.toString()}` : ''}`,
+        `/research/feed?${sp.toString()}`,
       );
       return (data.data ?? []) as ResearchMatch[];
     },
@@ -99,6 +95,19 @@ export function useGenerateAiDigest() {
       queryClient.invalidateQueries({ queryKey: ['research', 'digests', childId] });
     },
   });
+}
+
+export interface ArchivedMatch {
+  id: string;
+  articleId: string;
+  archivedAt: string;
+  article: {
+    pubmedId: string;
+    title: string;
+    journal: string;
+    publishedAt: string;
+    tags?: string[];
+  };
 }
 
 export interface DigestHistoryItem {
