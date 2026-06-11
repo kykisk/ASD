@@ -105,11 +105,13 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3
-            className={`text-sm font-semibold text-neutral-800 ${expanded ? '' : 'line-clamp-2'}`}
-          >
-            {item.article.title}
-          </h3>
+          {expanded ? (
+            <h3 className="text-sm font-semibold text-neutral-800">{item.article.title}</h3>
+          ) : (
+            <h3 className="text-sm font-semibold text-neutral-800 line-clamp-2">
+              {item.article.title}
+            </h3>
+          )}
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <p className="text-xs text-neutral-500">{item.article.journal}</p>
             <span
@@ -177,13 +179,16 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
         </div>
       </div>
 
-      {item.article.koreanSummary && (
-        <p
-          className={`mt-3 text-sm text-neutral-600 leading-relaxed ${expanded ? '' : 'line-clamp-3'}`}
-        >
-          {item.article.koreanSummary}
-        </p>
-      )}
+      {item.article.koreanSummary &&
+        (expanded ? (
+          <p className="mt-3 text-sm text-neutral-600 leading-relaxed">
+            {item.article.koreanSummary}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-neutral-600 leading-relaxed line-clamp-3">
+            {item.article.koreanSummary}
+          </p>
+        ))}
 
       {expanded && item.article.abstract && !item.article.koreanSummary && (
         <p className="mt-3 text-sm text-neutral-600 leading-relaxed">{item.article.abstract}</p>
@@ -195,7 +200,11 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
             (finding, i) => (
               <li key={i} className="text-xs text-neutral-600 flex gap-1.5">
                 <span className="text-primary-500 shrink-0">•</span>
-                <span className={expanded ? '' : 'line-clamp-1'}>{finding}</span>
+                {expanded ? (
+                  <span>{finding}</span>
+                ) : (
+                  <span className="line-clamp-1">{finding}</span>
+                )}
               </li>
             ),
           )}
