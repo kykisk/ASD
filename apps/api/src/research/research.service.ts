@@ -106,37 +106,28 @@ export class ResearchService {
     offset = 0,
     search?: string,
   ) {
-    const searchFilter = search
-      ? {
-          article: {
-            OR: [
-              { title: { contains: search, mode: 'insensitive' as const } },
-              { koreanSummary: { contains: search, mode: 'insensitive' as const } },
-              { tags: { hasSome: [search] } },
-            ],
-          },
-        }
-      : {};
-
-    const where = {
+    const where: Record<string, unknown> = {
       familyId,
       isArchived: false,
       ...(childId ? { OR: [{ childId }, { childId: null }] } : {}),
-      ...searchFilter,
     };
 
-    const [items, total] = await Promise.all([
-      this.prisma.researchUserMatch.findMany({
-        where,
-        include: { article: true },
-        orderBy: [{ isRead: 'asc' }, { score: 'desc' }],
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.researchUserMatch.count({ where }),
-    ]);
+    if (search) {
+      where['article'] = {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { koreanSummary: { contains: search, mode: 'insensitive' } },
+        ],
+      };
+    }
 
-    return { items, total, offset, limit, hasMore: offset + items.length < total };
+    return this.prisma.researchUserMatch.findMany({
+      where,
+      include: { article: true },
+      orderBy: [{ isRead: 'asc' }, { score: 'desc' }],
+      take: limit,
+      skip: offset,
+    });
   }
 
   async bookmarkArticle(familyId: string, articleId: string) {
