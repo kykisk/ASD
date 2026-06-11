@@ -53,7 +53,8 @@ export function useResearchFeed(
       const { data } = await api.get<{ success: true; data: ResearchFeedResponse }>(
         `/research/feed${qs ? `?${qs}` : ''}`,
       );
-      return data.data?.items ?? [];
+      const raw = data.data as ResearchFeedResponse | ResearchMatch[];
+      return Array.isArray(raw) ? raw : (raw?.items ?? []);
     },
   });
 }
