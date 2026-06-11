@@ -69,7 +69,10 @@ function DigestHistoryCard({
       {expanded && (
         <div className="px-5 pb-5 border-t border-neutral-100 space-y-4">
           <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap pt-4">
-            {item.digest}
+            {item.digest
+              .replace(/\*\*TOP\s*3?\s*추천\s*논문\*\*[\s\S]*/i, '')
+              .replace(/TOP\s*3?\s*추천\s*논문[\s\S]*/i, '')
+              .trim()}
           </p>
           {topArticles.length > 0 && (
             <div className="bg-primary-50 rounded-lg p-3 space-y-2">
