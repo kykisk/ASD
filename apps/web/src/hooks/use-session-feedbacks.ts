@@ -65,6 +65,9 @@ export interface CreateSessionFeedbackInput {
   challenges?: string | null;
   homeWork?: string | null;
   parentNote?: string | null;
+  feedbackType?: 'SESSION' | 'DAILY_LOG' | 'BEHAVIORAL_ISSUE';
+  severity?: number | null;
+  behaviorTags?: string[];
 }
 
 export interface UpdateSessionFeedbackInput {

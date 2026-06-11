@@ -7,6 +7,16 @@ import {
 import { useSchedules } from '../../hooks/use-schedules.js';
 import { useChildStore } from '../../stores/child.store.js';
 
+type FeedbackType = 'SESSION' | 'DAILY_LOG' | 'BEHAVIORAL_ISSUE';
+
+const FEEDBACK_TYPE_OPTIONS: { value: FeedbackType; label: string; emoji: string }[] = [
+  { value: 'SESSION', label: '수업 피드백', emoji: '📚' },
+  { value: 'DAILY_LOG', label: '일상 기록', emoji: '📝' },
+  { value: 'BEHAVIORAL_ISSUE', label: '문제행동', emoji: '⚠️' },
+];
+
+const BEHAVIOR_TAGS = ['발작', '자해', '공격', '탈주', '멜트다운', '상동행동', '기타'];
+
 const SESSION_TYPES = [
   'ABA',
   '언어치료',
@@ -36,12 +46,19 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
   const todayEnd = new Date(today + 'T23:59:59.999Z').toISOString();
   const { data: todaySchedules } = useSchedules(selectedChildId, todayStart, todayEnd);
 
+  // Feedback type
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('SESSION');
+
   // Required fields
   const [sessionType, setSessionType] = useState('');
   const [customSessionType, setCustomSessionType] = useState('');
   const [sessionDate, setSessionDate] = useState(today);
   const [rating, setRating] = useState(0);
   const [content, setContent] = useState('');
+
+  // Behavioral issue fields
+  const [severity, setSeverity] = useState<number>(0);
+  const [behaviorTags, setBehaviorTags] = useState<string[]>([]);
 
   // Optional fields
   const [showOptional, setShowOptional] = useState(false);
@@ -64,11 +81,14 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
 
   useEffect(() => {
     if (isOpen) {
+      setFeedbackType('SESSION');
       setSessionType('');
       setCustomSessionType('');
       setSessionDate(today);
       setRating(0);
       setContent('');
+      setSeverity(0);
+      setBehaviorTags([]);
       setProgress('');
       setChallenges('');
       setHomeWork('');
@@ -106,27 +126,31 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
 
   function handleSubmit() {
     setError('');
-    if (!finalSessionType) {
+    if (feedbackType === 'SESSION' && !finalSessionType) {
       setError('수업 유형을 선택해주세요.');
       return;
     }
     if (!sessionDate) {
-      setError('수업 날짜를 입력해주세요.');
+      setError('날짜를 입력해주세요.');
       return;
     }
-    if (rating === 0) {
+    if (feedbackType === 'SESSION' && rating === 0) {
       setError('만족도를 선택해주세요.');
       return;
     }
     if (!content.trim()) {
-      setError('피드백 내용을 입력해주세요.');
+      setError('내용을 입력해주세요.');
+      return;
+    }
+    if (feedbackType === 'BEHAVIORAL_ISSUE' && severity === 0) {
+      setError('심각도를 선택해주세요.');
       return;
     }
 
     const input: CreateSessionFeedbackInput = {
       sessionDate,
-      sessionType: finalSessionType,
-      rating,
+      sessionType: feedbackType === 'SESSION' ? finalSessionType : feedbackType,
+      rating: rating || 3,
       content: content.trim(),
       therapistName: therapistName.trim() || null,
       institution: institution.trim() || null,
@@ -136,6 +160,9 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
       challenges: challenges.trim() || null,
       homeWork: homeWork.trim() || null,
       parentNote: parentNote.trim() || null,
+      feedbackType,
+      severity: feedbackType === 'BEHAVIORAL_ISSUE' ? severity : null,
+      behaviorTags: feedbackType === 'BEHAVIORAL_ISSUE' ? behaviorTags : [],
     };
 
     createFeedback.mutate(input, {
@@ -173,46 +200,70 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
           </div>
         </div>
 
-        <div className="px-6 py-5 space-y-5">
+        <div
+          className={`px-6 py-5 space-y-5 ${feedbackType === 'BEHAVIORAL_ISSUE' ? 'bg-orange-50/40' : ''}`}
+        >
           {error && (
             <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          {/* Session Type */}
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              수업 유형 <span className="text-red-400">*</span>
-            </label>
-            <select
-              value={sessionType}
-              onChange={(e) => setSessionType(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30 focus:border-[#5B8A72] transition-all"
-            >
-              <option value="">선택하세요</option>
-              {SESSION_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-              <option value="직접입력">직접 입력</option>
-            </select>
-            {sessionType === '직접입력' && (
-              <input
-                type="text"
-                value={customSessionType}
-                onChange={(e) => setCustomSessionType(e.target.value)}
-                placeholder="수업 유형을 입력하세요"
-                className="mt-2 w-full px-4 py-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30 focus:border-[#5B8A72] transition-all"
-              />
-            )}
+          {/* Feedback Type Selector */}
+          <div className="flex gap-1 p-1 rounded-xl bg-neutral-100 border border-[#e8e4df]">
+            {FEEDBACK_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFeedbackType(opt.value)}
+                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  feedbackType === opt.value
+                    ? 'bg-[#5B8A72] text-white shadow-sm'
+                    : 'bg-white text-neutral-500 border border-transparent hover:text-neutral-700'
+                }`}
+              >
+                <span className="mr-1">{opt.emoji}</span>
+                {opt.label}
+              </button>
+            ))}
           </div>
+
+          {/* Session Type - only for SESSION */}
+          {feedbackType === 'SESSION' && (
+            <div>
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                수업 유형 <span className="text-red-400">*</span>
+              </label>
+              <select
+                value={sessionType}
+                onChange={(e) => setSessionType(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30 focus:border-[#5B8A72] transition-all"
+              >
+                <option value="">선택하세요</option>
+                {SESSION_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+                <option value="직접입력">직접 입력</option>
+              </select>
+              {sessionType === '직접입력' && (
+                <input
+                  type="text"
+                  value={customSessionType}
+                  onChange={(e) => setCustomSessionType(e.target.value)}
+                  placeholder="수업 유형을 입력하세요"
+                  className="mt-2 w-full px-4 py-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30 focus:border-[#5B8A72] transition-all"
+                />
+              )}
+            </div>
+          )}
 
           {/* Session Date */}
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              수업 날짜 <span className="text-red-400">*</span>
+              {feedbackType === 'SESSION' ? '수업 날짜' : '날짜'}{' '}
+              <span className="text-red-400">*</span>
             </label>
             <input
               type="date"
@@ -222,45 +273,112 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
             />
           </div>
 
-          {/* Rating */}
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              만족도 <span className="text-red-400">*</span>
-            </label>
-            <div className="flex gap-1.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all ${
-                    star <= rating
-                      ? 'bg-amber-50 scale-110'
-                      : 'bg-neutral-50 hover:bg-neutral-100 opacity-40 hover:opacity-70'
-                  }`}
-                >
-                  ⭐
-                </button>
-              ))}
-              {rating > 0 && (
-                <span className="ml-2 text-sm text-neutral-500 self-center">{rating}점</span>
-              )}
+          {/* Rating - required for SESSION, optional for DAILY_LOG, hidden for BEHAVIORAL_ISSUE */}
+          {feedbackType !== 'BEHAVIORAL_ISSUE' && (
+            <div>
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                만족도 {feedbackType === 'SESSION' && <span className="text-red-400">*</span>}
+              </label>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all ${
+                      star <= rating
+                        ? 'bg-amber-50 scale-110'
+                        : 'bg-neutral-50 hover:bg-neutral-100 opacity-40 hover:opacity-70'
+                    }`}
+                  >
+                    ⭐
+                  </button>
+                ))}
+                {rating > 0 && (
+                  <span className="ml-2 text-sm text-neutral-500 self-center">{rating}점</span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Content */}
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              피드백 내용 <span className="text-red-400">*</span>
+              {feedbackType === 'BEHAVIORAL_ISSUE' ? '상황 설명' : '피드백 내용'}{' '}
+              <span className="text-red-400">*</span>
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="오늘 수업은 어떠셨나요? 아이의 반응이나 특이사항을 기록해주세요."
+              placeholder={
+                feedbackType === 'DAILY_LOG'
+                  ? '오늘 아이는 어땠나요? 있었던 일을 자유롭게 기록하세요'
+                  : feedbackType === 'BEHAVIORAL_ISSUE'
+                    ? '어떤 문제행동이 있었나요?'
+                    : '오늘 수업은 어떠셨나요? 아이의 반응이나 특이사항을 기록해주세요.'
+              }
               rows={4}
               className="w-full px-4 py-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30 focus:border-[#5B8A72] transition-all resize-none"
             />
           </div>
+
+          {/* Severity - BEHAVIORAL_ISSUE only */}
+          {feedbackType === 'BEHAVIORAL_ISSUE' && (
+            <div>
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                심각도 <span className="text-red-400">*</span>
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setSeverity(level)}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all border ${
+                      severity === level
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                        : 'bg-white text-neutral-600 border-[#e8e4df] hover:border-orange-300'
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between mt-1.5 px-1">
+                <span className="text-xs text-neutral-400">경미</span>
+                <span className="text-xs text-neutral-400">심각</span>
+              </div>
+            </div>
+          )}
+
+          {/* Behavior Tags - BEHAVIORAL_ISSUE only */}
+          {feedbackType === 'BEHAVIORAL_ISSUE' && (
+            <div>
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                행동 유형 (복수 선택)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {BEHAVIOR_TAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() =>
+                      setBehaviorTags((prev) =>
+                        prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+                      )
+                    }
+                    className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all border ${
+                      behaviorTags.includes(tag)
+                        ? 'bg-orange-100 text-orange-700 border-orange-300'
+                        : 'bg-white text-neutral-600 border-[#e8e4df] hover:border-orange-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Optional Section Toggle */}
           <button

@@ -3,12 +3,15 @@
 > AI 에이전트가 이 프로젝트에서 작업할 때 반드시 읽어야 하는 문서입니다.
 > 이 프로젝트는 자폐 아동 가정치료 지원 시스템입니다.
 
-| 항목          | 내용                                       |
-| ------------- | ------------------------------------------ |
-| 현재 Phase    | **Phase 5 완료 + 수업 피드백 + 복약 관리** |
-| 최종 업데이트 | 2026-06-10                                 |
-| 총 커밋       | 203개                                      |
-| 테스트        | 282개 통과 (3개 기존 사전 실패)            |
+| 항목          | 내용                                                              |
+| ------------- | ----------------------------------------------------------------- |
+| 현재 Phase    | **Phase 5 완료 + 수업 피드백 + 복약 관리 + 피드백 기반 성장추적** |
+| 최종 업데이트 | 2026-06-11                                                        |
+| 총 커밋       | 204개                                                             |
+| 테스트        | 282개 통과 (3개 기존 사전 실패)                                   |
+| 최종 업데이트 | 2026-06-10                                                        |
+| 총 커밋       | 203개                                                             |
+| 테스트        | 282개 통과 (3개 기존 사전 실패)                                   |
 
 ---
 
@@ -1068,6 +1071,57 @@ apps/api/src/medications/
 ### 21.8 면책 고지 문구 (CRITICAL)
 
 > ⚠️ 이 기능은 의사가 처방한 약물의 복용을 기록하는 보조 도구입니다. 약물 추가 또는 변경은 반드시 전문 의료진과 상담하세요.
+
+---
+
+## 22. 피드백 기반 성장 추적 + 일상/문제행동 기록 (2026-06-11)
+
+### 22.1 핵심 변경
+
+**AS-IS**: 부모 → 매일 5도메인 수동 별점 → Assessment
+**TO-BE**: 부모 → 피드백 텍스트 → AI 자동 도메인 추출 → Assessment (하위 시스템 변경 없음)
+
+### 22.2 SessionFeedback 신규 필드
+
+| 필드             | 타입                      | 설명                                                       |
+| ---------------- | ------------------------- | ---------------------------------------------------------- |
+| `feedbackType`   | String (default: SESSION) | SESSION \| DAILY_LOG \| BEHAVIORAL_ISSUE                   |
+| `severity`       | Int?                      | 문제행동 심각도 1-5 (BEHAVIORAL_ISSUE 전용)                |
+| `behaviorTags`   | String[]                  | ['발작','자해','공격','탈주','멜트다운','상동행동','기타'] |
+| `aiDomainScores` | Json?                     | {"COMMUNICATION":4,"SOCIAL":2,...}                         |
+| `aiExtracted`    | Boolean                   | AI 추출 완료 여부                                          |
+
+### 22.3 FeedbackDomainExtractionService
+
+위치: `apps/api/src/session-feedbacks/feedback-domain-extraction.service.ts`
+
+- 피드백 저장 후 **fire-and-forget** 비동기 호출
+- AI(FEEDBACK_DOMAIN_EXTRACTION/Haiku)가 content+progress+challenges에서 5도메인 점수 추출
+- "AI 발달 추출" 시스템 질문지 getOrCreate (familyId 기준, 공유)
+- Assessment + AssessmentScore 자동 생성 → 기존 대시보드/성장/커리큘럼 AI 변경 없이 반영
+
+### 22.4 데이터 윈도우 최적화 (curriculum.service.ts)
+
+| 데이터                   | 변경 전                 | 변경 후             |
+| ------------------------ | ----------------------- | ------------------- |
+| Assessment (일일/AI추출) | take:10, 날짜 제한 없음 | 30일 이내 + take:15 |
+| 임상 보고서              | take:3                  | take:1 (최신 1건)   |
+
+### 22.5 FeedbackDigest 확장
+
+- `behaviorSuggestions: String[]` 필드 추가
+- BEHAVIORAL_ISSUE 피드백이 있으면 AI가 문제행동 개선 제안 생성
+- CurriculumPromptService에 문제행동 요약 섹션(9번째 소스) 추가
+
+### 22.6 AI feature key
+
+`FEEDBACK_DOMAIN_EXTRACTION` 추가 (Haiku 추천)
+
+### 22.7 UI 변경
+
+- 수업 피드백 작성 폼: feedbackType 선택 탭 (📚 수업 / 📝 일상 / ⚠️ 문제행동)
+- BEHAVIORAL_ISSUE 선택 시: severity 1-5 + behaviorTags 체크리스트
+- 사이드바: "일일 발달 체크" → "정밀 발달 체크 (선택)"
 
 ---
 

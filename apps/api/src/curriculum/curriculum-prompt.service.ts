@@ -63,6 +63,7 @@ export interface CurriculumPromptParams {
     weeklyGoal?: string;
     monthlyGoal?: string;
   };
+  behaviorIssueSummary?: string;
 }
 
 @Injectable()
@@ -181,6 +182,10 @@ ${domainText}`;
 
     if (params.sessionFeedbackSummary) {
       userContent += `\n\n최근 수업 피드백 요약 (치료사 피드백 기반):\n${params.sessionFeedbackSummary}\n위 수업 피드백을 참고하여 센터 치료와 연계된 가정 활동을 설계해주세요.\n`;
+    }
+
+    if (params.behaviorIssueSummary) {
+      userContent += `\n\n최근 문제행동 기록:\n${params.behaviorIssueSummary}\n위 문제행동 패턴을 고려하여 예방 및 개선에 도움이 되는 활동을 설계해주세요.\n`;
     }
 
     if (params.userInput) {

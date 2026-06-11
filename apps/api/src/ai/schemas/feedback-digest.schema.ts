@@ -26,6 +26,7 @@ export const feedbackDigestOutputSchema = z.object({
   highlights: flexibleStringArray.optional().default([]),
   concerns: flexibleStringArray.optional().default([]),
   homeWorkSummary: z.string().max(300).optional().default(''),
+  behaviorSuggestions: flexibleStringArray.optional().default([]),
 });
 
 export type FeedbackDigestOutput = z.infer<typeof feedbackDigestOutputSchema>;

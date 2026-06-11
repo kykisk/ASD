@@ -120,13 +120,26 @@ export class FeedbackDigestService {
       .slice(0, 4)
       .join(', ');
 
-    const userPrompt = `이번 주(${periodStart.toLocaleDateString('ko-KR')} ~ ${periodEnd.toLocaleDateString('ko-KR')}) 수업 피드백 요약:
+    const behaviorFeedbacks = feedbacks.filter(
+      (f) => (f as { feedbackType?: string }).feedbackType === 'BEHAVIORAL_ISSUE',
+    );
+    const behaviorText = behaviorFeedbacks
+      .slice(0, 5)
+      .map((f) => {
+        const tags = (f as { behaviorTags?: string[] }).behaviorTags ?? [];
+        const tagsStr = tags.length > 0 ? `[${tags.join(', ')}] ` : '';
+        return `- ${tagsStr}${f.content.slice(0, 150)}`;
+      })
+      .join('\n');
+
+    const userPrompt = `이번 주(${periodStart.toLocaleDateString('ko-KR')} ~ ${periodEnd.toLocaleDateString('ko-KR')}) 피드백 요약:
 
 ${sessionLines}
 ${homeWorkAll ? `\n가정 연습 과제: ${homeWorkAll}` : ''}
+${behaviorText ? `\n이번 주 문제행동 기록:\n${behaviorText}` : ''}
 
 다음 JSON 형식으로만 응답하세요 (코드 블록 없이):
-{"summary":"전체 주간 요약 한두 문장","bySessionType":{"수업종류":{"count":횟수,"avgRating":평균점수,"keyProgress":"핵심진전","keyChallenges":"핵심어려움"}},"highlights":["긍정1","긍정2"],"concerns":["집중점1"],"homeWorkSummary":"가정연습 종합"}`;
+{"summary":"전체 주간 요약","bySessionType":{"수업종류":{"count":0,"avgRating":0,"keyProgress":"","keyChallenges":""}},"highlights":["긍정1"],"concerns":["주의1"],"homeWorkSummary":"가정연습 종합","behaviorSuggestions":${behaviorFeedbacks.length > 0 ? '["개선제안1","개선제안2"]' : '[]'}}`;
 
     const result = await this.aiService.generateStructured(
       {
@@ -175,6 +188,7 @@ ${homeWorkAll ? `\n가정 연습 과제: ${homeWorkAll}` : ''}
         highlights: result.highlights,
         concerns: result.concerns,
         homeWorkSummary: result.homeWorkSummary || null,
+        behaviorSuggestions: result.behaviorSuggestions ?? [],
         feedbackCount: feedbacks.length,
         periodStart,
         periodEnd,
@@ -185,6 +199,7 @@ ${homeWorkAll ? `\n가정 연습 과제: ${homeWorkAll}` : ''}
         highlights: result.highlights,
         concerns: result.concerns,
         homeWorkSummary: result.homeWorkSummary || null,
+        behaviorSuggestions: result.behaviorSuggestions ?? [],
         feedbackCount: feedbacks.length,
       },
     });

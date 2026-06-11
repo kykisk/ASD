@@ -88,7 +88,7 @@ const navGroups = [
       },
       {
         to: '/assessment',
-        label: '일일 발달 체크',
+        label: '정밀 발달 체크 (선택)',
         icon: (
           <svg
             className="w-5 h-5"

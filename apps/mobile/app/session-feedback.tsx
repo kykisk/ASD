@@ -363,9 +363,21 @@ function DigestCard({ digest }: { digest: FeedbackDigest }) {
   );
 }
 
+// ─────────────── FeedbackType & BehaviorTags ───────────────
+type FeedbackType = 'SESSION' | 'DAILY_LOG' | 'BEHAVIORAL_ISSUE';
+
+const FEEDBACK_TYPES: { key: FeedbackType; label: string }[] = [
+  { key: 'SESSION', label: '📚 수업' },
+  { key: 'DAILY_LOG', label: '📝 일상' },
+  { key: 'BEHAVIORAL_ISSUE', label: '⚠️ 문제행동' },
+];
+
+const BEHAVIOR_TAGS = ['발작', '자해', '공격', '탈주', '멜트다운', '상동행동', '기타'];
+
 // ─────────────── Creation Form ───────────────
 function CreationForm({ childId, onClose }: { childId: string; onClose: () => void }) {
   const createMutation = useCreateSessionFeedback(childId);
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('SESSION');
   const [sessionType, setSessionType] = useState('ABA');
   const [rating, setRating] = useState(3);
   const [content, setContent] = useState('');
@@ -376,6 +388,20 @@ function CreationForm({ childId, onClose }: { childId: string; onClose: () => vo
   const [therapistName, setTherapistName] = useState('');
   const [institution, setInstitution] = useState('');
   const [durationMin, setDurationMin] = useState('');
+  const [severity, setSeverity] = useState<number | null>(null);
+  const [behaviorTags, setBehaviorTags] = useState<string[]>([]);
+
+  const toggleBehaviorTag = (tag: string) => {
+    setBehaviorTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
+  const getContentPlaceholder = (): string => {
+    if (feedbackType === 'BEHAVIORAL_ISSUE') return '어떤 문제행동이 있었나요?';
+    if (feedbackType === 'DAILY_LOG') return '오늘 아이는 어땠나요?';
+    return '선생님이 뭐라고 하셨나요?';
+  };
 
   const handleSave = async () => {
     if (!content.trim()) {
@@ -398,6 +424,9 @@ function CreationForm({ childId, onClose }: { childId: string; onClose: () => vo
       therapistName: therapistName.trim() || null,
       institution: institution.trim() || null,
       durationMin: durationMin ? Number(durationMin) : null,
+      feedbackType,
+      severity: feedbackType === 'BEHAVIORAL_ISSUE' ? severity : null,
+      behaviorTags: feedbackType === 'BEHAVIORAL_ISSUE' ? behaviorTags : [],
     };
 
     try {
@@ -416,27 +445,98 @@ function CreationForm({ childId, onClose }: { childId: string; onClose: () => vo
     <View style={formStyles.container}>
       <Text style={formStyles.title}>피드백 작성</Text>
 
-      <Text style={formStyles.label}>수업 유형</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={formStyles.typeRow}>
-          {SESSION_TYPES.map((t) => (
-            <TouchableOpacity
-              key={t.key}
-              style={[formStyles.typeChip, sessionType === t.key && formStyles.typeChipActive]}
-              onPress={() => setSessionType(t.key)}
+      <Text style={formStyles.label}>유형</Text>
+      <View style={formStyles.typeRow}>
+        {FEEDBACK_TYPES.map((ft) => (
+          <TouchableOpacity
+            key={ft.key}
+            style={[
+              formStyles.feedbackTypeChip,
+              feedbackType === ft.key && formStyles.feedbackTypeChipActive,
+            ]}
+            onPress={() => setFeedbackType(ft.key)}
+          >
+            <Text
+              style={[
+                formStyles.feedbackTypeChipText,
+                feedbackType === ft.key && formStyles.feedbackTypeChipTextActive,
+              ]}
             >
-              <Text
-                style={[
-                  formStyles.typeChipText,
-                  sessionType === t.key && formStyles.typeChipTextActive,
-                ]}
+              {ft.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {feedbackType === 'SESSION' && (
+        <>
+          <Text style={formStyles.label}>수업 유형</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={formStyles.typeRow}>
+              {SESSION_TYPES.map((t) => (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[formStyles.typeChip, sessionType === t.key && formStyles.typeChipActive]}
+                  onPress={() => setSessionType(t.key)}
+                >
+                  <Text
+                    style={[
+                      formStyles.typeChipText,
+                      sessionType === t.key && formStyles.typeChipTextActive,
+                    ]}
+                  >
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </>
+      )}
+
+      {feedbackType === 'BEHAVIORAL_ISSUE' && (
+        <>
+          <Text style={formStyles.label}>심각도</Text>
+          <View style={formStyles.severityRow}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <TouchableOpacity
+                key={n}
+                style={[formStyles.severityBtn, severity === n && formStyles.severityBtnActive]}
+                onPress={() => setSeverity(n)}
               >
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+                <Text
+                  style={[
+                    formStyles.severityBtnText,
+                    severity === n && formStyles.severityBtnTextActive,
+                  ]}
+                >
+                  {n}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={formStyles.label}>행동 태그</Text>
+          <View style={formStyles.tagsWrap}>
+            {BEHAVIOR_TAGS.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                style={[formStyles.tagChip, behaviorTags.includes(tag) && formStyles.tagChipActive]}
+                onPress={() => toggleBehaviorTag(tag)}
+              >
+                <Text
+                  style={[
+                    formStyles.tagChipText,
+                    behaviorTags.includes(tag) && formStyles.tagChipTextActive,
+                  ]}
+                >
+                  {tag}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
 
       <Text style={formStyles.label}>평가</Text>
       <RatingInput value={rating} onChange={setRating} />
@@ -444,7 +544,7 @@ function CreationForm({ childId, onClose }: { childId: string; onClose: () => vo
       <Text style={formStyles.label}>내용</Text>
       <TextInput
         style={[formStyles.input, formStyles.textArea]}
-        placeholder="선생님이 뭐라고 하셨나요?"
+        placeholder={getContentPlaceholder()}
         placeholderTextColor={colors.textMuted}
         multiline
         numberOfLines={4}
@@ -752,6 +852,64 @@ const formStyles = StyleSheet.create({
   },
   typeChipText: { fontSize: fontSize.xs, color: colors.textSecondary },
   typeChipTextActive: { color: '#fff', fontWeight: '600' },
+  feedbackTypeChip: {
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: '#f5f5f5',
+  },
+  feedbackTypeChipActive: {
+    backgroundColor: colors.primary,
+  },
+  feedbackTypeChipText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  feedbackTypeChipTextActive: { color: '#fff', fontWeight: '600' },
+  severityRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  severityBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+  },
+  severityBtnActive: {
+    backgroundColor: colors.warning,
+    borderColor: colors.warning,
+  },
+  severityBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  severityBtnTextActive: { color: '#fff' },
+  tagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  tagChip: {
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  tagChipActive: {
+    backgroundColor: colors.error,
+    borderColor: colors.error,
+  },
+  tagChipText: { fontSize: fontSize.xs, color: colors.textSecondary },
+  tagChipTextActive: { color: '#fff', fontWeight: '600' },
   starInput: { fontSize: fontSize.xl },
   input: {
     backgroundColor: colors.background,

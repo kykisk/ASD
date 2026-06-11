@@ -71,10 +71,13 @@ export class CurriculumService {
 
       const ageMonths = this.calculateAgeMonths(pii.birthDate);
 
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const assessments = await this.prisma.assessment.findMany({
-        where: { childId },
+        where: { childId, createdAt: { gte: thirtyDaysAgo } },
         orderBy: { createdAt: 'desc' },
-        take: 10,
+        take: 15,
         include: { scores: true },
       });
 
@@ -148,12 +151,33 @@ export class CurriculumService {
       const recentClinicalReports = await this.prisma.clinicalReport.findMany({
         where: { childId },
         orderBy: [{ assessmentDate: 'desc' }, { createdAt: 'desc' }],
-        take: 3,
+        take: 1,
       });
 
       const sessionFeedbackSummary = await this.sessionFeedbacksService
         .buildPromptSummary(childId, 7)
         .catch(() => null);
+
+      const recentBehaviorFeedbacks = await this.prisma.sessionFeedback.findMany({
+        where: {
+          childId,
+          feedbackType: 'BEHAVIORAL_ISSUE',
+          sessionDate: { gte: thirtyDaysAgo },
+        },
+        orderBy: { sessionDate: 'desc' },
+        take: 5,
+      });
+
+      const behaviorIssueSummary =
+        recentBehaviorFeedbacks.length > 0
+          ? recentBehaviorFeedbacks
+              .map((f) => {
+                const tags = (f as { behaviorTags?: string[] }).behaviorTags ?? [];
+                const tagsStr = tags.length > 0 ? `[${tags.join(', ')}] ` : '';
+                return `- ${tagsStr}${f.content.slice(0, 120)}`;
+              })
+              .join('\n')
+          : null;
 
       const messages = this.promptService.buildCurriculumPrompt({
         childAgeMonths: ageMonths,
@@ -206,6 +230,7 @@ export class CurriculumService {
               }))
             : undefined,
         sessionFeedbackSummary: sessionFeedbackSummary ?? undefined,
+        behaviorIssueSummary: behaviorIssueSummary ?? undefined,
         userInput: userInput ?? undefined,
       });
 

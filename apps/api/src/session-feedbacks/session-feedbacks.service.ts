@@ -1,20 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@auticare/prisma-client';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import { FeedbackDomainExtractionService } from './feedback-domain-extraction.service.js';
 
 export interface CreateSessionFeedbackInput {
-  sessionDate: string; // ISO date string
+  sessionDate: string;
   sessionType: string;
   therapistName?: string;
   institution?: string;
   durationMin?: number;
   scheduleId?: string;
-  rating: number; // 1-5
+  rating: number;
   content: string;
   progress?: string;
   challenges?: string;
   homeWork?: string;
   parentNote?: string;
+  feedbackType?: string;
+  severity?: number | null;
+  behaviorTags?: string[];
 }
 
 export interface UpdateSessionFeedbackInput {
@@ -44,7 +48,10 @@ export interface QuerySessionFeedbackInput {
 export class SessionFeedbacksService {
   private readonly logger = new Logger(SessionFeedbacksService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly domainExtraction: FeedbackDomainExtractionService,
+  ) {}
 
   async create(
     childId: string,
@@ -64,7 +71,7 @@ export class SessionFeedbacksService {
       if (!schedule) throw new ApiException(404, 'SCHEDULE_404', '일정을 찾을 수 없습니다');
     }
 
-    return this.prisma.sessionFeedback.create({
+    const feedback = await this.prisma.sessionFeedback.create({
       data: {
         childId,
         familyId,
@@ -81,9 +88,16 @@ export class SessionFeedbacksService {
         challenges: input.challenges ?? null,
         homeWork: input.homeWork ?? null,
         parentNote: input.parentNote ?? null,
+        feedbackType: input.feedbackType ?? 'SESSION',
+        severity: input.severity ?? null,
+        behaviorTags: input.behaviorTags ?? [],
       },
       include: { schedule: { select: { id: true, title: true } } },
     });
+
+    this.domainExtraction.extractAsync(feedback.id);
+
+    return feedback;
   }
 
   async findByChild(childId: string, query: QuerySessionFeedbackInput) {

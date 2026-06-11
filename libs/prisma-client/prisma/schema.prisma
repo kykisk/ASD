@@ -838,6 +838,15 @@ model SessionFeedback {
   homeWork      String?   // 가정 연습 과제
   parentNote    String?   // 부모 추가 메모
 
+  // 피드백 타입 (신규)
+  feedbackType  String    @default("SESSION")  // SESSION | DAILY_LOG | BEHAVIORAL_ISSUE
+  severity      Int?      // 문제행동 심각도 1-5 (BEHAVIORAL_ISSUE 전용)
+  behaviorTags  String[]  // ['발작','자해','공격','탈주','멜트다운','기타']
+
+  // AI 자동 도메인 추출 결과 (신규)
+  aiDomainScores Json?    // {"COMMUNICATION":4,"SOCIAL":2,"MOTOR":null,...}
+  aiExtracted   Boolean   @default(false)
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -859,10 +868,11 @@ model FeedbackDigest {
 
   // AI 생성 요약
   summary         String
-  bySessionType   Json     // { "ABA": { count, avgRating, keyProgress, keyChallenges }, ... }
+  bySessionType   Json
   highlights      String[]
   concerns        String[]
   homeWorkSummary String?
+  behaviorSuggestions String[]  // AI 문제행동 개선 제안 (신규)
 
   feedbackCount   Int
   periodStart     DateTime
