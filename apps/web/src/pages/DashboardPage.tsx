@@ -38,6 +38,36 @@ const DOMAIN_LABELS: Record<string, string> = {
   EMOTIONAL: '정서',
 };
 
+const DOMAIN_ORDER = [
+  'DAILY_LIVING',
+  'daily_living',
+  'COMMUNICATION',
+  'communication',
+  'Communication',
+  'COGNITIVE',
+  'cognitive',
+  'Cognitive',
+  'SOCIAL',
+  'social',
+  'Social',
+  'MOTOR',
+  'motor',
+  'Motor',
+  'OTHER',
+  'other',
+  'EMOTIONAL',
+  'emotional',
+  'Emotional',
+];
+
+function sortDomains<T extends { domain: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const ai = DOMAIN_ORDER.indexOf(a.domain);
+    const bi = DOMAIN_ORDER.indexOf(b.domain);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+}
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 11) return '좋은 아침이에요';
@@ -525,7 +555,7 @@ export function DashboardPage() {
 
         {recentAssessment && recentAssessment.domainScores.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {recentAssessment.domainScores.map((ds, idx) => (
+            {sortDomains(recentAssessment.domainScores).map((ds, idx) => (
               <DomainScoreCard key={ds.domain} {...ds} delay={200 + idx * 80} />
             ))}
           </div>
