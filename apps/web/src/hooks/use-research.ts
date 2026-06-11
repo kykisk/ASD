@@ -78,14 +78,18 @@ export function useResearchFeedPaginated(search?: string, limit = 20) {
         const { data } = await api.get<{ success: true; data: ResearchFeedResponse }>(
           `/research/feed?${qs}`,
         );
-        const result = data.data;
-        setTotal(result.total);
-        setHasMore(result.hasMore);
-        setOffset(pageOffset + result.items.length);
+        const raw = data.data as ResearchFeedResponse | ResearchMatch[];
+        const items = Array.isArray(raw) ? raw : (raw?.items ?? []);
+        const total = Array.isArray(raw) ? raw.length : (raw?.total ?? 0);
+        const hasMoreFlag = Array.isArray(raw) ? false : (raw?.hasMore ?? false);
+        const newOffset = pageOffset + items.length;
+        setTotal(total);
+        setHasMore(hasMoreFlag);
+        setOffset(newOffset);
         if (append) {
-          setItems((prev) => [...prev, ...result.items]);
+          setItems((prev) => [...prev, ...items]);
         } else {
-          setItems(result.items);
+          setItems(items);
         }
       } finally {
         setIsLoading(false);
