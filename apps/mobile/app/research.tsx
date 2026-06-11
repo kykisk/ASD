@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  SafeAreaView,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import {
@@ -77,6 +79,81 @@ function DigestHistoryCard({ item }: { item: DigestHistoryItem }) {
   );
 }
 
+function ArticleDetailModal({ item, onClose }: { item: ResearchMatch; onClose: () => void }) {
+  const a = item.article;
+  const dateLabel = a.publishedAt
+    ? new Date(a.publishedAt).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
+  const tags: string[] = Array.isArray(a.tags) ? a.tags : [];
+  const keyFindings: string[] = Array.isArray(a.keyFindings) ? a.keyFindings : [];
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={modalStyles.container}>
+        <View style={modalStyles.header}>
+          <Text style={modalStyles.journal} numberOfLines={1}>
+            {a.journal}
+          </Text>
+          <TouchableOpacity style={modalStyles.closeBtn} onPress={onClose}>
+            <Text style={modalStyles.closeText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={modalStyles.body} contentContainerStyle={modalStyles.bodyContent}>
+          <Text style={modalStyles.title}>{a.title}</Text>
+          {dateLabel ? <Text style={modalStyles.date}>📅 {dateLabel}</Text> : null}
+
+          {tags.length > 0 && (
+            <View style={modalStyles.tagsRow}>
+              {tags.map((tag, i) => (
+                <View key={i} style={modalStyles.tagBadge}>
+                  <Text style={modalStyles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {a.koreanSummary ? (
+            <View style={modalStyles.section}>
+              <Text style={modalStyles.sectionLabel}>✨ AI 한국어 요약</Text>
+              <Text style={modalStyles.sectionText}>{a.koreanSummary}</Text>
+            </View>
+          ) : null}
+
+          {a.abstract ? (
+            <View style={modalStyles.section}>
+              <Text style={modalStyles.sectionLabel}>📄 원문 초록 (Abstract)</Text>
+              <Text style={modalStyles.sectionText}>{a.abstract}</Text>
+            </View>
+          ) : null}
+
+          {keyFindings.length > 0 && (
+            <View style={modalStyles.section}>
+              <Text style={modalStyles.sectionLabel}>🔍 핵심 발견</Text>
+              {keyFindings.map((f, i) => (
+                <View key={i} style={modalStyles.findingRow}>
+                  <Text style={modalStyles.findingBullet}>•</Text>
+                  <Text style={modalStyles.findingText}>{f}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={modalStyles.footer}>
+          <TouchableOpacity style={modalStyles.closeFullBtn} onPress={onClose}>
+            <Text style={modalStyles.closeFullText}>닫기</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 export default function ResearchScreen() {
   const { selectedChildId } = useChildStore();
   const { data: articles, isLoading } = useResearchFeed();
@@ -86,7 +163,7 @@ export default function ResearchScreen() {
   const { data: digests, isLoading: digestsLoading } = useDigestHistory(selectedChildId);
   const [activeTab, setActiveTab] = useState<TabKey>('recommended');
   const [liveDigest, setLiveDigest] = useState<AiDigestResult | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ResearchMatch | null>(null);
 
   const filteredArticles =
     articles?.filter((a) => (activeTab === 'bookmarked' ? a.isBookmarked : true)) ?? [];
@@ -97,7 +174,7 @@ export default function ResearchScreen() {
 
   const handlePress = (item: ResearchMatch) => {
     if (!item.isRead) markReadMutation.mutate(item.articleId);
-    setExpandedId((prev) => (prev === item.id ? null : item.id));
+    setSelectedItem(item);
   };
 
   const handleGenerateDigest = async () => {
@@ -115,6 +192,10 @@ export default function ResearchScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: '연구 브리핑', headerShown: true }} />
+
+      {selectedItem && (
+        <ArticleDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      )}
 
       {/* AI Generate Button */}
       {selectedChildId && (
@@ -221,10 +302,7 @@ export default function ResearchScreen() {
                 {!item.isRead && <View style={styles.unreadDot} />}
 
                 <View style={styles.cardHeader}>
-                  <Text
-                    style={styles.articleTitle}
-                    numberOfLines={expandedId === item.id ? undefined : 2}
-                  >
+                  <Text style={styles.articleTitle} numberOfLines={2}>
                     {a.title}
                   </Text>
                   <TouchableOpacity style={styles.bookmarkBtn} onPress={() => handleBookmark(item)}>
@@ -254,35 +332,26 @@ export default function ResearchScreen() {
                 )}
 
                 {a.koreanSummary ? (
-                  <Text
-                    style={styles.summary}
-                    numberOfLines={expandedId === item.id ? undefined : 3}
-                  >
+                  <Text style={styles.summary} numberOfLines={3}>
                     {a.koreanSummary}
                   </Text>
                 ) : null}
 
-                {expandedId === item.id && !a.koreanSummary && a.abstract ? (
-                  <Text style={styles.summary}>{a.abstract}</Text>
-                ) : null}
-
                 {keyFindings.length > 0 && (
                   <View style={styles.findingsSection}>
-                    {(expandedId === item.id ? keyFindings : keyFindings.slice(0, 3)).map(
-                      (f, idx) => (
-                        <View key={idx} style={styles.findingRow}>
-                          <Text style={styles.findingBullet}>•</Text>
-                          <Text style={styles.findingText}>{f}</Text>
-                        </View>
-                      ),
-                    )}
+                    {keyFindings.slice(0, 2).map((f, idx) => (
+                      <View key={idx} style={styles.findingRow}>
+                        <Text style={styles.findingBullet}>•</Text>
+                        <Text style={styles.findingText} numberOfLines={1}>
+                          {f}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 )}
 
                 <View style={styles.expandBtn}>
-                  <Text style={styles.expandBtnText}>
-                    {expandedId === item.id ? '▲ 접기' : '▼ 전체 내용 보기'}
-                  </Text>
+                  <Text style={styles.expandBtnText}>⊞ 전체 내용 보기</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -490,4 +559,66 @@ const digestStyles = StyleSheet.create({
   topContent: { flex: 1 },
   topTitle: { fontSize: fontSize.sm, fontWeight: '600', color: colors.text },
   topReason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+});
+
+const modalStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  journal: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, marginRight: spacing.sm },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeText: { fontSize: fontSize.md, color: colors.textSecondary },
+  body: { flex: 1 },
+  bodyContent: { padding: spacing.md, gap: spacing.lg },
+  title: { fontSize: fontSize.md, fontWeight: '700', color: colors.text, lineHeight: 24 },
+  date: { fontSize: fontSize.xs, color: colors.textSecondary },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  tagBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.primaryLight,
+  },
+  tagText: { fontSize: fontSize.xs, color: colors.primaryDark },
+  section: { gap: spacing.sm },
+  sectionLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionText: { fontSize: fontSize.sm, color: colors.text, lineHeight: 22 },
+  findingRow: { flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-start' },
+  findingBullet: { fontSize: fontSize.sm, color: colors.primary, lineHeight: 20 },
+  findingText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  footer: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  closeFullBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  closeFullText: { fontSize: fontSize.sm, fontWeight: '600', color: '#fff' },
 });
