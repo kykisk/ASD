@@ -36,7 +36,7 @@ fi
 
 echo "🔨 API 빌드 중..."
 cd "$ROOT"
-pnpm nx run api:build --skip-nx-cache > /tmp/auticare-build.log 2>&1
+NX_DAEMON=false pnpm nx run api:build --skip-nx-cache > /tmp/auticare-build.log 2>&1
 if [ $? -ne 0 ]; then
   echo "❌ 빌드 실패. 로그 확인: cat /tmp/auticare-build.log"
   exit 1
