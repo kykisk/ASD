@@ -19,11 +19,20 @@ const DOMAIN_COLORS: Record<string, string> = {
 };
 
 const DOMAIN_LABELS: Record<string, string> = {
+  daily_living: '일상생활',
+  DAILY_LIVING: '일상생활',
   communication: '의사소통',
-  social: '사회성',
-  motor: '운동',
+  COMMUNICATION: '의사소통',
   cognitive: '인지',
+  COGNITIVE: '인지',
+  social: '사회성',
+  SOCIAL: '사회성',
+  motor: '운동',
+  MOTOR: '운동',
+  other: '기타',
+  OTHER: '기타',
   emotional: '정서',
+  EMOTIONAL: '정서',
 };
 
 interface GrowthLineChartProps {
@@ -90,9 +99,7 @@ function CustomTooltip({
               flexShrink: 0,
             }}
           />
-          <span style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>
-            {entry.name}
-          </span>
+          <span style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>{entry.name}</span>
           <span
             style={{
               fontSize: 13,
@@ -121,9 +128,7 @@ export function GrowthLineChart({
       ? allDomains.filter((d) => selectedDomains.includes(d))
       : allDomains;
 
-  const allDates = Array.from(
-    new Set(data.overall.map((p) => p.date))
-  ).sort();
+  const allDates = Array.from(new Set(data.overall.map((p) => p.date))).sort();
 
   const chartData = allDates.map((date) => {
     const point: Record<string, string | number> = {
@@ -138,15 +143,8 @@ export function GrowthLineChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart
-        data={chartData}
-        margin={{ top: 8, right: 12, left: -8, bottom: 4 }}
-      >
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="rgba(91, 138, 114, 0.08)"
-          vertical={false}
-        />
+      <LineChart data={chartData} margin={{ top: 8, right: 12, left: -8, bottom: 4 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(91, 138, 114, 0.08)" vertical={false} />
         <XAxis
           dataKey="date"
           tick={{ fontSize: 11, fill: '#94a3b8' }}
@@ -163,11 +161,7 @@ export function GrowthLineChart({
         />
         <Tooltip content={<CustomTooltip />} />
         {showLegend && (
-          <Legend
-            iconType="circle"
-            iconSize={8}
-            wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-          />
+          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
         )}
         {domainsToShow.map((domain) => (
           <Line

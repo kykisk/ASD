@@ -55,11 +55,12 @@ const MOCK_MILESTONES: Milestone[] = [
 ];
 
 const DOMAIN_LIST = [
+  { domain: 'DAILY_LIVING', label: '일상생활', color: '#94B8A0' },
   { domain: 'COMMUNICATION', label: '의사소통', color: '#7B9FD4' },
+  { domain: 'COGNITIVE', label: '인지', color: '#7EC8C8' },
   { domain: 'SOCIAL', label: '사회성', color: '#E8A87C' },
   { domain: 'MOTOR', label: '운동', color: '#9B8EC4' },
-  { domain: 'COGNITIVE', label: '인지', color: '#7EC8C8' },
-  { domain: 'EMOTIONAL', label: '정서', color: '#F2B880' },
+  { domain: 'OTHER', label: '기타', color: '#B0B8C1' },
 ];
 
 const MOCK_GROWTH_DATA: GrowthData = {

@@ -20,11 +20,20 @@ const DOMAIN_COLORS: Record<string, string> = {
 };
 
 const DOMAIN_LABELS: Record<string, string> = {
+  daily_living: '일상생활',
+  DAILY_LIVING: '일상생활',
   communication: '의사소통',
-  social: '사회성',
-  motor: '운동',
+  COMMUNICATION: '의사소통',
   cognitive: '인지',
+  COGNITIVE: '인지',
+  social: '사회성',
+  SOCIAL: '사회성',
+  motor: '운동',
+  MOTOR: '운동',
+  other: '기타',
+  OTHER: '기타',
   emotional: '정서',
+  EMOTIONAL: '정서',
 };
 
 function formatDate(dateStr: string): string {
