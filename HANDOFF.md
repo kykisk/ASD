@@ -6,6 +6,7 @@
 - 수업 피드백 기능 추가 (SessionFeedback + AI 파이프라인)
 - 복약 관리 기능 추가 (Medication + MedicationLog + MedicationReaction)
 - 피드백 기반 성장 추적 + 일상/문제행동 기록 (FeedbackDomainExtraction + feedbackType)
+- UX 개선 세션 (메뉴 재구성, 도메인 순서, 캘린더 피드백 아이콘, 날짜 구간 선택)
 
 ## GOAL
 
@@ -13,37 +14,42 @@
 
 ## CURRENT STATE
 
-- Phase 1~5 + 피드백 기반 성장 추적: 완전 완료
-- Git: **204 커밋**, master 브랜치
+- Phase 1~5 + UX 개선 완료
+- Git: **221 커밋**, master 브랜치
 - 테스트: 282개 통과 (3개 기존 사전 실패)
 - 웹: http://3.38.146.1:4200
 - Admin: http://3.38.146.1:4300
 - 모바일: http://3.38.146.1:8081
 
-## 이번 세션 완료 작업 (2026-06-11)
+## 최근 완료 작업 (2026-06-11, UX 개선 세션)
 
-| 작업                                                      | 파일                                                                     |
-| --------------------------------------------------------- | ------------------------------------------------------------------------ |
-| feedbackType/behaviorTags/aiDomainScores Prisma 추가      | schema.prisma → `20260611031000_add_feedback_type_and_domain_extraction` |
-| FeedbackDomainExtractionService                           | `feedback-domain-extraction.service.ts`                                  |
-| SessionFeedback create() → AI 도메인 추출 fire-and-forget | `session-feedbacks.service.ts`                                           |
-| FeedbackDigest behaviorSuggestions 추가                   | `feedback-digest.service.ts`, `feedback-digest.schema.ts`                |
-| CurriculumPrompt 문제행동 요약 9번째 소스                 | `curriculum-prompt.service.ts`, `curriculum.service.ts`                  |
-| 데이터 윈도우 최적화                                      | Assessment 30일, 임상보고서 최신 1건                                     |
-| 웹 SessionFeedbackModal feedbackType UI                   | `SessionFeedbackModal.tsx`                                               |
-| 사이드바 "정밀 발달 체크 (선택)" 변경                     | `AppLayout.tsx`                                                          |
-| 모바일 session-feedback feedbackType UI                   | `apps/mobile/app/session-feedback.tsx`                                   |
+| 작업                    | 내용                                                 |
+| ----------------------- | ---------------------------------------------------- |
+| 메뉴명 변경             | 수업 피드백 → **일일피드백** (Web + Mobile)          |
+| 정밀 발달 체크 제거     | 사이드바에서 제거 (DB/API 유지, AI 자동 추출로 대체) |
+| 질문지 관리             | 사용자 메뉴 제거 → Admin 전용                        |
+| 임상 평가 위치          | 별도 카테고리 → 치료 관리 그룹 이동                  |
+| 일일피드백 3탭 재구성   | 수업피드백 / 일상기록 / AI주간요약                   |
+| 날짜 구간 선택 (Web)    | 수업/일상 탭에 from~to 날짜 필터 (기본 30일)         |
+| 날짜 구간 선택 (Mobile) | 7일/30일/3개월 프리셋 버튼 추가                      |
+| 일정 캘린더 아이콘      | 피드백 있는 날 초록 연필 아이콘, 없는 날 회색        |
+| 일정 날짜 클릭 팝업     | 해당 날짜 피드백 팝업 (DateFeedbackPopup)            |
+| 커리큘럼 AI 생성 모달   | 목표/활동 입력 모달 추가                             |
+| FeedbackDigest 프롬프트 | DAILY_LOG + BEHAVIORAL_ISSUE 섹션 포함               |
+| 도메인 순서 통일        | 일상생활→의사소통→인지→사회성→운동→기타 (Web+Mobile) |
+| OAuth 버튼 비활성화     | 클릭 시 "서비스 오픈 후 이용 가능" 안내              |
+| IP 업데이트             | 3.35.36.62 → 3.38.146.1                              |
+| update-ip.sh            | EC2 재시작 후 IP 자동 업데이트 스크립트              |
 
-## 웹 메뉴 구조
+## 웹 메뉴 구조 (최신)
 
 ```
 치료 관리
   ├── 대시보드
   ├── 커리큘럼
   ├── 일정
-  ├── 수업 피드백  (SESSION | DAILY_LOG | BEHAVIORAL_ISSUE)
-  ├── 정밀 발달 체크 (선택)  ← 이름 변경
-  ├── 임상 평가
+  ├── 일일피드백       ← (수업/일상/AI요약 3탭)
+  ├── 임상 평가        ← (별도 카테고리에서 이동)
   ├── 성장 기록
   └── AI 분석
 
@@ -55,9 +61,16 @@
   └── 감각 프로파일
 ```
 
-## PENDING TASKS
+## 모바일 More 탭 구조 (최신)
 
-### 운영 준비 (서비스 오픈 전 필수)
+```
+치료 도구: 아이 프로필, 임상 평가 🏥, 일일피드백 📝, 감각 프로파일, 보고서
+건강 관리: 복약 관리 💊
+부모 지원: 웰빙 체크인, 비상 가이드, 연구 브리핑
+가족: 아이 추가, 가족 설정, 설정
+```
+
+## PENDING TASKS (운영 준비)
 
 1. consent.service.ts CONSENT_DOCUMENTS 실제 저작권 문구 교체
 2. licensed-tool-data.service.ts 실제 도구 문항 교체
@@ -67,20 +80,22 @@
 6. 개인정보처리방침 실제 법적 문서 작성
 7. 도메인 구매 → OAuth(Google/Kakao) 활성화
 
-### 잠재적 개선사항
+## PENDING 개선사항
 
 - ADOS-2, SCQ 라이선스 도구 추가
 - 임상 보고서 PDF 내보내기
-- 피드백 복약 알림 (FCM 설정 후)
+- 복약 알림 (FCM 설정 후)
 
 ## KEY FILES
 
-- ASD/auticare/AGENTS.md — 전체 개발 지식베이스 (22절)
+- ASD/auticare/AGENTS.md — 전체 개발 지식베이스 (23절)
+- ASD/auticare/scripts/update-ip.sh — EC2 IP 바뀌면 실행
 - ASD/auticare/apps/api/src/session-feedbacks/ — 수업 피드백 + 도메인 추출 모듈
 - ASD/auticare/apps/api/src/medications/ — 복약 관리 모듈
-- ASD/auticare/apps/web/src/pages/SessionFeedbackPage.tsx
-- ASD/auticare/apps/mobile/app/session-feedback.tsx
-- ASD/auticare/apps/mobile/app/medication.tsx
+- ASD/auticare/apps/web/src/pages/SessionFeedbackPage.tsx — 일일피드백 3탭
+- ASD/auticare/apps/mobile/app/session-feedback.tsx — 모바일 일일피드백
+- ASD/auticare/apps/mobile/app/medication.tsx — 모바일 복약 관리
+- ASD/auticare/apps/web/src/pages/SchedulePage.tsx — 일정 + 피드백 팝업
 
 ## IMPORTANT DECISIONS
 
@@ -95,6 +110,9 @@
 - Assessment 데이터 윈도우: 30일 이내 take:15
 - 임상보고서 참조: 최신 1건만
 - EC2 IP 바뀌면: ./scripts/update-ip.sh 실행
+- 도메인 표시 순서: DAILY_LIVING → COMMUNICATION → COGNITIVE → SOCIAL → MOTOR → OTHER
+- 정밀 발달 체크: UI 제거됨, DB/API는 유지 (AI 자동 추출로 대체)
+- 질문지 관리: Admin 전용, 사용자 메뉴에서 제거됨
 
 ## EXPLICIT CONSTRAINTS
 
