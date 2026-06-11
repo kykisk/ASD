@@ -67,13 +67,15 @@ export interface FeedbackDigest {
 
 export function useSessionFeedbacks(
   childId: string | null,
-  query?: { sessionType?: string; limit?: number; offset?: number },
+  query?: { sessionType?: string; from?: string; to?: string; limit?: number; offset?: number },
 ) {
   return useQuery<SessionFeedback[]>({
     queryKey: ['session-feedbacks', childId, query],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (query?.sessionType) params.set('sessionType', query.sessionType);
+      if (query?.from) params.set('from', query.from);
+      if (query?.to) params.set('to', query.to);
       if (query?.limit) params.set('limit', String(query.limit));
       if (query?.offset) params.set('offset', String(query.offset));
       const qs = params.toString();

@@ -28,8 +28,6 @@ import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 
 type TabKey = 'session' | 'daily' | 'ai';
 
-const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
-
 const SESSION_TYPES = [
   { key: 'ABA', label: 'ABA' },
   { key: 'SPEECH', label: '언어치료' },
@@ -50,22 +48,155 @@ function toDateString(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function formatDateLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const dow = DAY_NAMES[d.getDay()];
-  return `${year}년 ${month}월 ${day}일 (${dow})`;
-}
-
-function shiftDate(dateStr: string, delta: number): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + delta);
+function get30DaysAgo(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 30);
   return toDateString(d);
 }
 
-// ─────────────── Rating Stars ───────────────
+function get7DaysAgo(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return toDateString(d);
+}
+
+function get90DaysAgo(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 90);
+  return toDateString(d);
+}
+
+// ─────────────── Date Range Picker ───────────────
+function DateRangePicker({
+  from,
+  to,
+  onChangeFrom,
+  onChangeTo,
+  count,
+}: {
+  from: string;
+  to: string;
+  onChangeFrom: (v: string) => void;
+  onChangeTo: (v: string) => void;
+  count: number;
+}) {
+  const presets = [
+    { label: '7일', from: get7DaysAgo() },
+    { label: '30일', from: get30DaysAgo() },
+    { label: '3개월', from: get90DaysAgo() },
+  ];
+  const today = toDateString(new Date());
+
+  return (
+    <View style={drStyles.container}>
+      <View style={drStyles.row}>
+        <TextInput
+          style={drStyles.input}
+          value={from}
+          onChangeText={onChangeFrom}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="numbers-and-punctuation"
+          maxLength={10}
+        />
+        <Text style={drStyles.sep}>~</Text>
+        <TextInput
+          style={drStyles.input}
+          value={to}
+          onChangeText={onChangeTo}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="numbers-and-punctuation"
+          maxLength={10}
+        />
+        <Text style={drStyles.count}>{count}건</Text>
+      </View>
+      <View style={drStyles.presets}>
+        {presets.map((p) => (
+          <TouchableOpacity
+            key={p.label}
+            style={[drStyles.preset, from === p.from && to === today && drStyles.presetActive]}
+            onPress={() => {
+              onChangeFrom(p.from);
+              onChangeTo(today);
+            }}
+          >
+            <Text
+              style={[
+                drStyles.presetText,
+                from === p.from && to === today && drStyles.presetTextActive,
+              ]}
+            >
+              {p.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const drStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    fontSize: fontSize.xs,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  sep: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+  },
+  count: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+  presets: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  preset: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.background,
+  },
+  presetActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  presetText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  presetTextActive: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+});
 function RatingStars({ rating }: { rating: number }) {
   return (
     <View style={cardStyles.starsRow}>
@@ -86,29 +217,6 @@ function RatingInput({ value, onChange }: { value: number; onChange: (v: number)
           <Text style={formStyles.starInput}>{i <= value ? '⭐' : '☆'}</Text>
         </TouchableOpacity>
       ))}
-    </View>
-  );
-}
-
-// ─────────────── Date Navigation ───────────────
-function DateNavigation({
-  date,
-  onPrev,
-  onNext,
-}: {
-  date: string;
-  onPrev: () => void;
-  onNext: () => void;
-}) {
-  return (
-    <View style={dateNavStyles.container}>
-      <TouchableOpacity style={dateNavStyles.arrowBtn} onPress={onPrev}>
-        <Text style={dateNavStyles.arrow}>←</Text>
-      </TouchableOpacity>
-      <Text style={dateNavStyles.label}>{formatDateLabel(date)}</Text>
-      <TouchableOpacity style={dateNavStyles.arrowBtn} onPress={onNext}>
-        <Text style={dateNavStyles.arrow}>→</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -220,37 +328,22 @@ function BehavioralIssueCard({
 }
 
 // ─────────────── Tab 1: 수업피드백 ───────────────
-function SessionTab({
-  childId,
-  feedbacks,
-  isLoading,
-  onShowForm,
-}: {
-  childId: string;
-  feedbacks: SessionFeedback[];
-  isLoading: boolean;
-  onShowForm: () => void;
-}) {
+function SessionTab({ childId, onShowForm }: { childId: string; onShowForm: () => void }) {
+  const [fromDate, setFromDate] = useState(get30DaysAgo());
+  const [toDate, setToDate] = useState(toDateString(new Date()));
   const deleteMutation = useDeleteSessionFeedback(childId);
 
+  const { data: rawFeedbacks, isLoading } = useSessionFeedbacks(childId, {
+    from: fromDate,
+    to: toDate,
+  });
+
   const sessionFeedbacks = useMemo(
-    () => feedbacks.filter((f) => f.feedbackType === 'SESSION'),
-    [feedbacks],
-  );
-
-  const mostRecentDate = useMemo(() => {
-    if (sessionFeedbacks.length === 0) return toDateString(new Date());
-    const sorted = [...sessionFeedbacks].sort(
-      (a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime(),
-    );
-    return sorted[0].sessionDate.split('T')[0];
-  }, [sessionFeedbacks]);
-
-  const [selectedDate, setSelectedDate] = useState(mostRecentDate);
-
-  const dayFeedbacks = useMemo(
-    () => sessionFeedbacks.filter((f) => f.sessionDate.split('T')[0] === selectedDate),
-    [sessionFeedbacks, selectedDate],
+    () =>
+      (rawFeedbacks ?? [])
+        .filter((f) => (f.feedbackType ?? 'SESSION') === 'SESSION')
+        .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()),
+    [rawFeedbacks],
   );
 
   const handleDelete = (id: string) => {
@@ -275,27 +368,26 @@ function SessionTab({
 
   return (
     <View style={tabStyles.container}>
-      <DateNavigation
-        date={selectedDate}
-        onPrev={() => setSelectedDate(shiftDate(selectedDate, -1))}
-        onNext={() => setSelectedDate(shiftDate(selectedDate, 1))}
+      <DateRangePicker
+        from={fromDate}
+        to={toDate}
+        onChangeFrom={setFromDate}
+        onChangeTo={setToDate}
+        count={sessionFeedbacks.length}
       />
 
-      <View style={tabStyles.filterHeader}>
-        <Text style={tabStyles.countText}>{dayFeedbacks.length}건</Text>
-        <TouchableOpacity style={tabStyles.addBtn} onPress={onShowForm}>
-          <Text style={tabStyles.addBtnText}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={tabStyles.addFullBtn} onPress={onShowForm}>
+        <Text style={tabStyles.addFullBtnText}>+ 수업 기록 추가</Text>
+      </TouchableOpacity>
 
-      {dayFeedbacks.length === 0 ? (
+      {sessionFeedbacks.length === 0 ? (
         <View style={tabStyles.emptyState}>
-          <Text style={tabStyles.emptyIcon}>📝</Text>
-          <Text style={tabStyles.emptyText}>이 날 기록이 없어요</Text>
+          <Text style={tabStyles.emptyIcon}>📚</Text>
+          <Text style={tabStyles.emptyText}>선택한 기간에 기록이 없어요</Text>
         </View>
       ) : (
         <View style={tabStyles.list}>
-          {dayFeedbacks.map((f) => (
+          {sessionFeedbacks.map((f) => (
             <SessionFeedbackCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
           ))}
         </View>
@@ -305,40 +397,25 @@ function SessionTab({
 }
 
 // ─────────────── Tab 2: 일상기록 ───────────────
-function DailyTab({
-  childId,
-  feedbacks,
-  isLoading,
-  onShowForm,
-}: {
-  childId: string;
-  feedbacks: SessionFeedback[];
-  isLoading: boolean;
-  onShowForm: () => void;
-}) {
+function DailyTab({ childId, onShowForm }: { childId: string; onShowForm: () => void }) {
+  const [fromDate, setFromDate] = useState(get30DaysAgo());
+  const [toDate, setToDate] = useState(toDateString(new Date()));
   const deleteMutation = useDeleteSessionFeedback(childId);
+
+  const { data: rawFeedbacks, isLoading } = useSessionFeedbacks(childId, {
+    from: fromDate,
+    to: toDate,
+  });
 
   const dailyFeedbacks = useMemo(
     () =>
-      feedbacks.filter(
-        (f) => f.feedbackType === 'DAILY_LOG' || f.feedbackType === 'BEHAVIORAL_ISSUE',
-      ),
-    [feedbacks],
-  );
-
-  const mostRecentDate = useMemo(() => {
-    if (dailyFeedbacks.length === 0) return toDateString(new Date());
-    const sorted = [...dailyFeedbacks].sort(
-      (a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime(),
-    );
-    return sorted[0].sessionDate.split('T')[0];
-  }, [dailyFeedbacks]);
-
-  const [selectedDate, setSelectedDate] = useState(mostRecentDate);
-
-  const dayFeedbacks = useMemo(
-    () => dailyFeedbacks.filter((f) => f.sessionDate.split('T')[0] === selectedDate),
-    [dailyFeedbacks, selectedDate],
+      (rawFeedbacks ?? [])
+        .filter((f) => {
+          const t = f.feedbackType ?? 'SESSION';
+          return t === 'DAILY_LOG' || t === 'BEHAVIORAL_ISSUE';
+        })
+        .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()),
+    [rawFeedbacks],
   );
 
   const handleDelete = (id: string) => {
@@ -363,28 +440,27 @@ function DailyTab({
 
   return (
     <View style={tabStyles.container}>
-      <DateNavigation
-        date={selectedDate}
-        onPrev={() => setSelectedDate(shiftDate(selectedDate, -1))}
-        onNext={() => setSelectedDate(shiftDate(selectedDate, 1))}
+      <DateRangePicker
+        from={fromDate}
+        to={toDate}
+        onChangeFrom={setFromDate}
+        onChangeTo={setToDate}
+        count={dailyFeedbacks.length}
       />
 
-      <View style={tabStyles.filterHeader}>
-        <Text style={tabStyles.countText}>{dayFeedbacks.length}건</Text>
-        <TouchableOpacity style={tabStyles.addBtn} onPress={onShowForm}>
-          <Text style={tabStyles.addBtnText}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={tabStyles.addFullBtn} onPress={onShowForm}>
+        <Text style={tabStyles.addFullBtnText}>+ 일상 기록 추가</Text>
+      </TouchableOpacity>
 
-      {dayFeedbacks.length === 0 ? (
+      {dailyFeedbacks.length === 0 ? (
         <View style={tabStyles.emptyState}>
-          <Text style={tabStyles.emptyIcon}>📋</Text>
-          <Text style={tabStyles.emptyText}>이 날 기록이 없어요</Text>
+          <Text style={tabStyles.emptyIcon}>📝</Text>
+          <Text style={tabStyles.emptyText}>선택한 기간에 기록이 없어요</Text>
         </View>
       ) : (
         <View style={tabStyles.list}>
-          {dayFeedbacks.map((f) =>
-            f.feedbackType === 'BEHAVIORAL_ISSUE' ? (
+          {dailyFeedbacks.map((f) =>
+            (f.feedbackType ?? 'SESSION') === 'BEHAVIORAL_ISSUE' ? (
               <BehavioralIssueCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
             ) : (
               <DailyLogCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
@@ -778,8 +854,6 @@ export default function SessionFeedbackScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('session');
   const [showForm, setShowForm] = useState(false);
 
-  const { data: feedbacks, isLoading } = useSessionFeedbacks(selectedChildId);
-
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'session', label: '수업피드백' },
     { key: 'daily', label: '일상기록' },
@@ -825,20 +899,10 @@ export default function SessionFeedbackScreen() {
 
       {/* Tab Content */}
       {activeTab === 'session' && (
-        <SessionTab
-          childId={selectedChildId}
-          feedbacks={feedbacks ?? []}
-          isLoading={isLoading}
-          onShowForm={() => setShowForm(true)}
-        />
+        <SessionTab childId={selectedChildId} onShowForm={() => setShowForm(true)} />
       )}
       {activeTab === 'daily' && (
-        <DailyTab
-          childId={selectedChildId}
-          feedbacks={feedbacks ?? []}
-          isLoading={isLoading}
-          onShowForm={() => setShowForm(true)}
-        />
+        <DailyTab childId={selectedChildId} onShowForm={() => setShowForm(true)} />
       )}
       {activeTab === 'ai' && <AiTab childId={selectedChildId} />}
     </ScrollView>
@@ -878,37 +942,6 @@ const styles = StyleSheet.create({
   },
 });
 
-const dateNavStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  arrowBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrow: {
-    fontSize: fontSize.lg,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  label: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    color: colors.text,
-  },
-});
-
 const tabStyles = StyleSheet.create({
   container: { gap: spacing.md },
   center: { paddingVertical: spacing.xxl, alignItems: 'center' },
@@ -927,6 +960,19 @@ const tabStyles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+  addFullBtn: {
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+  },
+  addFullBtnText: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.primary,
   },
   addBtn: {
     width: 40,
