@@ -356,7 +356,7 @@ ${articlesContext}
     try {
       const aiResponse = await this.aiService.generate({
         messages: [{ role: 'user', content: prompt }],
-        maxTokens: 1200,
+        maxTokens: 2500,
       });
 
       const text = (aiResponse.content ?? '').trim();
