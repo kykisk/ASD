@@ -15,13 +15,17 @@ export class ResearchController {
     @CurrentUser() user: { id: string; familyId: string | null },
     @Query('childId') childId?: string,
     @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('search') search?: string,
   ) {
     const familyId = await this.familyResolver.resolve(user.id, user.familyId);
-    if (!familyId) return [];
+    if (!familyId) return { items: [], total: 0, offset: 0, limit: 20, hasMore: false };
     return this.researchService.getResearchFeed(
       familyId,
       childId,
       limit ? parseInt(limit, 10) : undefined,
+      offset ? parseInt(offset, 10) : 0,
+      search,
     );
   }
 

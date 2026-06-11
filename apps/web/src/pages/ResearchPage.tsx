@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useChildStore } from '../stores/child.store';
 import {
-  useResearchFeed,
+  useResearchFeedPaginated,
   useBookmarks,
   useBookmarkArticle,
   useMarkAsRead,
@@ -317,7 +317,10 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
         )}
 
         <button
-          onClick={handleOpen}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpen();
+          }}
           className="mt-3 flex items-center gap-1.5 text-xs text-[#5B8A72] font-semibold hover:text-[#3d6b54] transition-colors"
         >
           <svg
@@ -382,13 +385,28 @@ export function ResearchPage() {
   const { selectedChildId } = useChildStore();
   const [tab, setTab] = useState<'feed' | 'bookmarks' | 'archived' | 'history'>('feed');
   const [digest, setDigest] = useState<AiDigestResult | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const {
-    data: feed,
+    items: feedItems,
+    total: feedTotal,
+    hasMore: feedHasMore,
+    loadMore: feedLoadMore,
     isLoading: feedLoading,
-    isError: feedError,
-    refetch: refetchFeed,
-  } = useResearchFeed();
+    isInitialLoading: feedInitialLoading,
+    resetAndFetch: feedReset,
+  } = useResearchFeedPaginated(debouncedSearch);
+
+  useEffect(() => {
+    feedReset();
+  }, [feedReset]);
+
   const {
     data: bookmarks,
     isLoading: bmLoading,
@@ -403,14 +421,23 @@ export function ResearchPage() {
 
   const isLoading =
     tab === 'feed'
-      ? feedLoading
+      ? feedInitialLoading
       : tab === 'bookmarks'
         ? bmLoading
         : tab === 'archived'
           ? archLoading
           : digestsLoading;
-  const isError = tab === 'feed' ? feedError : tab === 'bookmarks' ? bmError : false;
-  const refetchFn = tab === 'feed' ? refetchFeed : refetchBm;
+  const isError = tab === 'bookmarks' ? bmError : false;
+  const refetchFn = refetchBm;
+
+  const filteredBookmarks = debouncedSearch
+    ? bookmarks?.filter(
+        (b) =>
+          b.article.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          (b.article.koreanSummary &&
+            b.article.koreanSummary.toLowerCase().includes(debouncedSearch.toLowerCase())),
+      )
+    : bookmarks;
 
   const handleGenerateDigest = async () => {
     if (!selectedChildId) return;
@@ -506,6 +533,37 @@ export function ResearchPage() {
         </div>
       )}
 
+      {/* Search Input */}
+      <div className="relative">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </span>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="제목, 요약으로 검색..."
+          className="w-full border border-[#e8e4df] rounded-xl pl-10 pr-4 py-2.5 text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-colors"
+        />
+        {debouncedSearch && (tab === 'feed' || tab === 'bookmarks') && (
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-neutral-500">
+            {tab === 'feed' ? feedTotal : (filteredBookmarks?.length ?? 0)}건 결과
+          </span>
+        )}
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 flex-wrap">
         {[
@@ -528,20 +586,65 @@ export function ResearchPage() {
         ))}
       </div>
 
-      {/* Feed / Bookmarks */}
-      {(tab === 'feed' || tab === 'bookmarks') &&
-        ((tab === 'feed' ? feed : bookmarks)?.length ? (
+      {/* Feed */}
+      {tab === 'feed' &&
+        (feedItems.length ? (
           <div className="space-y-3">
-            {(tab === 'feed' ? feed : bookmarks)!.map((item: ResearchMatch) => (
+            {feedItems.map((item: ResearchMatch) => (
+              <ArticleCard key={item.id} item={item} />
+            ))}
+            {feedHasMore && (
+              <button
+                onClick={feedLoadMore}
+                disabled={feedLoading}
+                className="w-full py-3 rounded-xl border border-[#e8e4df] text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+              >
+                {feedLoading ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    불러오는 중...
+                  </>
+                ) : (
+                  '더 보기'
+                )}
+              </button>
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            title="추천 논문이 없습니다"
+            description="매주 자동으로 아이의 프로파일에 맞는 연구를 수집합니다."
+          />
+        ))}
+
+      {/* Bookmarks */}
+      {tab === 'bookmarks' &&
+        (filteredBookmarks?.length ? (
+          <div className="space-y-3">
+            {filteredBookmarks.map((item: ResearchMatch) => (
               <ArticleCard key={item.id} item={item} />
             ))}
           </div>
         ) : (
           <EmptyState
-            title={tab === 'feed' ? '추천 논문이 없습니다' : '북마크한 논문이 없습니다'}
+            title="북마크한 논문이 없습니다"
             description={
-              tab === 'feed'
-                ? '매주 자동으로 아이의 프로파일에 맞는 연구를 수집합니다.'
+              debouncedSearch
+                ? '검색 결과가 없습니다. 다른 키워드로 시도해보세요.'
                 : '관심 있는 논문을 북마크해보세요.'
             }
           />

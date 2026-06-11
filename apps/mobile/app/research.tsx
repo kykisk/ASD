@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,13 @@ import {
   ActivityIndicator,
   Modal,
   SafeAreaView,
+  TextInput,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import {
   useResearchFeed,
+  useResearchFeedSearch,
+  useResearchPagination,
   useBookmarkArticle,
   useMarkAsRead,
   useGenerateAiDigest,
@@ -92,64 +95,66 @@ function ArticleDetailModal({ item, onClose }: { item: ResearchMatch; onClose: (
   const keyFindings: string[] = Array.isArray(a.keyFindings) ? a.keyFindings : [];
 
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={modalStyles.container}>
-        <View style={modalStyles.header}>
-          <Text style={modalStyles.journal} numberOfLines={1}>
-            {a.journal}
-          </Text>
-          <TouchableOpacity style={modalStyles.closeBtn} onPress={onClose}>
-            <Text style={modalStyles.closeText}>✕</Text>
-          </TouchableOpacity>
-        </View>
+    <Modal visible animationType="fade" transparent onRequestClose={onClose}>
+      <View style={modalStyles.overlay}>
+        <SafeAreaView style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.journal} numberOfLines={1}>
+              {a.journal}
+            </Text>
+            <TouchableOpacity style={modalStyles.closeBtn} onPress={onClose}>
+              <Text style={modalStyles.closeText}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView style={modalStyles.body} contentContainerStyle={modalStyles.bodyContent}>
-          <Text style={modalStyles.title}>{a.title}</Text>
-          {dateLabel ? <Text style={modalStyles.date}>📅 {dateLabel}</Text> : null}
+          <ScrollView style={modalStyles.body} contentContainerStyle={modalStyles.bodyContent}>
+            <Text style={modalStyles.title}>{a.title}</Text>
+            {dateLabel ? <Text style={modalStyles.date}>📅 {dateLabel}</Text> : null}
 
-          {tags.length > 0 && (
-            <View style={modalStyles.tagsRow}>
-              {tags.map((tag, i) => (
-                <View key={i} style={modalStyles.tagBadge}>
-                  <Text style={modalStyles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+            {tags.length > 0 && (
+              <View style={modalStyles.tagsRow}>
+                {tags.map((tag, i) => (
+                  <View key={i} style={modalStyles.tagBadge}>
+                    <Text style={modalStyles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
-          {a.koreanSummary ? (
-            <View style={modalStyles.section}>
-              <Text style={modalStyles.sectionLabel}>✨ AI 한국어 요약</Text>
-              <Text style={modalStyles.sectionText}>{a.koreanSummary}</Text>
-            </View>
-          ) : null}
+            {a.koreanSummary ? (
+              <View style={modalStyles.section}>
+                <Text style={modalStyles.sectionLabel}>✨ AI 한국어 요약</Text>
+                <Text style={modalStyles.sectionText}>{a.koreanSummary}</Text>
+              </View>
+            ) : null}
 
-          {a.abstract ? (
-            <View style={modalStyles.section}>
-              <Text style={modalStyles.sectionLabel}>📄 원문 초록 (Abstract)</Text>
-              <Text style={modalStyles.sectionText}>{a.abstract}</Text>
-            </View>
-          ) : null}
+            {a.abstract ? (
+              <View style={modalStyles.section}>
+                <Text style={modalStyles.sectionLabel}>📄 원문 초록 (Abstract)</Text>
+                <Text style={modalStyles.sectionText}>{a.abstract}</Text>
+              </View>
+            ) : null}
 
-          {keyFindings.length > 0 && (
-            <View style={modalStyles.section}>
-              <Text style={modalStyles.sectionLabel}>🔍 핵심 발견</Text>
-              {keyFindings.map((f, i) => (
-                <View key={i} style={modalStyles.findingRow}>
-                  <Text style={modalStyles.findingBullet}>•</Text>
-                  <Text style={modalStyles.findingText}>{f}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
+            {keyFindings.length > 0 && (
+              <View style={modalStyles.section}>
+                <Text style={modalStyles.sectionLabel}>🔍 핵심 발견</Text>
+                {keyFindings.map((f, i) => (
+                  <View key={i} style={modalStyles.findingRow}>
+                    <Text style={modalStyles.findingBullet}>•</Text>
+                    <Text style={modalStyles.findingText}>{f}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </ScrollView>
 
-        <View style={modalStyles.footer}>
-          <TouchableOpacity style={modalStyles.closeFullBtn} onPress={onClose}>
-            <Text style={modalStyles.closeFullText}>닫기</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+          <View style={modalStyles.footer}>
+            <TouchableOpacity style={modalStyles.closeFullBtn} onPress={onClose}>
+              <Text style={modalStyles.closeFullText}>닫기</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -165,8 +170,41 @@ export default function ResearchScreen() {
   const [liveDigest, setLiveDigest] = useState<AiDigestResult | null>(null);
   const [selectedItem, setSelectedItem] = useState<ResearchMatch | null>(null);
 
-  const filteredArticles =
-    articles?.filter((a) => (activeTab === 'bookmarked' ? a.isBookmarked : true)) ?? [];
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchInput]);
+
+  const searchResult = useResearchFeedSearch(debouncedSearch);
+  const pagination = useResearchPagination();
+
+  useEffect(() => {
+    if (articles && debouncedSearch.length === 0) {
+      pagination.reset(articles, articles.length, false);
+    }
+  }, [articles, debouncedSearch]);
+
+  useEffect(() => {
+    if (debouncedSearch.length > 0 && searchResult.items.length > 0) {
+      pagination.reset(searchResult.items, searchResult.total, searchResult.hasMore);
+    }
+  }, [searchResult.items, searchResult.total, searchResult.hasMore, debouncedSearch]);
+
+  const displayArticles = debouncedSearch.length > 0 ? pagination.items : (articles ?? []);
+  const filteredArticles = displayArticles.filter((a) =>
+    activeTab === 'bookmarked' ? a.isBookmarked : true,
+  );
+  const showHasMore = debouncedSearch.length > 0 ? pagination.hasMore : false;
+  const displayTotal = debouncedSearch.length > 0 ? pagination.total : filteredArticles.length;
 
   const handleBookmark = (item: ResearchMatch) => {
     bookmarkMutation.mutate(item.articleId);
@@ -181,6 +219,10 @@ export default function ResearchScreen() {
     if (!selectedChildId) return;
     const result = await generateDigest.mutateAsync(selectedChildId);
     setLiveDigest(result);
+  };
+
+  const handleLoadMore = () => {
+    pagination.loadMore(debouncedSearch || undefined);
   };
 
   const tabs: { key: TabKey; label: string }[] = [
@@ -248,6 +290,24 @@ export default function ResearchScreen() {
           )}
         </View>
       )}
+
+      {/* Search Input */}
+      <View style={styles.searchCard}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="제목, 요약으로 검색..."
+          placeholderTextColor={colors.textMuted}
+          value={searchInput}
+          onChangeText={setSearchInput}
+          returnKeyType="search"
+        />
+        {searchInput.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchInput('')}>
+            <Text style={styles.searchClear}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Tabs */}
       <View style={styles.tabRow}>
@@ -356,6 +416,25 @@ export default function ResearchScreen() {
               </TouchableOpacity>
             );
           })}
+
+          {showHasMore && (
+            <TouchableOpacity
+              style={styles.loadMoreBtn}
+              onPress={handleLoadMore}
+              disabled={pagination.isLoadingMore}
+            >
+              {pagination.isLoadingMore ? (
+                <ActivityIndicator color={colors.primary} size="small" />
+              ) : (
+                <>
+                  <Text style={styles.loadMoreText}>더 보기</Text>
+                  <Text style={styles.loadMoreCount}>
+                    {displayTotal}건 중 {filteredArticles.length}건 표시
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </>
       )}
 
@@ -502,6 +581,47 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
   },
+  searchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  searchIcon: { fontSize: fontSize.md },
+  searchInput: {
+    flex: 1,
+    fontSize: fontSize.md,
+    color: colors.text,
+    paddingVertical: 0,
+  },
+  searchClear: {
+    fontSize: fontSize.md,
+    color: colors.textMuted,
+    paddingHorizontal: spacing.xs,
+  },
+  loadMoreBtn: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: spacing.sm + 4,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  loadMoreText: {
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  loadMoreCount: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
 });
 
 const digestStyles = StyleSheet.create({
@@ -562,7 +682,14 @@ const digestStyles = StyleSheet.create({
 });
 
 const modalStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    margin: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
