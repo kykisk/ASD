@@ -184,3 +184,15 @@ export function useDigestHistory(childId?: string | null) {
     enabled: !!childId,
   });
 }
+
+export function useDeleteDigest(childId?: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (digestId: string) => {
+      await api.delete(`/research/digests/${digestId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['research', 'digests', childId] });
+    },
+  });
+}

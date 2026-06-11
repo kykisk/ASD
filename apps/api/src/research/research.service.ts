@@ -238,6 +238,12 @@ export class ResearchService {
     });
   }
 
+  async deleteDigest(digestId: string, familyId: string): Promise<void> {
+    await this.prisma.researchDigest.deleteMany({
+      where: { id: digestId, familyId },
+    });
+  }
+
   async generateAiDigest(
     familyId: string,
     childId: string,
@@ -363,12 +369,17 @@ ${articlesContext}
       if (!text) throw new Error('Empty AI response');
 
       const topArticles: { pubmedId: string; title: string; reason: string }[] = [];
-      const topRegex = /\d+\.\s*\[([^\]]+)\]\s*([^-\n]+)\s*-\s*([^\n]+)/g;
+      const topRegex = /\d+\.\s*\*{0,2}\[(\d+)\]\s*([^*\n]+)\*{0,2}\s*-\s*([^\n]+)/g;
       let match;
       while ((match = topRegex.exec(text)) !== null && topArticles.length < 3) {
-        const matchedArticle = bookmarks.find((b) => b.article.pubmedId === match[1].trim());
+        const idx = parseInt(match[1].trim(), 10) - 1;
+        const matchedArticle =
+          bookmarks[idx] ??
+          bookmarks.find((b) =>
+            b.article.title.toLowerCase().includes(match[2].trim().toLowerCase().slice(0, 20)),
+          );
         topArticles.push({
-          pubmedId: match[1].trim(),
+          pubmedId: matchedArticle?.article.pubmedId ?? '',
           title: matchedArticle?.article.title ?? match[2].trim(),
           reason: match[3].trim(),
         });

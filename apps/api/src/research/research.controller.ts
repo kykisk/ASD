@@ -113,4 +113,14 @@ export class ResearchController {
     }
     return this.researchService.generateAiDigest(familyId, childId);
   }
+
+  @Delete('research/digests/:id')
+  async deleteDigest(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; familyId: string | null },
+  ) {
+    const familyId = await this.familyResolver.resolve(user.id, user.familyId);
+    if (!familyId) return;
+    await this.researchService.deleteDigest(id, familyId);
+  }
 }
