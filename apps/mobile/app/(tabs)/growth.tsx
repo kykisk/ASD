@@ -43,22 +43,42 @@ function getLicensedSeverity(tool: string, score: number): { label: string; colo
 }
 
 const DOMAIN_COLORS: Record<string, string> = {
+  DAILY_LIVING: '#94B8A0',
   COMMUNICATION: '#7B9FD4',
+  COGNITIVE: '#7EC8C8',
   SOCIAL: '#E8A87C',
   MOTOR: '#9B8EC4',
-  COGNITIVE: '#7EC8C8',
+  OTHER: '#B0B8C1',
   EMOTIONAL: '#F2B880',
-  DAILY_LIVING: '#94B8A0',
 };
 
 const DOMAIN_LABELS: Record<string, string> = {
+  DAILY_LIVING: '일상생활',
   COMMUNICATION: '의사소통',
+  COGNITIVE: '인지',
   SOCIAL: '사회성',
   MOTOR: '운동',
-  COGNITIVE: '인지',
+  OTHER: '기타',
   EMOTIONAL: '정서',
-  DAILY_LIVING: '일상생활',
 };
+
+const DOMAIN_ORDER = [
+  'DAILY_LIVING',
+  'COMMUNICATION',
+  'COGNITIVE',
+  'SOCIAL',
+  'MOTOR',
+  'OTHER',
+  'EMOTIONAL',
+];
+
+function sortDomains<T extends { domain: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const ai = DOMAIN_ORDER.indexOf(a.domain.toUpperCase());
+    const bi = DOMAIN_ORDER.indexOf(b.domain.toUpperCase());
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+}
 
 function TrendLabel({ direction, label }: { direction: string; label: string }) {
   const color =
@@ -220,7 +240,7 @@ export default function GrowthScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>영역별 발달 현황</Text>
           <View style={styles.domainsContainer}>
-            {aggregated.domains.map((domain) => (
+            {sortDomains(aggregated.domains).map((domain) => (
               <DomainProgressBar key={domain.domain} domain={domain} />
             ))}
           </View>
@@ -240,7 +260,7 @@ export default function GrowthScreen() {
       {growth && growth.domains.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>영역별 최근 점수</Text>
-          {growth.domains.map((ds) => {
+          {sortDomains(growth.domains).map((ds) => {
             const lastPoint = ds.data[ds.data.length - 1];
             return (
               <View key={ds.domain} style={styles.domainGrowthRow}>

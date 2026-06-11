@@ -28,13 +28,32 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const DOMAIN_LABELS: Record<string, string> = {
+  DAILY_LIVING: '일상생활',
   COMMUNICATION: '의사소통',
+  COGNITIVE: '인지',
   SOCIAL: '사회성',
   MOTOR: '운동',
-  COGNITIVE: '인지',
+  OTHER: '기타',
   EMOTIONAL: '정서',
-  DAILY_LIVING: '일상생활',
 };
+
+const DOMAIN_ORDER = [
+  'DAILY_LIVING',
+  'COMMUNICATION',
+  'COGNITIVE',
+  'SOCIAL',
+  'MOTOR',
+  'OTHER',
+  'EMOTIONAL',
+];
+
+function sortDomains<T extends { domain: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const ai = DOMAIN_ORDER.indexOf(a.domain.toUpperCase());
+    const bi = DOMAIN_ORDER.indexOf(b.domain.toUpperCase());
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+}
 
 function ResearchTickerCard({ articles }: { articles: ResearchMatch[] }) {
   const router = useRouter();
@@ -283,7 +302,7 @@ export default function HomeScreen() {
             종합 점수: {data.recentAssessment.overallScore.toFixed(1)}
           </Text>
           <View style={styles.domainScoresContainer}>
-            {data.recentAssessment.domainScores.map((ds) => (
+            {sortDomains(data.recentAssessment.domainScores).map((ds) => (
               <DomainScoreRow key={ds.domain} domainScore={ds} />
             ))}
           </View>
