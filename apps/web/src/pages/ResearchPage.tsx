@@ -399,7 +399,8 @@ export function ResearchPage() {
 
   const { data: feedItems = [], isLoading: feedInitialLoading } = useResearchFeed(
     undefined,
-    debouncedSearch ? { search: debouncedSearch, limit: feedLimit } : { limit: feedLimit },
+    debouncedSearch || undefined,
+    feedLimit,
   );
 
   const feedHasMore = feedItems.length === feedLimit;

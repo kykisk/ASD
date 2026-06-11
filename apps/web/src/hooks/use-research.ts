@@ -1,4 +1,3 @@
-import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 
@@ -8,6 +7,7 @@ export interface ResearchArticle {
   authors: string[];
   journal: string;
   publishedAt: string;
+  abstract?: string;
   koreanSummary?: string;
   keyFindings?: string[];
   tags?: string[];
@@ -28,33 +28,23 @@ export interface AiDigestResult {
   generatedAt: string;
 }
 
-export interface ResearchFeedResponse {
-  items: ResearchMatch[];
-  total: number;
-  offset: number;
-  limit: number;
-  hasMore: boolean;
+export interface ArchivedMatch extends ResearchMatch {
+  isArchived: boolean;
 }
 
-export function useResearchFeed(
-  childId?: string | null,
-  params?: { search?: string; limit?: number; offset?: number },
-) {
+export function useResearchFeed(childId?: string | null, search?: string, limit = 20) {
   return useQuery({
-    queryKey: ['research', 'feed', childId, params?.search, params?.limit, params?.offset],
+    queryKey: ['research', 'feed', childId, search, limit],
     staleTime: 0,
     queryFn: async () => {
-      const searchParams = new URLSearchParams();
-      if (childId) searchParams.set('childId', childId);
-      if (params?.search) searchParams.set('search', params.search);
-      if (params?.limit != null) searchParams.set('limit', String(params.limit));
-      if (params?.offset != null) searchParams.set('offset', String(params.offset));
-      const qs = searchParams.toString();
-      const { data } = await api.get<{ success: true; data: ResearchFeedResponse }>(
-        `/research/feed${qs ? `?${qs}` : ''}`,
+      const sp = new URLSearchParams();
+      if (childId) sp.set('childId', childId);
+      if (search) sp.set('search', search);
+      sp.set('limit', String(limit));
+      const { data } = await api.get<{ success: true; data: ResearchMatch[] }>(
+        `/research/feed${sp.toString() ? `?${sp.toString()}` : ''}`,
       );
-      const raw = data.data as ResearchFeedResponse | ResearchMatch[];
-      return Array.isArray(raw) ? raw : (raw?.items ?? []);
+      return (data.data ?? []) as ResearchMatch[];
     },
   });
 }
