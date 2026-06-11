@@ -101,19 +101,6 @@ export function useGenerateAiDigest() {
   });
 }
 
-export interface ArchivedMatch {
-  id: string;
-  articleId: string;
-  archivedAt: string;
-  article: {
-    pubmedId: string;
-    title: string;
-    journal: string;
-    publishedAt: string;
-    tags?: string[];
-  };
-}
-
 export interface DigestHistoryItem {
   id: string;
   digest: string;
