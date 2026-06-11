@@ -72,6 +72,8 @@ export class FeedbackDigestService {
     > = {};
 
     for (const f of feedbacks) {
+      const fType = (f as { feedbackType?: string }).feedbackType ?? 'SESSION';
+      if (fType !== 'SESSION') continue;
       const key = f.sessionType;
       if (!grouped[key]) {
         grouped[key] = {
@@ -90,6 +92,14 @@ export class FeedbackDigestService {
       if (f.homeWork) grouped[key].homeWork.push(f.homeWork.slice(0, 80));
       if (f.content) grouped[key].content.push(f.content.slice(0, 150));
     }
+
+    const dailyLogFeedbacks = feedbacks.filter(
+      (f) => (f as { feedbackType?: string }).feedbackType === 'DAILY_LOG',
+    );
+    const dailyLogText = dailyLogFeedbacks
+      .slice(0, 5)
+      .map((f) => `- ${f.content.slice(0, 150)}`)
+      .join('\n');
 
     // 프롬프트 텍스트 조립
     const sessionLines = Object.entries(grouped)
@@ -134,8 +144,9 @@ export class FeedbackDigestService {
 
     const userPrompt = `이번 주(${periodStart.toLocaleDateString('ko-KR')} ~ ${periodEnd.toLocaleDateString('ko-KR')}) 피드백 요약:
 
-${sessionLines}
+${sessionLines || '(수업 피드백 없음)'}
 ${homeWorkAll ? `\n가정 연습 과제: ${homeWorkAll}` : ''}
+${dailyLogText ? `\n이번 주 일상 기록:\n${dailyLogText}` : ''}
 ${behaviorText ? `\n이번 주 문제행동 기록:\n${behaviorText}` : ''}
 
 다음 JSON 형식으로만 응답하세요 (코드 블록 없이):

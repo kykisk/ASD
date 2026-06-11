@@ -17,6 +17,7 @@ interface MonthViewProps {
   schedules: Schedule[];
   onEventClick?: (schedule: Schedule) => void;
   onFeedbackClick?: (schedule: Schedule) => void;
+  onDateClick?: (dateStr: string) => void;
 }
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -27,6 +28,7 @@ export function MonthView({
   schedules,
   onEventClick,
   onFeedbackClick,
+  onDateClick,
 }: MonthViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -71,8 +73,10 @@ export function MonthView({
               } ${idx % 7 === 6 ? 'border-r-0' : ''}`}
             >
               <div className="flex justify-center mb-1">
-                <span
-                  className={`inline-flex items-center justify-center w-6 h-6 text-xs rounded-full ${
+                <button
+                  type="button"
+                  onClick={() => onDateClick?.(format(day, 'yyyy-MM-dd'))}
+                  className={`inline-flex items-center justify-center w-6 h-6 text-xs rounded-full cursor-pointer hover:ring-2 hover:ring-[#5B8A72]/30 transition-all ${
                     today
                       ? 'bg-primary-500 text-white font-bold'
                       : !isCurrentMonth
@@ -85,7 +89,7 @@ export function MonthView({
                   }`}
                 >
                   {format(day, 'd')}
-                </span>
+                </button>
               </div>
 
               <div className="space-y-0.5">

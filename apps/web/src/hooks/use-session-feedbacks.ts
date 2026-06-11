@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api.js';
 
+export type FeedbackType = 'SESSION' | 'DAILY_LOG' | 'BEHAVIORAL_ISSUE';
+
 export interface SessionFeedback {
   id: string;
   childId: string;
@@ -8,6 +10,7 @@ export interface SessionFeedback {
   userId: string;
   sessionDate: string;
   sessionType: string;
+  feedbackType: FeedbackType;
   therapistName: string | null;
   institution: string | null;
   durationMin: number | null;
@@ -18,6 +21,8 @@ export interface SessionFeedback {
   challenges: string | null;
   homeWork: string | null;
   parentNote: string | null;
+  severity: number | null;
+  behaviorTags: string[];
   createdAt: string;
   updatedAt: string;
   schedule?: { id: string; title: string } | null;
@@ -32,6 +37,7 @@ export interface FeedbackDigest {
   bySessionType: Record<string, unknown>;
   highlights: string[];
   concerns: string[];
+  behaviorSuggestions: string[];
   homeWorkSummary: string | null;
   feedbackCount: number;
   periodStart: string;
@@ -181,16 +187,34 @@ export function useSessionFeedbackAutocomplete(childId: string | null) {
   });
 }
 
-export function useFeedbackDigests(childId: string | null) {
+export function useFeedbackDigests(childId: string | null, limit?: number) {
   return useQuery({
-    queryKey: ['feedback-digests', childId],
+    queryKey: ['feedback-digests', childId, limit],
     queryFn: async () => {
+      const params = limit ? { limit } : undefined;
       const { data } = await api.get<{ success: true; data: FeedbackDigest[] }>(
         `/children/${childId}/feedback-digests`,
+        { params },
       );
       return data.data;
     },
     enabled: !!childId,
+  });
+}
+
+export function useFeedbacksByDate(childId: string | null, date: string | null) {
+  return useQuery({
+    queryKey: ['session-feedbacks', childId, 'by-date', date],
+    queryFn: async () => {
+      const { data } = await api.get<{
+        success: true;
+        data: { items: SessionFeedback[]; total: number; page: number; limit: number };
+      }>(`/children/${childId}/session-feedbacks`, {
+        params: { startDate: date, endDate: date, limit: 50 },
+      });
+      return data.data.items;
+    },
+    enabled: !!childId && !!date,
   });
 }
 

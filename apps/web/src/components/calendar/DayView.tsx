@@ -8,12 +8,19 @@ interface DayViewProps {
   schedules: Schedule[];
   onEventClick?: (schedule: Schedule) => void;
   onFeedbackClick?: (schedule: Schedule) => void;
+  onDateClick?: (dateStr: string) => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const HOUR_HEIGHT = 56;
 
-export function DayView({ currentDate, schedules, onEventClick, onFeedbackClick }: DayViewProps) {
+export function DayView({
+  currentDate,
+  schedules,
+  onEventClick,
+  onFeedbackClick,
+  onDateClick,
+}: DayViewProps) {
   const daySchedules = schedules.filter((s) => {
     const eventDate = format(new Date(s.startTime), 'yyyy-MM-dd');
     const currentDateStr = format(currentDate, 'yyyy-MM-dd');
@@ -41,13 +48,15 @@ export function DayView({ currentDate, schedules, onEventClick, onFeedbackClick 
         className={`px-4 py-3 border-b border-neutral-200 ${today ? 'bg-primary-50/30' : 'bg-neutral-50'}`}
       >
         <div className="flex items-center gap-3">
-          <span
-            className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-lg font-bold ${
+          <button
+            type="button"
+            onClick={() => onDateClick?.(format(currentDate, 'yyyy-MM-dd'))}
+            className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-lg font-bold cursor-pointer hover:ring-2 hover:ring-[#5B8A72]/30 transition-all ${
               today ? 'bg-primary-500 text-white' : 'bg-neutral-100 text-neutral-700'
             }`}
           >
             {format(currentDate, 'd')}
-          </span>
+          </button>
           <div>
             <p className="text-sm font-semibold text-neutral-800">
               {format(currentDate, 'EEEE', { locale: ko })}

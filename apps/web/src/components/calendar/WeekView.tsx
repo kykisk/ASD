@@ -15,13 +15,20 @@ interface WeekViewProps {
   schedules: Schedule[];
   onEventClick?: (schedule: Schedule) => void;
   onFeedbackClick?: (schedule: Schedule) => void;
+  onDateClick?: (dateStr: string) => void;
 }
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const HOUR_HEIGHT = 48;
 
-export function WeekView({ currentDate, schedules, onEventClick, onFeedbackClick }: WeekViewProps) {
+export function WeekView({
+  currentDate,
+  schedules,
+  onEventClick,
+  onFeedbackClick,
+  onDateClick,
+}: WeekViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -64,15 +71,17 @@ export function WeekView({ currentDate, schedules, onEventClick, onFeedbackClick
               >
                 {DAY_NAMES[i]}
               </span>
-              <span
-                className={`block text-sm mt-0.5 ${
+              <button
+                type="button"
+                onClick={() => onDateClick?.(format(day, 'yyyy-MM-dd'))}
+                className={`block text-sm mt-0.5 mx-auto cursor-pointer hover:ring-2 hover:ring-[#5B8A72]/30 rounded-full transition-all ${
                   today
-                    ? 'w-7 h-7 mx-auto rounded-full bg-primary-500 text-white flex items-center justify-center font-bold'
-                    : 'font-semibold text-neutral-700'
+                    ? 'w-7 h-7 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold'
+                    : 'font-semibold text-neutral-700 w-7 h-7 flex items-center justify-center'
                 }`}
               >
                 {format(day, 'd')}
-              </span>
+              </button>
             </div>
           );
         })}

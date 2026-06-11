@@ -16,6 +16,11 @@ export interface SessionFeedback {
   challenges: string | null;
   homeWork: string | null;
   parentNote: string | null;
+  feedbackType: 'SESSION' | 'DAILY_LOG' | 'BEHAVIORAL_ISSUE';
+  severity: number | null;
+  behaviorTags: string[];
+  aiDomainScores: Record<string, number> | null;
+  aiExtracted: boolean;
   createdAt: string;
 }
 
@@ -53,6 +58,7 @@ export interface FeedbackDigest {
   >;
   highlights: string[];
   concerns: string[];
+  behaviorSuggestions: string[];
   homeWorkSummary: string | null;
   feedbackCount: number;
   periodStart: string;

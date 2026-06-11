@@ -30,6 +30,7 @@ import {
   useAcceptSuggestion,
   type ScheduleSuggestion,
 } from '../hooks/use-schedule-ai';
+import { useFeedbacksByDate, type SessionFeedback } from '../hooks/use-session-feedbacks';
 import { useChildStore } from '../stores/child.store';
 import { CalendarHeader } from '../components/calendar/CalendarHeader';
 import { MonthView } from '../components/calendar/MonthView';
@@ -86,6 +87,91 @@ function ScheduleAnalysisProgress() {
   );
 }
 
+const FEEDBACK_TYPE_BADGE: Record<string, { label: string; className: string }> = {
+  SESSION: { label: '수업', className: 'bg-[#e8f5ee] text-[#3d6b54]' },
+  DAILY_LOG: { label: '일상', className: 'bg-blue-50 text-blue-700' },
+  BEHAVIORAL_ISSUE: { label: '문제행동', className: 'bg-red-50 text-red-700' },
+};
+
+function DateFeedbackPopup({
+  date,
+  feedbacks,
+  onClose,
+  onAddFeedback,
+}: {
+  date: string;
+  feedbacks: SessionFeedback[];
+  onClose: () => void;
+  onAddFeedback: () => void;
+}) {
+  const d = new Date(date + 'T00:00:00');
+  const title = `${d.getMonth() + 1}월 ${d.getDate()}일 피드백`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl border border-[#e8e4df] shadow-[0_8px_32px_rgba(0,0,0,0.12)] w-full max-w-md max-h-[70vh] flex flex-col animate-[fadeIn_0.15s_ease-out]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e4df]">
+          <h3 className="text-base font-bold text-neutral-800">{title}</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+          {feedbacks.length === 0 && (
+            <div className="py-8 text-center">
+              <div className="text-2xl mb-2">📋</div>
+              <p className="text-sm text-neutral-500">이 날 기록된 피드백이 없습니다</p>
+            </div>
+          )}
+
+          {feedbacks.map((fb) => {
+            const badge =
+              FEEDBACK_TYPE_BADGE[fb.feedbackType ?? 'SESSION'] ?? FEEDBACK_TYPE_BADGE.SESSION;
+            return (
+              <div
+                key={fb.id}
+                className="p-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] hover:border-[#5B8A72]/30 transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${badge.className}`}
+                  >
+                    {badge.label}
+                  </span>
+                  {fb.sessionType && (
+                    <span className="text-[11px] text-neutral-400">{fb.sessionType}</span>
+                  )}
+                </div>
+                <p className="text-sm text-neutral-700 line-clamp-2">{fb.content}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-[#e8e4df]">
+          <button
+            onClick={() => {
+              onAddFeedback();
+              onClose();
+            }}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-[#5B8A72] hover:bg-[#3d6b54] transition-all"
+          >
+            + 피드백 추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
@@ -105,10 +191,12 @@ export function SchedulePage() {
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackScheduleId, setFeedbackScheduleId] = useState<string | null>(null);
+  const [feedbackDatePopup, setFeedbackDatePopup] = useState<string | null>(null);
 
   const { selectedChildId } = useChildStore();
   const childId = selectedChildId;
 
+  const { data: dateFeedbacks } = useFeedbacksByDate(childId, feedbackDatePopup);
   const suggestions = useScheduleSuggestions(childId);
   const acceptSuggestion = useAcceptSuggestion(childId);
 
@@ -289,6 +377,10 @@ export function SchedulePage() {
     const realId = schedule.id.includes('_') ? schedule.id.split('_')[0] : schedule.id;
     setFeedbackScheduleId(realId);
     setShowFeedbackModal(true);
+  }, []);
+
+  const handleDateClick = useCallback((dateStr: string) => {
+    setFeedbackDatePopup(dateStr);
   }, []);
 
   const allActive = activeCategories.size === ALL_CATEGORIES.length;
@@ -472,6 +564,7 @@ export function SchedulePage() {
             schedules={filteredSchedules}
             onEventClick={handleEventClick}
             onFeedbackClick={handleFeedbackClick}
+            onDateClick={handleDateClick}
           />
         )}
         {viewMode === 'week' && (
@@ -480,6 +573,7 @@ export function SchedulePage() {
             schedules={filteredSchedules}
             onEventClick={handleEventClick}
             onFeedbackClick={handleFeedbackClick}
+            onDateClick={handleDateClick}
           />
         )}
         {viewMode === 'day' && (
@@ -488,6 +582,7 @@ export function SchedulePage() {
             schedules={filteredSchedules}
             onEventClick={handleEventClick}
             onFeedbackClick={handleFeedbackClick}
+            onDateClick={handleDateClick}
           />
         )}
       </div>
@@ -537,6 +632,19 @@ export function SchedulePage() {
         }}
         defaultScheduleId={feedbackScheduleId}
       />
+
+      {/* Date Feedback Popup */}
+      {feedbackDatePopup && (
+        <DateFeedbackPopup
+          date={feedbackDatePopup}
+          feedbacks={dateFeedbacks ?? []}
+          onClose={() => setFeedbackDatePopup(null)}
+          onAddFeedback={() => {
+            setFeedbackScheduleId(null);
+            setShowFeedbackModal(true);
+          }}
+        />
+      )}
     </div>
   );
 }

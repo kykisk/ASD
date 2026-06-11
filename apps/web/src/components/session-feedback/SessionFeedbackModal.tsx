@@ -34,9 +34,15 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   defaultScheduleId?: string | null;
+  defaultFeedbackType?: FeedbackType;
 }
 
-export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Props) {
+export function SessionFeedbackModal({
+  isOpen,
+  onClose,
+  defaultScheduleId,
+  defaultFeedbackType,
+}: Props) {
   const { selectedChildId } = useChildStore();
   const createFeedback = useCreateSessionFeedback(selectedChildId);
   const { data: autocomplete } = useSessionFeedbackAutocomplete(selectedChildId);
@@ -81,7 +87,7 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
 
   useEffect(() => {
     if (isOpen) {
-      setFeedbackType('SESSION');
+      setFeedbackType(defaultFeedbackType ?? 'SESSION');
       setSessionType('');
       setCustomSessionType('');
       setSessionDate(today);
@@ -100,7 +106,7 @@ export function SessionFeedbackModal({ isOpen, onClose, defaultScheduleId }: Pro
       setShowOptional(!!defaultScheduleId);
       setError('');
     }
-  }, [isOpen, defaultScheduleId, today]);
+  }, [isOpen, defaultScheduleId, defaultFeedbackType, today]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

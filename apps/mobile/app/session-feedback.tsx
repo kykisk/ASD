@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,9 @@ import type {
 } from '../hooks/use-session-feedbacks.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 
-type TabKey = 'recent' | 'all' | 'ai';
+type TabKey = 'session' | 'daily' | 'ai';
+
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
 const SESSION_TYPES = [
   { key: 'ABA', label: 'ABA' },
@@ -41,11 +43,29 @@ function getSessionTypeLabel(key: string): string {
   return SESSION_TYPES.find((t) => t.key === key)?.label ?? key;
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' });
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
+function formatDateLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const dow = DAY_NAMES[d.getDay()];
+  return `${year}년 ${month}월 ${day}일 (${dow})`;
+}
+
+function shiftDate(dateStr: string, delta: number): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  return toDateString(d);
+}
+
+// ─────────────── Rating Stars ───────────────
 function RatingStars({ rating }: { rating: number }) {
   return (
     <View style={cardStyles.starsRow}>
@@ -70,8 +90,37 @@ function RatingInput({ value, onChange }: { value: number; onChange: (v: number)
   );
 }
 
-// ─────────────── Feedback Card ───────────────
-function FeedbackCard({ feedback, onDelete }: { feedback: SessionFeedback; onDelete: () => void }) {
+// ─────────────── Date Navigation ───────────────
+function DateNavigation({
+  date,
+  onPrev,
+  onNext,
+}: {
+  date: string;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <View style={dateNavStyles.container}>
+      <TouchableOpacity style={dateNavStyles.arrowBtn} onPress={onPrev}>
+        <Text style={dateNavStyles.arrow}>←</Text>
+      </TouchableOpacity>
+      <Text style={dateNavStyles.label}>{formatDateLabel(date)}</Text>
+      <TouchableOpacity style={dateNavStyles.arrowBtn} onPress={onNext}>
+        <Text style={dateNavStyles.arrow}>→</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─────────────── Session Feedback Card ───────────────
+function SessionFeedbackCard({
+  feedback,
+  onDelete,
+}: {
+  feedback: SessionFeedback;
+  onDelete: () => void;
+}) {
   return (
     <View style={cardStyles.card}>
       <View style={cardStyles.cardHeader}>
@@ -83,14 +132,11 @@ function FeedbackCard({ feedback, onDelete }: { feedback: SessionFeedback; onDel
         </TouchableOpacity>
       </View>
       <RatingStars rating={feedback.rating} />
-      <Text style={cardStyles.content} numberOfLines={3}>
+      <Text style={cardStyles.content} numberOfLines={4}>
         {feedback.content}
       </Text>
-      <View style={cardStyles.metaRow}>
-        <Text style={cardStyles.date}>{formatDate(feedback.sessionDate)}</Text>
-        {feedback.therapistName && <Text style={cardStyles.meta}>· {feedback.therapistName}</Text>}
-        {feedback.institution && <Text style={cardStyles.meta}>· {feedback.institution}</Text>}
-      </View>
+      {feedback.therapistName && <Text style={cardStyles.meta}>👤 {feedback.therapistName}</Text>}
+      {feedback.institution && <Text style={cardStyles.meta}>🏫 {feedback.institution}</Text>}
       {feedback.progress && (
         <Text style={cardStyles.detail} numberOfLines={2}>
           📈 {feedback.progress}
@@ -110,82 +156,102 @@ function FeedbackCard({ feedback, onDelete }: { feedback: SessionFeedback; onDel
   );
 }
 
-// ─────────────── Tab: 최근 ───────────────
-function RecentTab({
-  childId,
-  feedbacks,
-  isLoading,
-}: {
-  childId: string;
-  feedbacks: SessionFeedback[];
-  isLoading: boolean;
-}) {
-  const deleteMutation = useDeleteSessionFeedback(childId);
-
-  const handleDelete = (id: string) => {
-    const doDelete = () => deleteMutation.mutate(id);
-    if (Platform.OS === 'web') {
-      if (window.confirm('이 피드백을 삭제하시겠습니까?')) doDelete();
-    } else {
-      Alert.alert('삭제 확인', '이 피드백을 삭제하시겠습니까?', [
-        { text: '취소', style: 'cancel' },
-        { text: '삭제', style: 'destructive', onPress: doDelete },
-      ]);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <View style={tabStyles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  // Filter last 7 days
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const recentFeedbacks = feedbacks.filter((f) => new Date(f.sessionDate) >= sevenDaysAgo);
-
-  if (recentFeedbacks.length === 0) {
-    return (
-      <View style={tabStyles.emptyState}>
-        <Text style={tabStyles.emptyIcon}>📝</Text>
-        <Text style={tabStyles.emptyText}>최근 7일간 피드백이 없습니다</Text>
-        <Text style={tabStyles.emptyHint}>수업 후 피드백을 작성하면 여기에 표시됩니다.</Text>
-      </View>
-    );
-  }
-
+// ─────────────── Daily Log Card ───────────────
+function DailyLogCard({ feedback, onDelete }: { feedback: SessionFeedback; onDelete: () => void }) {
   return (
-    <View style={tabStyles.container}>
-      <Text style={tabStyles.sectionTitle}>최근 7일 ({recentFeedbacks.length}건)</Text>
-      <View style={tabStyles.list}>
-        {recentFeedbacks.map((f) => (
-          <FeedbackCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
-        ))}
+    <View style={cardStyles.card}>
+      <View style={cardStyles.cardHeader}>
+        <View style={[cardStyles.typeBadge, { backgroundColor: colors.info + '20' }]}>
+          <Text style={[cardStyles.typeBadgeText, { color: colors.info }]}>📝 일상기록</Text>
+        </View>
+        <TouchableOpacity onPress={onDelete}>
+          <Text style={cardStyles.deleteBtn}>🗑️</Text>
+        </TouchableOpacity>
       </View>
+      <Text style={cardStyles.content} numberOfLines={5}>
+        {feedback.content}
+      </Text>
     </View>
   );
 }
 
-// ─────────────── Tab: 전체 ───────────────
-function AllTab({
+// ─────────────── Behavioral Issue Card ───────────────
+function BehavioralIssueCard({
+  feedback,
+  onDelete,
+}: {
+  feedback: SessionFeedback;
+  onDelete: () => void;
+}) {
+  return (
+    <View style={[cardStyles.card, { borderLeftWidth: 3, borderLeftColor: colors.error }]}>
+      <View style={cardStyles.cardHeader}>
+        <View style={[cardStyles.typeBadge, { backgroundColor: colors.error + '15' }]}>
+          <Text style={[cardStyles.typeBadgeText, { color: colors.error }]}>⚠️ 문제행동</Text>
+        </View>
+        <TouchableOpacity onPress={onDelete}>
+          <Text style={cardStyles.deleteBtn}>🗑️</Text>
+        </TouchableOpacity>
+      </View>
+      {feedback.severity != null && (
+        <View style={cardStyles.severityRow}>
+          <Text style={cardStyles.severityLabel}>심각도</Text>
+          <View style={cardStyles.severityBadge}>
+            <Text style={cardStyles.severityText}>
+              {'❗'.repeat(feedback.severity)} {feedback.severity}/5
+            </Text>
+          </View>
+        </View>
+      )}
+      {feedback.behaviorTags.length > 0 && (
+        <View style={cardStyles.tagsRow}>
+          {feedback.behaviorTags.map((tag) => (
+            <View key={tag} style={cardStyles.tagChip}>
+              <Text style={cardStyles.tagChipText}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+      <Text style={cardStyles.content} numberOfLines={5}>
+        {feedback.content}
+      </Text>
+    </View>
+  );
+}
+
+// ─────────────── Tab 1: 수업피드백 ───────────────
+function SessionTab({
   childId,
   feedbacks,
   isLoading,
-  selectedType,
-  onTypeChange,
   onShowForm,
 }: {
   childId: string;
   feedbacks: SessionFeedback[];
   isLoading: boolean;
-  selectedType: string;
-  onTypeChange: (type: string) => void;
   onShowForm: () => void;
 }) {
   const deleteMutation = useDeleteSessionFeedback(childId);
+
+  const sessionFeedbacks = useMemo(
+    () => feedbacks.filter((f) => f.feedbackType === 'SESSION'),
+    [feedbacks],
+  );
+
+  const mostRecentDate = useMemo(() => {
+    if (sessionFeedbacks.length === 0) return toDateString(new Date());
+    const sorted = [...sessionFeedbacks].sort(
+      (a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime(),
+    );
+    return sorted[0].sessionDate.split('T')[0];
+  }, [sessionFeedbacks]);
+
+  const [selectedDate, setSelectedDate] = useState(mostRecentDate);
+
+  const dayFeedbacks = useMemo(
+    () => sessionFeedbacks.filter((f) => f.sessionDate.split('T')[0] === selectedDate),
+    [sessionFeedbacks, selectedDate],
+  );
 
   const handleDelete = (id: string) => {
     const doDelete = () => deleteMutation.mutate(id);
@@ -207,54 +273,30 @@ function AllTab({
     );
   }
 
-  const filtered = selectedType
-    ? feedbacks.filter((f) => f.sessionType === selectedType)
-    : feedbacks;
-
   return (
     <View style={tabStyles.container}>
+      <DateNavigation
+        date={selectedDate}
+        onPrev={() => setSelectedDate(shiftDate(selectedDate, -1))}
+        onNext={() => setSelectedDate(shiftDate(selectedDate, 1))}
+      />
+
       <View style={tabStyles.filterHeader}>
-        <Text style={tabStyles.sectionTitle}>전체 피드백 ({filtered.length}건)</Text>
-        <TouchableOpacity style={tabStyles.createBtn} onPress={onShowForm}>
-          <Text style={tabStyles.createBtnText}>피드백 작성</Text>
+        <Text style={tabStyles.countText}>{dayFeedbacks.length}건</Text>
+        <TouchableOpacity style={tabStyles.addBtn} onPress={onShowForm}>
+          <Text style={tabStyles.addBtnText}>+</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={tabStyles.chipScroll}>
-        <View style={tabStyles.chipRow}>
-          <TouchableOpacity
-            style={[tabStyles.chip, !selectedType && tabStyles.chipActive]}
-            onPress={() => onTypeChange('')}
-          >
-            <Text style={[tabStyles.chipText, !selectedType && tabStyles.chipTextActive]}>
-              전체
-            </Text>
-          </TouchableOpacity>
-          {SESSION_TYPES.map((t) => (
-            <TouchableOpacity
-              key={t.key}
-              style={[tabStyles.chip, selectedType === t.key && tabStyles.chipActive]}
-              onPress={() => onTypeChange(t.key)}
-            >
-              <Text
-                style={[tabStyles.chipText, selectedType === t.key && tabStyles.chipTextActive]}
-              >
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-
-      {filtered.length === 0 ? (
+      {dayFeedbacks.length === 0 ? (
         <View style={tabStyles.emptyState}>
-          <Text style={tabStyles.emptyIcon}>📋</Text>
-          <Text style={tabStyles.emptyText}>피드백이 없습니다</Text>
+          <Text style={tabStyles.emptyIcon}>📝</Text>
+          <Text style={tabStyles.emptyText}>이 날 기록이 없어요</Text>
         </View>
       ) : (
         <View style={tabStyles.list}>
-          {filtered.map((f) => (
-            <FeedbackCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
+          {dayFeedbacks.map((f) => (
+            <SessionFeedbackCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
           ))}
         </View>
       )}
@@ -262,10 +304,104 @@ function AllTab({
   );
 }
 
-// ─────────────── Tab: AI 요약 ───────────────
+// ─────────────── Tab 2: 일상기록 ───────────────
+function DailyTab({
+  childId,
+  feedbacks,
+  isLoading,
+  onShowForm,
+}: {
+  childId: string;
+  feedbacks: SessionFeedback[];
+  isLoading: boolean;
+  onShowForm: () => void;
+}) {
+  const deleteMutation = useDeleteSessionFeedback(childId);
+
+  const dailyFeedbacks = useMemo(
+    () =>
+      feedbacks.filter(
+        (f) => f.feedbackType === 'DAILY_LOG' || f.feedbackType === 'BEHAVIORAL_ISSUE',
+      ),
+    [feedbacks],
+  );
+
+  const mostRecentDate = useMemo(() => {
+    if (dailyFeedbacks.length === 0) return toDateString(new Date());
+    const sorted = [...dailyFeedbacks].sort(
+      (a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime(),
+    );
+    return sorted[0].sessionDate.split('T')[0];
+  }, [dailyFeedbacks]);
+
+  const [selectedDate, setSelectedDate] = useState(mostRecentDate);
+
+  const dayFeedbacks = useMemo(
+    () => dailyFeedbacks.filter((f) => f.sessionDate.split('T')[0] === selectedDate),
+    [dailyFeedbacks, selectedDate],
+  );
+
+  const handleDelete = (id: string) => {
+    const doDelete = () => deleteMutation.mutate(id);
+    if (Platform.OS === 'web') {
+      if (window.confirm('이 기록을 삭제하시겠습니까?')) doDelete();
+    } else {
+      Alert.alert('삭제 확인', '이 기록을 삭제하시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        { text: '삭제', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={tabStyles.center}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={tabStyles.container}>
+      <DateNavigation
+        date={selectedDate}
+        onPrev={() => setSelectedDate(shiftDate(selectedDate, -1))}
+        onNext={() => setSelectedDate(shiftDate(selectedDate, 1))}
+      />
+
+      <View style={tabStyles.filterHeader}>
+        <Text style={tabStyles.countText}>{dayFeedbacks.length}건</Text>
+        <TouchableOpacity style={tabStyles.addBtn} onPress={onShowForm}>
+          <Text style={tabStyles.addBtnText}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      {dayFeedbacks.length === 0 ? (
+        <View style={tabStyles.emptyState}>
+          <Text style={tabStyles.emptyIcon}>📋</Text>
+          <Text style={tabStyles.emptyText}>이 날 기록이 없어요</Text>
+        </View>
+      ) : (
+        <View style={tabStyles.list}>
+          {dayFeedbacks.map((f) =>
+            f.feedbackType === 'BEHAVIORAL_ISSUE' ? (
+              <BehavioralIssueCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
+            ) : (
+              <DailyLogCard key={f.id} feedback={f} onDelete={() => handleDelete(f.id)} />
+            ),
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ─────────────── Tab 3: AI주간요약 ───────────────
 function AiTab({ childId }: { childId: string }) {
   const { data: digests, isLoading } = useFeedbackDigests(childId);
   const generateMutation = useGenerateFeedbackDigest(childId);
+
+  const displayDigests = useMemo(() => (digests ?? []).slice(0, 4), [digests]);
 
   const handleGenerate = () => {
     generateMutation.mutate();
@@ -299,7 +435,7 @@ function AiTab({ childId }: { childId: string }) {
         </TouchableOpacity>
       </View>
 
-      {!digests || digests.length === 0 ? (
+      {displayDigests.length === 0 ? (
         <View style={tabStyles.emptyState}>
           <Text style={tabStyles.emptyIcon}>🤖</Text>
           <Text style={tabStyles.emptyText}>AI 요약이 없습니다</Text>
@@ -309,7 +445,7 @@ function AiTab({ childId }: { childId: string }) {
         </View>
       ) : (
         <View style={tabStyles.list}>
-          {digests.map((digest) => (
+          {displayDigests.map((digest) => (
             <DigestCard key={digest.id} digest={digest} />
           ))}
         </View>
@@ -318,6 +454,7 @@ function AiTab({ childId }: { childId: string }) {
   );
 }
 
+// ─────────────── Digest Card ───────────────
 function DigestCard({ digest }: { digest: FeedbackDigest }) {
   return (
     <View style={cardStyles.card}>
@@ -349,6 +486,17 @@ function DigestCard({ digest }: { digest: FeedbackDigest }) {
         </View>
       )}
 
+      {digest.behaviorSuggestions.length > 0 && (
+        <View style={cardStyles.digestSection}>
+          <Text style={cardStyles.digestLabel}>💡 행동 개선 제안</Text>
+          {digest.behaviorSuggestions.map((s, i) => (
+            <Text key={i} style={cardStyles.digestItem}>
+              • {s}
+            </Text>
+          ))}
+        </View>
+      )}
+
       {digest.homeWorkSummary && (
         <View style={cardStyles.digestSection}>
           <Text style={cardStyles.digestLabel}>📝 숙제 요약</Text>
@@ -357,7 +505,7 @@ function DigestCard({ digest }: { digest: FeedbackDigest }) {
       )}
 
       <Text style={cardStyles.digestPeriod}>
-        {formatDate(digest.periodStart)} ~ {formatDate(digest.periodEnd)}
+        {digest.periodStart} ~ {digest.periodEnd}
       </Text>
     </View>
   );
@@ -627,16 +775,15 @@ function CreationForm({ childId, onClose }: { childId: string; onClose: () => vo
 // ─────────────── Main Screen ───────────────
 export default function SessionFeedbackScreen() {
   const selectedChildId = useChildStore((s) => s.selectedChildId);
-  const [activeTab, setActiveTab] = useState<TabKey>('recent');
+  const [activeTab, setActiveTab] = useState<TabKey>('session');
   const [showForm, setShowForm] = useState(false);
-  const [filterType, setFilterType] = useState('');
 
   const { data: feedbacks, isLoading } = useSessionFeedbacks(selectedChildId);
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: 'recent', label: '최근' },
-    { key: 'all', label: '전체' },
-    { key: 'ai', label: 'AI 요약' },
+    { key: 'session', label: '수업피드백' },
+    { key: 'daily', label: '일상기록' },
+    { key: 'ai', label: 'AI주간요약' },
   ];
 
   if (!selectedChildId) {
@@ -677,16 +824,19 @@ export default function SessionFeedbackScreen() {
       {showForm && <CreationForm childId={selectedChildId} onClose={() => setShowForm(false)} />}
 
       {/* Tab Content */}
-      {activeTab === 'recent' && (
-        <RecentTab childId={selectedChildId} feedbacks={feedbacks ?? []} isLoading={isLoading} />
-      )}
-      {activeTab === 'all' && (
-        <AllTab
+      {activeTab === 'session' && (
+        <SessionTab
           childId={selectedChildId}
           feedbacks={feedbacks ?? []}
           isLoading={isLoading}
-          selectedType={filterType}
-          onTypeChange={setFilterType}
+          onShowForm={() => setShowForm(true)}
+        />
+      )}
+      {activeTab === 'daily' && (
+        <DailyTab
+          childId={selectedChildId}
+          feedbacks={feedbacks ?? []}
+          isLoading={isLoading}
           onShowForm={() => setShowForm(true)}
         />
       )}
@@ -728,6 +878,37 @@ const styles = StyleSheet.create({
   },
 });
 
+const dateNavStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  arrowBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrow: {
+    fontSize: fontSize.lg,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  label: {
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    color: colors.text,
+  },
+});
+
 const tabStyles = StyleSheet.create({
   container: { gap: spacing.md },
   center: { paddingVertical: spacing.xxl, alignItems: 'center' },
@@ -742,13 +923,20 @@ const tabStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  createBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
+  countText: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
-  createBtnText: { fontSize: fontSize.sm, color: '#fff', fontWeight: '600' },
+  addBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addBtnText: { fontSize: fontSize.xl, color: '#fff', fontWeight: '600' },
   generateBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
@@ -757,22 +945,6 @@ const tabStyles = StyleSheet.create({
   },
   generateBtnDisabled: { opacity: 0.6 },
   generateBtnText: { fontSize: fontSize.sm, color: '#fff', fontWeight: '600' },
-  chipScroll: { marginVertical: spacing.xs },
-  chipRow: { flexDirection: 'row', gap: spacing.xs },
-  chip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: { fontSize: fontSize.xs, color: colors.textSecondary },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
@@ -813,10 +985,33 @@ const cardStyles = StyleSheet.create({
   starsRow: { flexDirection: 'row', gap: 2 },
   star: { fontSize: fontSize.sm },
   content: { fontSize: fontSize.sm, color: colors.text, lineHeight: 20 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
-  date: { fontSize: fontSize.xs, color: colors.textMuted },
   meta: { fontSize: fontSize.xs, color: colors.textSecondary },
   detail: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
+  severityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  severityLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
+  severityBadge: {
+    backgroundColor: colors.error + '15',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  severityText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.error },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  tagChip: {
+    backgroundColor: colors.warning + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  tagChipText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: '500' },
   digestWeek: { fontSize: fontSize.md, fontWeight: '700', color: colors.text },
   digestCount: { fontSize: fontSize.xs, color: colors.textMuted },
   digestSummary: { fontSize: fontSize.sm, color: colors.text, lineHeight: 22 },
