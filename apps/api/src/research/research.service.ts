@@ -369,7 +369,7 @@ ${articlesContext}
       if (!text) throw new Error('Empty AI response');
 
       const topArticles: { pubmedId: string; title: string; reason: string }[] = [];
-      const topRegex = /\d+\.\s*\*{0,2}\[(\d+)\]\s*([^*\n]+)\*{0,2}\s*-\s*([^\n]+)/g;
+      const topRegex = /\d+\.\s*\*{0,2}\[(\d+)\]\s*([^*\n]+?)\*{0,2}\s*[-—]\s*([^\n]+)/g;
       let match;
       while ((match = topRegex.exec(text)) !== null && topArticles.length < 3) {
         const idx = parseInt(match[1].trim(), 10) - 1;
