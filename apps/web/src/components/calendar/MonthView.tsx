@@ -18,6 +18,7 @@ interface MonthViewProps {
   onEventClick?: (schedule: Schedule) => void;
   onFeedbackClick?: (schedule: Schedule) => void;
   onDateClick?: (dateStr: string) => void;
+  feedbackDates?: Set<string>;
 }
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -29,6 +30,7 @@ export function MonthView({
   onEventClick,
   onFeedbackClick,
   onDateClick,
+  feedbackDates,
 }: MonthViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -76,8 +78,14 @@ export function MonthView({
                 <button
                   type="button"
                   onClick={() => onDateClick(format(day, 'yyyy-MM-dd'))}
-                  className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded text-neutral-300 hover:text-[#5B8A72] hover:bg-[#5B8A72]/10 transition-colors"
-                  title="피드백 보기"
+                  className={`absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded transition-colors ${
+                    feedbackDates?.has(format(day, 'yyyy-MM-dd'))
+                      ? 'text-[#5B8A72] bg-[#5B8A72]/10 hover:bg-[#5B8A72]/20'
+                      : 'text-neutral-300 hover:text-[#5B8A72] hover:bg-[#5B8A72]/10'
+                  }`}
+                  title={
+                    feedbackDates?.has(format(day, 'yyyy-MM-dd')) ? '피드백 있음' : '피드백 없음'
+                  }
                 >
                   <svg
                     className="w-3 h-3"

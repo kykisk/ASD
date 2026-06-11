@@ -30,7 +30,11 @@ import {
   useAcceptSuggestion,
   type ScheduleSuggestion,
 } from '../hooks/use-schedule-ai';
-import { useFeedbacksByDate, type SessionFeedback } from '../hooks/use-session-feedbacks';
+import {
+  useFeedbacksByDate,
+  useSessionFeedbacks,
+  type SessionFeedback,
+} from '../hooks/use-session-feedbacks';
 import { useChildStore } from '../stores/child.store';
 import { CalendarHeader } from '../components/calendar/CalendarHeader';
 import { MonthView } from '../components/calendar/MonthView';
@@ -197,6 +201,16 @@ export function SchedulePage() {
   const childId = selectedChildId;
 
   const { data: dateFeedbacks } = useFeedbacksByDate(childId, feedbackDatePopup);
+
+  const { data: monthFeedbacks } = useSessionFeedbacks(childId, {
+    from: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+    to: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+  });
+
+  const feedbackDates = useMemo(() => {
+    if (!monthFeedbacks) return new Set<string>();
+    return new Set(monthFeedbacks.map((f) => f.sessionDate.split('T')[0]));
+  }, [monthFeedbacks]);
   const suggestions = useScheduleSuggestions(childId);
   const acceptSuggestion = useAcceptSuggestion(childId);
 
@@ -565,6 +579,7 @@ export function SchedulePage() {
             onEventClick={handleEventClick}
             onFeedbackClick={handleFeedbackClick}
             onDateClick={handleDateClick}
+            feedbackDates={feedbackDates}
           />
         )}
         {viewMode === 'week' && (
@@ -574,6 +589,7 @@ export function SchedulePage() {
             onEventClick={handleEventClick}
             onFeedbackClick={handleFeedbackClick}
             onDateClick={handleDateClick}
+            feedbackDates={feedbackDates}
           />
         )}
         {viewMode === 'day' && (
@@ -583,6 +599,7 @@ export function SchedulePage() {
             onEventClick={handleEventClick}
             onFeedbackClick={handleFeedbackClick}
             onDateClick={handleDateClick}
+            feedbackDates={feedbackDates}
           />
         )}
       </div>

@@ -9,6 +9,7 @@ interface DayViewProps {
   onEventClick?: (schedule: Schedule) => void;
   onFeedbackClick?: (schedule: Schedule) => void;
   onDateClick?: (dateStr: string) => void;
+  feedbackDates?: Set<string>;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -20,6 +21,7 @@ export function DayView({
   onEventClick,
   onFeedbackClick,
   onDateClick,
+  feedbackDates,
 }: DayViewProps) {
   const daySchedules = schedules.filter((s) => {
     const eventDate = format(new Date(s.startTime), 'yyyy-MM-dd');
@@ -65,8 +67,16 @@ export function DayView({
             <button
               type="button"
               onClick={() => onDateClick(format(currentDate, 'yyyy-MM-dd'))}
-              className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-neutral-400 hover:text-[#5B8A72] hover:bg-[#5B8A72]/10 transition-colors"
-              title="피드백 보기"
+              className={`ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                feedbackDates?.has(format(currentDate, 'yyyy-MM-dd'))
+                  ? 'text-[#5B8A72] bg-[#5B8A72]/10 hover:bg-[#5B8A72]/20 font-semibold'
+                  : 'text-neutral-400 hover:text-[#5B8A72] hover:bg-[#5B8A72]/10'
+              }`}
+              title={
+                feedbackDates?.has(format(currentDate, 'yyyy-MM-dd'))
+                  ? '피드백 있음'
+                  : '피드백 없음'
+              }
             >
               <svg
                 className="w-3.5 h-3.5"
