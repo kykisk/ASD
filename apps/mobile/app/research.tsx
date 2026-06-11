@@ -86,6 +86,7 @@ export default function ResearchScreen() {
   const { data: digests, isLoading: digestsLoading } = useDigestHistory(selectedChildId);
   const [activeTab, setActiveTab] = useState<TabKey>('recommended');
   const [liveDigest, setLiveDigest] = useState<AiDigestResult | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredArticles =
     articles?.filter((a) => (activeTab === 'bookmarked' ? a.isBookmarked : true)) ?? [];
@@ -96,6 +97,7 @@ export default function ResearchScreen() {
 
   const handlePress = (item: ResearchMatch) => {
     if (!item.isRead) markReadMutation.mutate(item.articleId);
+    setExpandedId((prev) => (prev === item.id ? null : item.id));
   };
 
   const handleGenerateDigest = async () => {
@@ -214,11 +216,15 @@ export default function ResearchScreen() {
                 key={item.id}
                 style={[styles.card, item.isRead && styles.cardRead]}
                 onPress={() => handlePress(item)}
+                activeOpacity={0.85}
               >
                 {!item.isRead && <View style={styles.unreadDot} />}
 
                 <View style={styles.cardHeader}>
-                  <Text style={styles.articleTitle} numberOfLines={2}>
+                  <Text
+                    style={styles.articleTitle}
+                    numberOfLines={expandedId === item.id ? undefined : 2}
+                  >
                     {a.title}
                   </Text>
                   <TouchableOpacity style={styles.bookmarkBtn} onPress={() => handleBookmark(item)}>
@@ -248,21 +254,36 @@ export default function ResearchScreen() {
                 )}
 
                 {a.koreanSummary ? (
-                  <Text style={styles.summary} numberOfLines={3}>
+                  <Text
+                    style={styles.summary}
+                    numberOfLines={expandedId === item.id ? undefined : 3}
+                  >
                     {a.koreanSummary}
                   </Text>
                 ) : null}
 
+                {expandedId === item.id && !a.koreanSummary && a.abstract ? (
+                  <Text style={styles.summary}>{a.abstract}</Text>
+                ) : null}
+
                 {keyFindings.length > 0 && (
                   <View style={styles.findingsSection}>
-                    {keyFindings.slice(0, 3).map((f, idx) => (
-                      <View key={idx} style={styles.findingRow}>
-                        <Text style={styles.findingBullet}>•</Text>
-                        <Text style={styles.findingText}>{f}</Text>
-                      </View>
-                    ))}
+                    {(expandedId === item.id ? keyFindings : keyFindings.slice(0, 3)).map(
+                      (f, idx) => (
+                        <View key={idx} style={styles.findingRow}>
+                          <Text style={styles.findingBullet}>•</Text>
+                          <Text style={styles.findingText}>{f}</Text>
+                        </View>
+                      ),
+                    )}
                   </View>
                 )}
+
+                <View style={styles.expandBtn}>
+                  <Text style={styles.expandBtnText}>
+                    {expandedId === item.id ? '▲ 접기' : '▼ 전체 내용 보기'}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -394,6 +415,15 @@ const styles = StyleSheet.create({
   findingRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs },
   findingBullet: { fontSize: fontSize.sm, color: colors.primary, lineHeight: 20 },
   findingText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  expandBtn: {
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  expandBtnText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: '600',
+  },
   unreadDot: {
     position: 'absolute',
     top: spacing.sm,

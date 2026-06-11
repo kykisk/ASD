@@ -6,6 +6,7 @@ export interface ResearchArticle {
   title: string;
   journal: string;
   publishedAt: string;
+  abstract: string | null;
   koreanSummary: string | null;
   keyFindings: string[] | null;
   tags: string[] | null;

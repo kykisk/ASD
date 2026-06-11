@@ -92,6 +92,7 @@ function DigestHistoryCard({ item }: { item: DigestHistoryItem }) {
 function ArticleCard({ item }: { item: ResearchMatch }) {
   const bookmark = useBookmarkArticle();
   const markRead = useMarkAsRead();
+  const [expanded, setExpanded] = useState(false);
 
   const publishedDate = new Date(item.article.publishedAt);
   const ageYears = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
@@ -104,7 +105,9 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-neutral-800 line-clamp-2">
+          <h3
+            className={`text-sm font-semibold text-neutral-800 ${expanded ? '' : 'line-clamp-2'}`}
+          >
             {item.article.title}
           </h3>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -175,19 +178,27 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
       </div>
 
       {item.article.koreanSummary && (
-        <p className="mt-3 text-sm text-neutral-600 leading-relaxed line-clamp-3">
+        <p
+          className={`mt-3 text-sm text-neutral-600 leading-relaxed ${expanded ? '' : 'line-clamp-3'}`}
+        >
           {item.article.koreanSummary}
         </p>
       )}
 
+      {expanded && item.article.abstract && !item.article.koreanSummary && (
+        <p className="mt-3 text-sm text-neutral-600 leading-relaxed">{item.article.abstract}</p>
+      )}
+
       {item.article.keyFindings && item.article.keyFindings.length > 0 && (
         <ul className="mt-3 space-y-1">
-          {item.article.keyFindings.slice(0, 3).map((finding, i) => (
-            <li key={i} className="text-xs text-neutral-600 flex gap-1.5">
-              <span className="text-primary-500 shrink-0">•</span>
-              <span className="line-clamp-1">{finding}</span>
-            </li>
-          ))}
+          {(expanded ? item.article.keyFindings : item.article.keyFindings.slice(0, 3)).map(
+            (finding, i) => (
+              <li key={i} className="text-xs text-neutral-600 flex gap-1.5">
+                <span className="text-primary-500 shrink-0">•</span>
+                <span className={expanded ? '' : 'line-clamp-1'}>{finding}</span>
+              </li>
+            ),
+          )}
         </ul>
       )}
 
@@ -203,6 +214,25 @@ function ArticleCard({ item }: { item: ResearchMatch }) {
           ))}
         </div>
       )}
+
+      <button
+        onClick={() => {
+          setExpanded(!expanded);
+          if (!item.isRead) markRead.mutate(item.articleId);
+        }}
+        className="mt-3 flex items-center gap-1 text-xs text-[#5B8A72] font-medium hover:text-[#3d6b54] transition-colors"
+      >
+        <svg
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+        {expanded ? '접기' : '전체 내용 보기'}
+      </button>
     </div>
   );
 }
