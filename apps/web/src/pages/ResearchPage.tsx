@@ -17,6 +17,64 @@ import {
 } from '../hooks/use-research';
 import { PageHeader, ErrorState, EmptyState, LoadingSpinner } from '../components/ui';
 
+function DigestTextWithLinks({
+  text,
+  topArticles,
+  onOpenArticle,
+}: {
+  text: string;
+  topArticles: { pubmedId: string; title: string }[];
+  onOpenArticle: (pubmedId: string) => void;
+}) {
+  const segments: React.ReactNode[] = [];
+  const boldRegex = /\*\*([^*\n]+)\*\*/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push(<span key={`t${lastIndex}`}>{text.slice(lastIndex, match.index)}</span>);
+    }
+
+    const boldContent = match[1].trim();
+    const article = topArticles.find((a) => {
+      const norm = (s: string) =>
+        s
+          .toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .slice(0, 40);
+      return (
+        norm(boldContent).includes(norm(a.title).slice(0, 30)) ||
+        norm(a.title).includes(norm(boldContent).slice(0, 30))
+      );
+    });
+
+    if (article && boldContent.length > 15) {
+      segments.push(
+        <button
+          key={`a${match.index}`}
+          onClick={() => onOpenArticle(article.pubmedId)}
+          className="font-semibold text-[#5B8A72] underline underline-offset-2 decoration-[#5B8A72]/50 hover:decoration-[#5B8A72] cursor-pointer"
+        >
+          {boldContent}
+        </button>,
+      );
+    } else {
+      segments.push(<strong key={`b${match.index}`}>{boldContent}</strong>);
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push(<span key={`t${lastIndex}`}>{text.slice(lastIndex)}</span>);
+  }
+
+  return (
+    <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap pt-4">{segments}</p>
+  );
+}
+
 function DigestHistoryCard({
   item,
   onOpenArticle,
@@ -68,12 +126,11 @@ function DigestHistoryCard({
       {/* Expanded content */}
       {expanded && (
         <div className="px-5 pb-5 border-t border-neutral-100 space-y-4">
-          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap pt-4">
-            {item.digest
-              .replace(/\*\*TOP\s*3?\s*추천\s*논문\*\*[\s\S]*/i, '')
-              .replace(/TOP\s*3?\s*추천\s*논문[\s\S]*/i, '')
-              .trim()}
-          </p>
+          <DigestTextWithLinks
+            text={item.digest}
+            topArticles={topArticles}
+            onOpenArticle={onOpenArticle}
+          />
           {topArticles.length > 0 && (
             <div className="bg-primary-50 rounded-lg p-3 space-y-2">
               <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide">
