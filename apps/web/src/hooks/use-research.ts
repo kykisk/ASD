@@ -64,8 +64,17 @@ export function useBookmarkArticle() {
     mutationFn: async (articleId: string) => {
       await api.post(`/research/${articleId}/bookmark`);
     },
+    onMutate: async (articleId: string) => {
+      queryClient.setQueriesData<ResearchMatch[]>(
+        { queryKey: ['research', 'feed'], exact: false },
+        (old) =>
+          old?.map((item) =>
+            item.articleId === articleId ? { ...item, isBookmarked: !item.isBookmarked } : item,
+          ) ?? old,
+      );
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['research'] });
+      queryClient.invalidateQueries({ queryKey: ['research', 'bookmarks'] });
     },
   });
 }
@@ -76,8 +85,13 @@ export function useMarkAsRead() {
     mutationFn: async (articleId: string) => {
       await api.post(`/research/${articleId}/read`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['research'] });
+    onMutate: async (articleId: string) => {
+      queryClient.setQueriesData<ResearchMatch[]>(
+        { queryKey: ['research', 'feed'], exact: false },
+        (old) =>
+          old?.map((item) => (item.articleId === articleId ? { ...item, isRead: true } : item)) ??
+          old,
+      );
     },
   });
 }
