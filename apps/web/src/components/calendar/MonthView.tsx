@@ -68,15 +68,35 @@ export function MonthView({
           return (
             <div
               key={idx}
-              className={`min-h-[100px] border-b border-r border-neutral-100 p-1 ${
+              className={`relative min-h-[100px] border-b border-r border-neutral-100 p-1 ${
                 !isCurrentMonth ? 'bg-neutral-50/50' : ''
               } ${idx % 7 === 6 ? 'border-r-0' : ''}`}
             >
-              <div className="flex justify-center mb-1">
+              {onDateClick && isCurrentMonth && (
                 <button
                   type="button"
-                  onClick={() => onDateClick?.(format(day, 'yyyy-MM-dd'))}
-                  className={`inline-flex items-center justify-center w-6 h-6 text-xs rounded-full cursor-pointer hover:ring-2 hover:ring-[#5B8A72]/30 transition-all ${
+                  onClick={() => onDateClick(format(day, 'yyyy-MM-dd'))}
+                  className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded text-neutral-300 hover:text-[#5B8A72] hover:bg-[#5B8A72]/10 transition-colors"
+                  title="피드백 보기"
+                >
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
+                    />
+                  </svg>
+                </button>
+              )}
+              <div className="flex justify-center mb-1">
+                <span
+                  className={`inline-flex items-center justify-center w-6 h-6 text-xs rounded-full ${
                     today
                       ? 'bg-primary-500 text-white font-bold'
                       : !isCurrentMonth
@@ -89,7 +109,7 @@ export function MonthView({
                   }`}
                 >
                   {format(day, 'd')}
-                </button>
+                </span>
               </div>
 
               <div className="space-y-0.5">

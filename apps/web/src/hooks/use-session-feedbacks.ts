@@ -210,7 +210,7 @@ export function useFeedbacksByDate(childId: string | null, date: string | null) 
         success: true;
         data: { items: SessionFeedback[]; total: number; page: number; limit: number };
       }>(`/children/${childId}/session-feedbacks`, {
-        params: { startDate: date, endDate: date, limit: 50 },
+        params: { from: date, to: date, limit: 50 },
       });
       return data.data.items;
     },

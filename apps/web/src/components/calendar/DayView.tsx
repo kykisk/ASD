@@ -48,21 +48,42 @@ export function DayView({
         className={`px-4 py-3 border-b border-neutral-200 ${today ? 'bg-primary-50/30' : 'bg-neutral-50'}`}
       >
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => onDateClick?.(format(currentDate, 'yyyy-MM-dd'))}
-            className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-lg font-bold cursor-pointer hover:ring-2 hover:ring-[#5B8A72]/30 transition-all ${
+          <span
+            className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-lg font-bold ${
               today ? 'bg-primary-500 text-white' : 'bg-neutral-100 text-neutral-700'
             }`}
           >
             {format(currentDate, 'd')}
-          </button>
+          </span>
           <div>
             <p className="text-sm font-semibold text-neutral-800">
               {format(currentDate, 'EEEE', { locale: ko })}
             </p>
             <p className="text-xs text-neutral-500">{format(currentDate, 'yyyy년 M월 d일')}</p>
           </div>
+          {onDateClick && (
+            <button
+              type="button"
+              onClick={() => onDateClick(format(currentDate, 'yyyy-MM-dd'))}
+              className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-neutral-400 hover:text-[#5B8A72] hover:bg-[#5B8A72]/10 transition-colors"
+              title="피드백 보기"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
+                />
+              </svg>
+              피드백
+            </button>
+          )}
         </div>
       </div>
 
