@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 
@@ -53,7 +53,7 @@ export function useResearchFeed(
       const { data } = await api.get<{ success: true; data: ResearchFeedResponse }>(
         `/research/feed${qs ? `?${qs}` : ''}`,
       );
-      return data.data.items;
+      return data.data?.items ?? [];
     },
   });
 }
