@@ -94,7 +94,7 @@ export interface UpdateSessionFeedbackInput {
 
 export function useSessionFeedbacks(
   childId: string | null,
-  query?: { sessionType?: string; startDate?: string; endDate?: string },
+  query?: { sessionType?: string; from?: string; to?: string },
 ) {
   return useQuery({
     queryKey: ['session-feedbacks', childId, query],

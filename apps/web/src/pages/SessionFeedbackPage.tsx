@@ -74,35 +74,26 @@ function findLastDateWithType(
 // ─── Session Feedback Tab ────────────────────────────────────────────────────
 
 function SessionTab({ childId }: { childId: string }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState(get30DaysAgo());
+  const [toDate, setToDate] = useState(getToday());
   const [showModal, setShowModal] = useState(false);
 
-  // Fetch last 30 days to find most recent session date
-  const thirtyDaysAgo = get30DaysAgo();
-  const today = getToday();
-  const { data: recentFeedbacks, isLoading: loadingRecent } = useSessionFeedbacks(childId, {
-    startDate: thirtyDaysAgo,
-    endDate: today,
+  const { data: feedbacks, isLoading } = useSessionFeedbacks(childId, {
+    from: fromDate,
+    to: toDate,
   });
 
-  // Determine the display date
-  const displayDate = useMemo(() => {
-    if (selectedDate) return selectedDate;
-    return findLastDateWithType(recentFeedbacks, ['SESSION']);
-  }, [selectedDate, recentFeedbacks]);
-
-  // Filter feedbacks for display date that are SESSION type
-  const dayFeedbacks = useMemo(() => {
-    if (!recentFeedbacks || !displayDate) return [];
-    return recentFeedbacks.filter((f) => {
-      const fDate = f.sessionDate.split('T')[0];
-      return fDate === displayDate && (f.feedbackType ?? 'SESSION') === 'SESSION';
-    });
-  }, [recentFeedbacks, displayDate]);
+  const sessionFeedbacks = useMemo(
+    () =>
+      (feedbacks ?? [])
+        .filter((f) => (f.feedbackType ?? 'SESSION') === 'SESSION')
+        .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()),
+    [feedbacks],
+  );
 
   const deleteFeedback = useDeleteSessionFeedback(childId);
 
-  if (loadingRecent) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-2xl border border-[#e8e4df] p-12 text-center">
         <div className="text-2xl mb-2 animate-pulse">📚</div>
@@ -113,23 +104,23 @@ function SessionTab({ childId }: { childId: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Date Navigation */}
-      <div className="flex items-center justify-between bg-white rounded-xl border border-[#e8e4df] px-4 py-3">
-        <button
-          onClick={() => setSelectedDate(addDaysToDate(displayDate || today, -1))}
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-600"
-        >
-          ◀
-        </button>
-        <span className="text-sm font-semibold text-neutral-700">
-          {displayDate ? formatDateKorean(displayDate) : '데이터 없음'}
-        </span>
-        <button
-          onClick={() => setSelectedDate(addDaysToDate(displayDate || today, 1))}
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-600"
-        >
-          ▶
-        </button>
+      {/* Date Range Filter */}
+      <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-[#e8e4df] px-4 py-3">
+        <span className="text-xs text-neutral-500 font-medium shrink-0">기간</span>
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="px-3 py-1.5 rounded-lg border border-[#e8e4df] bg-[#fdfbf7] text-sm focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30"
+        />
+        <span className="text-neutral-400 text-sm">~</span>
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="px-3 py-1.5 rounded-lg border border-[#e8e4df] bg-[#fdfbf7] text-sm focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30"
+        />
+        <span className="text-xs text-neutral-400 ml-auto">{sessionFeedbacks.length}건</span>
       </div>
 
       {/* Add Button */}
@@ -141,21 +132,23 @@ function SessionTab({ childId }: { childId: string }) {
       </button>
 
       {/* Feedback Cards */}
-      {dayFeedbacks.length === 0 && (
+      {sessionFeedbacks.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#e8e4df] p-10 text-center shadow-[0_2px_16px_rgba(91,138,114,0.06)]">
           <div className="text-3xl mb-2">📚</div>
-          <p className="text-sm font-medium text-neutral-500">이 날의 수업 피드백이 없습니다</p>
-          <p className="text-xs text-neutral-400 mt-1">날짜를 이동하거나 새 기록을 추가해보세요</p>
+          <p className="text-sm font-medium text-neutral-500">
+            선택한 기간의 수업 피드백이 없습니다
+          </p>
+          <p className="text-xs text-neutral-400 mt-1">기간을 변경하거나 새 기록을 추가해보세요</p>
         </div>
+      ) : (
+        sessionFeedbacks.map((feedback) => (
+          <SessionFeedbackCard
+            key={feedback.id}
+            feedback={feedback}
+            onDelete={(id) => deleteFeedback.mutate(id)}
+          />
+        ))
       )}
-
-      {dayFeedbacks.map((feedback) => (
-        <SessionFeedbackCard
-          key={feedback.id}
-          feedback={feedback}
-          onDelete={(id) => deleteFeedback.mutate(id)}
-        />
-      ))}
 
       <SessionFeedbackModal
         isOpen={showModal}
@@ -237,33 +230,29 @@ function SessionFeedbackCard({
 // ─── Daily Log Tab ───────────────────────────────────────────────────────────
 
 function DailyTab({ childId }: { childId: string }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState(get30DaysAgo());
+  const [toDate, setToDate] = useState(getToday());
   const [showModal, setShowModal] = useState(false);
 
-  const thirtyDaysAgo = get30DaysAgo();
-  const today = getToday();
-  const { data: recentFeedbacks, isLoading: loadingRecent } = useSessionFeedbacks(childId, {
-    startDate: thirtyDaysAgo,
-    endDate: today,
+  const { data: feedbacks, isLoading } = useSessionFeedbacks(childId, {
+    from: fromDate,
+    to: toDate,
   });
 
-  const displayDate = useMemo(() => {
-    if (selectedDate) return selectedDate;
-    return findLastDateWithType(recentFeedbacks, ['DAILY_LOG', 'BEHAVIORAL_ISSUE']);
-  }, [selectedDate, recentFeedbacks]);
-
-  const dayFeedbacks = useMemo(() => {
-    if (!recentFeedbacks || !displayDate) return [];
-    return recentFeedbacks.filter((f) => {
-      const fDate = f.sessionDate.split('T')[0];
-      const fType = f.feedbackType ?? 'SESSION';
-      return fDate === displayDate && (fType === 'DAILY_LOG' || fType === 'BEHAVIORAL_ISSUE');
-    });
-  }, [recentFeedbacks, displayDate]);
+  const dailyFeedbacks = useMemo(
+    () =>
+      (feedbacks ?? [])
+        .filter((f) => {
+          const t = f.feedbackType ?? 'SESSION';
+          return t === 'DAILY_LOG' || t === 'BEHAVIORAL_ISSUE';
+        })
+        .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()),
+    [feedbacks],
+  );
 
   const deleteFeedback = useDeleteSessionFeedback(childId);
 
-  if (loadingRecent) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-2xl border border-[#e8e4df] p-12 text-center">
         <div className="text-2xl mb-2 animate-pulse">📝</div>
@@ -274,23 +263,23 @@ function DailyTab({ childId }: { childId: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Date Navigation */}
-      <div className="flex items-center justify-between bg-white rounded-xl border border-[#e8e4df] px-4 py-3">
-        <button
-          onClick={() => setSelectedDate(addDaysToDate(displayDate || today, -1))}
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-600"
-        >
-          ◀
-        </button>
-        <span className="text-sm font-semibold text-neutral-700">
-          {displayDate ? formatDateKorean(displayDate) : '데이터 없음'}
-        </span>
-        <button
-          onClick={() => setSelectedDate(addDaysToDate(displayDate || today, 1))}
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-600"
-        >
-          ▶
-        </button>
+      {/* Date Range Filter */}
+      <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-[#e8e4df] px-4 py-3">
+        <span className="text-xs text-neutral-500 font-medium shrink-0">기간</span>
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="px-3 py-1.5 rounded-lg border border-[#e8e4df] bg-[#fdfbf7] text-sm focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30"
+        />
+        <span className="text-neutral-400 text-sm">~</span>
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="px-3 py-1.5 rounded-lg border border-[#e8e4df] bg-[#fdfbf7] text-sm focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/30"
+        />
+        <span className="text-xs text-neutral-400 ml-auto">{dailyFeedbacks.length}건</span>
       </div>
 
       {/* Add Button */}
@@ -302,21 +291,21 @@ function DailyTab({ childId }: { childId: string }) {
       </button>
 
       {/* Cards */}
-      {dayFeedbacks.length === 0 && (
+      {dailyFeedbacks.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#e8e4df] p-10 text-center shadow-[0_2px_16px_rgba(91,138,114,0.06)]">
           <div className="text-3xl mb-2">📝</div>
-          <p className="text-sm font-medium text-neutral-500">이 날의 일상 기록이 없습니다</p>
-          <p className="text-xs text-neutral-400 mt-1">날짜를 이동하거나 새 기록을 추가해보세요</p>
+          <p className="text-sm font-medium text-neutral-500">선택한 기간의 일상 기록이 없습니다</p>
+          <p className="text-xs text-neutral-400 mt-1">기간을 변경하거나 새 기록을 추가해보세요</p>
         </div>
+      ) : (
+        dailyFeedbacks.map((feedback) => (
+          <DailyFeedbackCard
+            key={feedback.id}
+            feedback={feedback}
+            onDelete={(id) => deleteFeedback.mutate(id)}
+          />
+        ))
       )}
-
-      {dayFeedbacks.map((feedback) => (
-        <DailyFeedbackCard
-          key={feedback.id}
-          feedback={feedback}
-          onDelete={(id) => deleteFeedback.mutate(id)}
-        />
-      ))}
 
       <SessionFeedbackModal
         isOpen={showModal}
