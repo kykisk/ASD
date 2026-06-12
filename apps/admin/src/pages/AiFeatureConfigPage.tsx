@@ -22,6 +22,9 @@ const FEATURE_LABELS: Record<string, string> = {
   WELLBEING: '웰빙 격려 메시지',
   SENSORY: '감각 활동 추천',
   EMERGENCY: '비상 패턴 분석',
+  CLINICAL_REPORT_IMPORT: '임상 보고서 이미지 추출',
+  FEEDBACK_DIGEST: '피드백 주간 AI 요약',
+  FEEDBACK_DOMAIN_EXTRACTION: '피드백 → 발달 도메인 추출',
 };
 
 const FEATURE_RECOMMENDATIONS: Record<string, { tier: 'QUALITY' | 'FAST'; reason: string }> = {
@@ -36,6 +39,12 @@ const FEATURE_RECOMMENDATIONS: Record<string, { tier: 'QUALITY' | 'FAST'; reason
   WELLBEING: { tier: 'FAST', reason: '짧은 격려 메시지, 빠른 응답 우선' },
   SENSORY: { tier: 'FAST', reason: '구조화된 활동 목록 생성' },
   EMERGENCY: { tier: 'QUALITY', reason: '패턴 감지 + 임상 맥락 이해 필요' },
+  CLINICAL_REPORT_IMPORT: {
+    tier: 'QUALITY',
+    reason: 'Vision 이미지 분석 — 정확한 데이터 추출 필수',
+  },
+  FEEDBACK_DIGEST: { tier: 'FAST', reason: '정형화된 주간 요약 생성, 속도 우선' },
+  FEEDBACK_DOMAIN_EXTRACTION: { tier: 'FAST', reason: '간단한 5도메인 점수 추출, 빈번 호출' },
 };
 
 export function AiFeatureConfigPage() {
