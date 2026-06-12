@@ -89,6 +89,8 @@
 ## KEY FILES
 
 - ASD/auticare/AGENTS.md — 전체 개발 지식베이스 (23절)
+- ASD/auticare/HANDOFF.md — 현재 상태 + 최근 변경사항 + 남은 작업
+- ASD/auticare/SERVER_MIGRATION_GUIDE.md — 서버 이전 가이드 (새 환경 세팅 절차)
 - ASD/auticare/scripts/update-ip.sh — EC2 IP 바뀌면 실행
 - ASD/auticare/apps/api/src/session-feedbacks/ — 수업 피드백 + 도메인 추출 모듈
 - ASD/auticare/apps/api/src/medications/ — 복약 관리 모듈
