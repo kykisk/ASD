@@ -98,6 +98,65 @@ const FEEDBACK_TYPE_BADGE: Record<string, { label: string; className: string }> 
   BEHAVIORAL_ISSUE: { label: '문제행동', className: 'bg-red-50 text-red-700' },
 };
 
+function FeedbackPopupCard({
+  fb,
+  badge,
+}: {
+  fb: SessionFeedback;
+  badge: { label: string; className: string };
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className="p-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] hover:border-[#5B8A72]/30 transition-colors cursor-pointer"
+      onClick={() => setExpanded((v) => !v)}
+    >
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${badge.className}`}>
+          {badge.label}
+        </span>
+        {fb.sessionType && fb.sessionType !== fb.feedbackType && (
+          <span className="text-[11px] text-neutral-400">{fb.sessionType}</span>
+        )}
+        {fb.rating && fb.rating > 0 && (
+          <span className="text-[11px] text-amber-500">{'⭐'.repeat(fb.rating)}</span>
+        )}
+        <span className="ml-auto text-[10px] text-neutral-300">
+          {expanded ? '▲ 접기' : '▼ 펼치기'}
+        </span>
+      </div>
+      {expanded ? (
+        <div className="space-y-2">
+          <p className="text-sm text-neutral-700 leading-relaxed">{fb.content}</p>
+          {fb.progress && (
+            <p className="text-xs text-[#5B8A72]">
+              <span className="font-semibold">잘한 점:</span> {fb.progress}
+            </p>
+          )}
+          {fb.challenges && (
+            <p className="text-xs text-orange-600">
+              <span className="font-semibold">어려운 점:</span> {fb.challenges}
+            </p>
+          )}
+          {fb.homeWork && (
+            <p className="text-xs text-blue-600">
+              <span className="font-semibold">가정 연습:</span> {fb.homeWork}
+            </p>
+          )}
+          {fb.parentNote && (
+            <p className="text-xs text-neutral-500">
+              <span className="font-semibold">메모:</span> {fb.parentNote}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-neutral-700 line-clamp-2">{fb.content}</p>
+      )}
+    </div>
+  );
+}
+
 function DateFeedbackPopup({
   date,
   feedbacks,
@@ -139,24 +198,7 @@ function DateFeedbackPopup({
           {feedbacks.map((fb) => {
             const badge =
               FEEDBACK_TYPE_BADGE[fb.feedbackType ?? 'SESSION'] ?? FEEDBACK_TYPE_BADGE.SESSION;
-            return (
-              <div
-                key={fb.id}
-                className="p-3 rounded-xl border border-[#e8e4df] bg-[#fdfbf7] hover:border-[#5B8A72]/30 transition-colors"
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                  {fb.sessionType && (
-                    <span className="text-[11px] text-neutral-400">{fb.sessionType}</span>
-                  )}
-                </div>
-                <p className="text-sm text-neutral-700 line-clamp-2">{fb.content}</p>
-              </div>
-            );
+            return <FeedbackPopupCard key={fb.id} fb={fb} badge={badge} />;
           })}
         </div>
 
