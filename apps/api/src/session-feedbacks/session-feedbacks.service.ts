@@ -22,6 +22,7 @@ export interface CreateSessionFeedbackInput {
 }
 
 export interface UpdateSessionFeedbackInput {
+  sessionDate?: string;
   sessionType?: string;
   therapistName?: string;
   institution?: string;
@@ -212,6 +213,7 @@ export class SessionFeedbacksService {
     return this.prisma.sessionFeedback.update({
       where: { id },
       data: {
+        ...(input.sessionDate !== undefined && { sessionDate: new Date(input.sessionDate) }),
         ...(input.sessionType !== undefined && { sessionType: input.sessionType }),
         ...(input.therapistName !== undefined && { therapistName: input.therapistName }),
         ...(input.institution !== undefined && { institution: input.institution }),
