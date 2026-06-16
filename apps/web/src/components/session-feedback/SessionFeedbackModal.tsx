@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   useCreateSessionFeedback,
+  useUpdateSessionFeedback,
   useSessionFeedbackAutocomplete,
   type CreateSessionFeedbackInput,
+  type SessionFeedback,
 } from '../../hooks/use-session-feedbacks.js';
 import { useSchedules } from '../../hooks/use-schedules.js';
 import { useChildStore } from '../../stores/child.store.js';
@@ -35,6 +37,7 @@ interface Props {
   onClose: () => void;
   defaultScheduleId?: string | null;
   defaultFeedbackType?: FeedbackType;
+  editingFeedback?: SessionFeedback | null;
 }
 
 export function SessionFeedbackModal({
@@ -42,9 +45,11 @@ export function SessionFeedbackModal({
   onClose,
   defaultScheduleId,
   defaultFeedbackType,
+  editingFeedback,
 }: Props) {
   const { selectedChildId } = useChildStore();
   const createFeedback = useCreateSessionFeedback(selectedChildId);
+  const updateFeedback = useUpdateSessionFeedback();
   const { data: autocomplete } = useSessionFeedbackAutocomplete(selectedChildId);
 
   const today = new Date().toISOString().split('T')[0];
@@ -87,26 +92,53 @@ export function SessionFeedbackModal({
 
   useEffect(() => {
     if (isOpen) {
-      setFeedbackType(defaultFeedbackType ?? 'SESSION');
-      setSessionType('');
-      setCustomSessionType('');
-      setSessionDate(today);
-      setRating(0);
-      setContent('');
-      setSeverity(0);
-      setBehaviorTags([]);
-      setProgress('');
-      setChallenges('');
-      setHomeWork('');
-      setParentNote('');
-      setTherapistName('');
-      setInstitution('');
-      setDurationMin('');
-      setScheduleId(defaultScheduleId ?? null);
-      setShowOptional(!!defaultScheduleId);
+      if (editingFeedback) {
+        setFeedbackType((editingFeedback.feedbackType ?? 'SESSION') as FeedbackType);
+        setSessionType(editingFeedback.sessionType ?? '');
+        setCustomSessionType('');
+        setSessionDate(editingFeedback.sessionDate?.split('T')[0] ?? today);
+        setRating(editingFeedback.rating ?? 0);
+        setContent(editingFeedback.content ?? '');
+        setSeverity(editingFeedback.severity ?? 0);
+        setBehaviorTags(editingFeedback.behaviorTags ?? []);
+        setProgress(editingFeedback.progress ?? '');
+        setChallenges(editingFeedback.challenges ?? '');
+        setHomeWork(editingFeedback.homeWork ?? '');
+        setParentNote(editingFeedback.parentNote ?? '');
+        setTherapistName(editingFeedback.therapistName ?? '');
+        setInstitution(editingFeedback.institution ?? '');
+        setDurationMin(editingFeedback.durationMin ? String(editingFeedback.durationMin) : '');
+        setScheduleId(editingFeedback.scheduleId ?? null);
+        setShowOptional(
+          !!(
+            editingFeedback.progress ||
+            editingFeedback.challenges ||
+            editingFeedback.homeWork ||
+            editingFeedback.therapistName
+          ),
+        );
+      } else {
+        setFeedbackType(defaultFeedbackType ?? 'SESSION');
+        setSessionType('');
+        setCustomSessionType('');
+        setSessionDate(today);
+        setRating(0);
+        setContent('');
+        setSeverity(0);
+        setBehaviorTags([]);
+        setProgress('');
+        setChallenges('');
+        setHomeWork('');
+        setParentNote('');
+        setTherapistName('');
+        setInstitution('');
+        setDurationMin('');
+        setScheduleId(defaultScheduleId ?? null);
+        setShowOptional(!!defaultScheduleId);
+      }
       setError('');
     }
-  }, [isOpen, defaultScheduleId, defaultFeedbackType, today]);
+  }, [isOpen, defaultScheduleId, defaultFeedbackType, editingFeedback, today]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -175,6 +207,59 @@ export function SessionFeedbackModal({
       onSuccess: () => onClose(),
       onError: () => setError('저장에 실패했습니다. 다시 시도해주세요.'),
     });
+  }
+
+  const isEditing = !!editingFeedback;
+  const isPending = isEditing ? updateFeedback.isPending : createFeedback.isPending;
+
+  function handleSubmitOrUpdate() {
+    setError('');
+    if (feedbackType === 'SESSION' && !finalSessionType) {
+      setError('수업 유형을 선택해주세요.');
+      return;
+    }
+    if (!sessionDate) {
+      setError('날짜를 입력해주세요.');
+      return;
+    }
+    if (feedbackType === 'SESSION' && rating === 0) {
+      setError('만족도를 선택해주세요.');
+      return;
+    }
+    if (!content.trim()) {
+      setError('내용을 입력해주세요.');
+      return;
+    }
+    if (feedbackType === 'BEHAVIORAL_ISSUE' && severity === 0) {
+      setError('심각도를 선택해주세요.');
+      return;
+    }
+
+    if (isEditing) {
+      updateFeedback.mutate(
+        {
+          id: editingFeedback!.id,
+          sessionDate,
+          sessionType: feedbackType === 'SESSION' ? finalSessionType : feedbackType,
+          rating: rating || 3,
+          content: content.trim(),
+          therapistName: therapistName.trim() || null,
+          institution: institution.trim() || null,
+          durationMin: durationMin ? parseInt(durationMin, 10) : null,
+          scheduleId: scheduleId || null,
+          progress: progress.trim() || null,
+          challenges: challenges.trim() || null,
+          homeWork: homeWork.trim() || null,
+          parentNote: parentNote.trim() || null,
+        },
+        {
+          onSuccess: () => onClose(),
+          onError: () => setError('수정에 실패했습니다. 다시 시도해주세요.'),
+        },
+      );
+    } else {
+      handleSubmit();
+    }
   }
 
   if (!isOpen) return null;
@@ -579,11 +664,11 @@ export function SessionFeedbackModal({
             취소
           </button>
           <button
-            onClick={handleSubmit}
-            disabled={createFeedback.isPending}
+            onClick={handleSubmitOrUpdate}
+            disabled={isPending}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#5B8A72] hover:bg-[#3d6b54] disabled:opacity-50 transition-all min-h-[44px] shadow-[0_2px_8px_rgba(91,138,114,0.2)]"
           >
-            {createFeedback.isPending ? '저장 중...' : '저장'}
+            {isPending ? (isEditing ? '수정 중...' : '저장 중...') : isEditing ? '수정' : '저장'}
           </button>
         </div>
       </div>

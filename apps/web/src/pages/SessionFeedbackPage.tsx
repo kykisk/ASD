@@ -77,6 +77,7 @@ function SessionTab({ childId }: { childId: string }) {
   const [fromDate, setFromDate] = useState(get30DaysAgo());
   const [toDate, setToDate] = useState(getToday());
   const [showModal, setShowModal] = useState(false);
+  const [editingFeedback, setEditingFeedback] = useState<SessionFeedback | null>(null);
 
   const { data: feedbacks, isLoading } = useSessionFeedbacks(childId, {
     from: fromDate,
@@ -146,14 +147,22 @@ function SessionTab({ childId }: { childId: string }) {
             key={feedback.id}
             feedback={feedback}
             onDelete={(id) => deleteFeedback.mutate(id)}
+            onEdit={(f) => {
+              setEditingFeedback(f);
+              setShowModal(true);
+            }}
           />
         ))
       )}
 
       <SessionFeedbackModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          setShowModal(false);
+          setEditingFeedback(null);
+        }}
         defaultFeedbackType="SESSION"
+        editingFeedback={editingFeedback}
       />
     </div>
   );
@@ -162,9 +171,11 @@ function SessionTab({ childId }: { childId: string }) {
 function SessionFeedbackCard({
   feedback,
   onDelete,
+  onEdit,
 }: {
   feedback: SessionFeedback;
   onDelete: (id: string) => void;
+  onEdit: (feedback: SessionFeedback) => void;
 }) {
   return (
     <div className="bg-white rounded-xl border border-[#e8e4df] p-5 shadow-[0_2px_8px_rgba(91,138,114,0.04)] hover:shadow-[0_4px_16px_rgba(91,138,114,0.08)] transition-shadow">
@@ -180,6 +191,12 @@ function SessionFeedbackCard({
             </span>
           )}
         </div>
+        <button
+          onClick={() => onEdit(feedback)}
+          className="px-2 py-1 rounded-md text-[11px] text-neutral-400 hover:text-[#5B8A72] hover:bg-[#e8f5ee] transition-colors"
+        >
+          수정
+        </button>
         <button
           onClick={() => {
             if (window.confirm('이 피드백을 삭제하시겠습니까?')) {
@@ -233,6 +250,7 @@ function DailyTab({ childId }: { childId: string }) {
   const [fromDate, setFromDate] = useState(get30DaysAgo());
   const [toDate, setToDate] = useState(getToday());
   const [showModal, setShowModal] = useState(false);
+  const [editingFeedback, setEditingFeedback] = useState<SessionFeedback | null>(null);
 
   const { data: feedbacks, isLoading } = useSessionFeedbacks(childId, {
     from: fromDate,
@@ -303,14 +321,22 @@ function DailyTab({ childId }: { childId: string }) {
             key={feedback.id}
             feedback={feedback}
             onDelete={(id) => deleteFeedback.mutate(id)}
+            onEdit={(f) => {
+              setEditingFeedback(f);
+              setShowModal(true);
+            }}
           />
         ))
       )}
 
       <SessionFeedbackModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          setShowModal(false);
+          setEditingFeedback(null);
+        }}
         defaultFeedbackType="DAILY_LOG"
+        editingFeedback={editingFeedback}
       />
     </div>
   );
@@ -327,9 +353,11 @@ const SEVERITY_LABELS: Record<number, { label: string; color: string }> = {
 function DailyFeedbackCard({
   feedback,
   onDelete,
+  onEdit,
 }: {
   feedback: SessionFeedback;
   onDelete: (id: string) => void;
+  onEdit: (feedback: SessionFeedback) => void;
 }) {
   const isBehavioral = (feedback.feedbackType ?? 'SESSION') === 'BEHAVIORAL_ISSUE';
 
@@ -355,16 +383,24 @@ function DailyFeedbackCard({
             </span>
           )}
         </div>
-        <button
-          onClick={() => {
-            if (window.confirm('이 기록을 삭제하시겠습니까?')) {
-              onDelete(feedback.id);
-            }
-          }}
-          className="px-2 py-1 rounded-md text-[11px] text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-        >
-          삭제
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={() => onEdit(feedback)}
+            className="px-2 py-1 rounded-md text-[11px] text-neutral-400 hover:text-[#5B8A72] hover:bg-[#e8f5ee] transition-colors"
+          >
+            수정
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm('이 기록을 삭제하시겠습니까?')) {
+                onDelete(feedback.id);
+              }
+            }}
+            className="px-2 py-1 rounded-md text-[11px] text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          >
+            삭제
+          </button>
+        </div>
       </div>
 
       <p className="text-sm text-neutral-700 leading-relaxed mb-3">{feedback.content}</p>
