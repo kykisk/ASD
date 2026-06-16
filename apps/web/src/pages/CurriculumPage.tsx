@@ -427,10 +427,10 @@ export function CurriculumPage() {
 
   const handleGenerateSubmit = (input: GenerateCurriculumInput) => {
     if (!selectedChildId) return;
+    setShowGenerateModal(false);
     generateCurriculum.mutate(
       { childId: selectedChildId, input },
       {
-        onSuccess: () => setShowGenerateModal(false),
         onError: (err) => {
           const msg = getAiErrorMessage(err);
           if (msg) alert(msg);

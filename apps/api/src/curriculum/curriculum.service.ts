@@ -235,7 +235,7 @@ export class CurriculumService {
       });
 
       const result = await this.aiService.generateStructured(
-        { messages },
+        { messages, maxTokens: 4000 },
         curriculumOutputSchema,
         undefined,
         child.familyId,

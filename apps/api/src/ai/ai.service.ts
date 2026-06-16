@@ -143,7 +143,9 @@ export class AIService {
         );
         if (!withinBudget) {
           errors.push({ provider: config.provider, error: '일일 예산 한도 초과' });
-          this.logger.warn(`Provider ${config.provider} (${config.id}) budget exceeded, falling back`);
+          this.logger.warn(
+            `Provider ${config.provider} (${config.id}) budget exceeded, falling back`,
+          );
           continue;
         }
 
@@ -208,7 +210,12 @@ export class AIService {
         });
       }
 
-      const response = await this.generate({ ...options, messages }, preferredProvider, undefined, feature);
+      const response = await this.generate(
+        { ...options, messages },
+        preferredProvider,
+        undefined,
+        feature,
+      );
       const jsonStr = this.extractJson(response.content);
 
       try {
@@ -253,7 +260,11 @@ export class AIService {
     const key = `auticare:ai-family:${familyId}:${new Date().toISOString().split('T')[0]}`;
     const count = parseInt((await this.redis.get(key)) || '0');
     if (count >= dailyLimit) {
-      throw new ApiException(429, 'AI_002', '오늘의 AI 사용량이 소진됐어요. 내일 다시 시도해주세요');
+      throw new ApiException(
+        429,
+        'AI_002',
+        '오늘의 AI 사용량이 소진됐어요. 내일 다시 시도해주세요',
+      );
     }
 
     await this.redis.incr(key);
@@ -295,6 +306,10 @@ export class AIService {
     const fenceMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
     if (fenceMatch) {
       return fenceMatch[1].trim();
+    }
+    const startsFence = content.match(/^```(?:json)?\s*\n?([\s\S]*)/);
+    if (startsFence) {
+      return startsFence[1].trim();
     }
     return content.trim();
   }
