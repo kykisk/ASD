@@ -98,6 +98,7 @@ export function useSessionFeedbacks(
 ) {
   return useQuery({
     queryKey: ['session-feedbacks', childId, query],
+    staleTime: 0,
     queryFn: async () => {
       const { data } = await api.get<{
         success: true;
