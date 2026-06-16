@@ -37,6 +37,7 @@ interface Props {
   onClose: () => void;
   defaultScheduleId?: string | null;
   defaultFeedbackType?: FeedbackType;
+  defaultDate?: string | null;
   editingFeedback?: SessionFeedback | null;
 }
 
@@ -45,6 +46,7 @@ export function SessionFeedbackModal({
   onClose,
   defaultScheduleId,
   defaultFeedbackType,
+  defaultDate,
   editingFeedback,
 }: Props) {
   const { selectedChildId } = useChildStore();
@@ -121,7 +123,7 @@ export function SessionFeedbackModal({
         setFeedbackType(defaultFeedbackType ?? 'SESSION');
         setSessionType('');
         setCustomSessionType('');
-        setSessionDate(today);
+        setSessionDate(defaultDate ?? today);
         setRating(0);
         setContent('');
         setSeverity(0);

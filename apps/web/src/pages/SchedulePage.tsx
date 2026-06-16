@@ -196,6 +196,7 @@ export function SchedulePage() {
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackScheduleId, setFeedbackScheduleId] = useState<string | null>(null);
+  const [feedbackModalDate, setFeedbackModalDate] = useState<string | null>(null);
   const [feedbackDatePopup, setFeedbackDatePopup] = useState<string | null>(null);
 
   const { selectedChildId } = useChildStore();
@@ -647,8 +648,10 @@ export function SchedulePage() {
         onClose={() => {
           setShowFeedbackModal(false);
           setFeedbackScheduleId(null);
+          setFeedbackModalDate(null);
         }}
         defaultScheduleId={feedbackScheduleId}
+        defaultDate={feedbackModalDate}
       />
 
       {/* Date Feedback Popup */}
@@ -660,6 +663,7 @@ export function SchedulePage() {
           onAddFeedback={() => {
             setFeedbackScheduleId(null);
             setShowFeedbackModal(true);
+            setFeedbackModalDate(feedbackDatePopup);
           }}
         />
       )}
