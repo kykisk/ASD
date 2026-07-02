@@ -79,6 +79,7 @@ export class CurriculumPromptService {
 - 아이의 연령과 발달 수준에 맞게 설계하세요
 - 매우 구체적인 단계별 지침을 제공하세요
 - 한국어로 작성하세요
+- 각 텍스트 필드는 지정된 최대 글자 수를 반드시 지키세요 (초과 금지). 특히 notes는 500자 이내로 간결하게 작성하세요
 - JSON 형식으로만 응답하세요 (다른 텍스트 없이)`,
     };
 
@@ -208,20 +209,20 @@ ${domainText}`;
 
 다음 JSON 형식으로만 응답하세요:
 {
-  "weeklyGoal": "이번 주 주요 목표 (1-2문장)",
+  "weeklyGoal": "이번 주 주요 목표 (1-2문장, 최대 300자)",
   "activities": [
     {
-      "title": "활동 이름",
+      "title": "활동 이름 (최대 100자)",
       "domain": "COMMUNICATION|SOCIAL|MOTOR|COGNITIVE|EMOTIONAL|DAILY_LIVING",
-      "durationMin": 숫자,
-      "description": "활동 설명",
+      "durationMin": 숫자 (5~120),
+      "description": "활동 설명 (최대 500자)",
       "materials": ["필요한 재료 (선택사항)"],
       "steps": ["1단계", "2단계", "3단계"],
-      "successCriteria": "성공 기준",
+      "successCriteria": "성공 기준 (최대 300자)",
       "difficultyLevel": "EASY|MEDIUM|HARD"
     }
   ],
-  "notes": "부모를 위한 추가 참고사항 (선택사항)"
+  "notes": "부모를 위한 추가 참고사항 (선택사항, 최대 500자)"
 }`;
 
     const userMessage: AIMessage = {
