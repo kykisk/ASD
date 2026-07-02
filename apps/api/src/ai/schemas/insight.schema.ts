@@ -13,8 +13,12 @@ const flexibleStringArray = z
   ])
   .pipe(z.array(z.string()).max(3));
 
+// AI 출력이 상한을 넘겨도 예외 대신 잘라내 인사이트 생성 전체 실패를 막는다 (하드 max() 금지)
+const cappedString = (max: number) =>
+  z.string().transform((s) => (s.length > max ? s.slice(0, max) : s));
+
 export const insightOutputSchema = z.object({
-  summary: z.string().max(500).optional().default('이번 주 발달 데이터를 분석했습니다.'),
+  summary: cappedString(500).optional().default('이번 주 발달 데이터를 분석했습니다.'),
   highlights: flexibleStringArray.optional().default([]),
   concerns: flexibleStringArray.optional().default([]),
   recommendations: flexibleStringArray.optional().default([]),
