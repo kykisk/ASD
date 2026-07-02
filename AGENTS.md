@@ -6,8 +6,8 @@
 | 항목          | 내용                                                                        |
 | ------------- | --------------------------------------------------------------------------- |
 | 현재 Phase    | **Phase 5 완료 + 수업 피드백 + 복약 관리 + 피드백 기반 성장추적 + UX 개선** |
-| 최종 업데이트 | 2026-06-11                                                                  |
-| 총 커밋       | 221개                                                                       |
+| 최종 업데이트 | 2026-07-02                                                                  |
+| 총 커밋       | 260개                                                                       |
 | 테스트        | 282개 통과 (3개 기존 사전 실패)                                             |
 
 ---
@@ -1109,6 +1109,20 @@ apps/api/src/medications/
 - `behaviorSuggestions: String[]` 필드 추가
 - BEHAVIORAL_ISSUE 피드백이 있으면 AI가 문제행동 개선 제안 생성
 - CurriculumPromptService에 문제행동 요약 섹션(9번째 소스) 추가
+
+### 22.6 AI 출력 스키마 규칙 (CRITICAL)
+
+AI가 생성한 텍스트의 길이 검증 시 **하드 `.max()` 사용 금지**. 반드시 `cappedString(max)` 트렁케이션 헬퍼 사용:
+
+```ts
+// apps/api/src/ai/schemas/ 내 모든 스키마에 적용
+const cappedString = (max: number) =>
+  z.string().transform((s) => (s.length > max ? s.slice(0, max) : s));
+```
+
+이유: AI는 프롬프트 길이 제약을 종종 무시하므로, `.max()`가 Zod 예외를 던지면 전체 생성이 실패(FAILED 레코드 + 500 에러)하게 된다. `cappedString`은 초과분만 잘라내 graceful degradation을 보장한다.
+
+적용 대상: `curriculum.schema.ts`, `feedback-digest.schema.ts`, `insight.schema.ts`
 
 ### 22.6 AI feature key
 
