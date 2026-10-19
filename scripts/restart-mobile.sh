@@ -30,10 +30,14 @@ echo "  📦 빌드 중... (1~2분)"
 rm -rf "$DIST"
 
 PUBLIC_IP=$("$ROOT/scripts/public-ip.sh" || echo localhost)
+# .env 의 EXPO_PUBLIC_API_URL 우선 (SSH 터널 사용 시 http://localhost:3100/v1)
+if [ -z "${EXPO_PUBLIC_API_URL:-}" ] && [ -f "$ROOT/.env" ]; then
+  EXPO_PUBLIC_API_URL=$(grep -E '^EXPO_PUBLIC_API_URL=' "$ROOT/.env" | cut -d= -f2- || true)
+fi
 EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-http://$PUBLIC_IP:3100/v1}"
 cd "$ROOT/apps/mobile"
 CI=1 EXPO_PUBLIC_API_URL="$EXPO_PUBLIC_API_URL" \
-  npx expo export --platform web --output-dir "$DIST" 2>&1 | tail -5
+  npx expo export --platform web --output-dir "$DIST" --clear 2>&1 | tail -5
 
 if [ ! -f "$DIST/index.html" ]; then
   echo "  ❌ 빌드 실패"
