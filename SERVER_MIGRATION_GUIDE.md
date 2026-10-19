@@ -1,8 +1,34 @@
 # AutiCare 서버 이전 가이드 (EC2 → 미니서버)
 
-> 최종 업데이트: 2026-08-30
+> 최종 업데이트: 2026-10-19
+> 현재 개발 서버: EC2 (RHEL 10.2, Elastic IP) — `~/workspace/ASD` (리포 루트 = 프로젝트 루트)
 > 이전 원본: EC2 (RHEL 9.8, ip-172-31-36-149, ap-northeast-2)
-> 이전 대상: 개인 미니서버 (Ubuntu 22.04+ 권장)
+
+---
+
+## ⚡ 빠른 재구축 (dnf 계열 서버: RHEL / Amazon Linux / Fedora)
+
+서버를 갑자기 못 쓰게 됐을 때 새 서버에서 아래만 하면 됩니다.
+`scripts/setup-server.sh` 가 패키지·Node·pnpm·DB 컨테이너·.env·migration·seed·재부팅 자동기동·매일 백업 cron 까지 처리합니다 (여러 번 실행해도 안전).
+
+```bash
+# 1) SSH 키 생성 → GitHub 등록 (4-1 참고)
+# 2) 클론
+git clone git@github.com:kykisk/ASD.git ~/workspace/ASD
+# 3) (데이터 복원 시) 비밀번호 관리자에 보관한 .env 를 ~/workspace/ASD/.env 로 저장
+#    + 최신 DB 백업(auticare-db-*.sql.gz)을 ~/workspace/ASD/backups/ 에 복사
+#    → setup-server.sh 가 빈 DB 를 감지하면 최신 백업을 자동 복원
+# 4) 실행
+~/workspace/ASD/scripts/setup-server.sh
+# 5) AWS 보안 그룹: TCP 3100, 4200, 4300, 8081 오픈 (5433/6380 은 열지 말 것)
+```
+
+| 항목              | 위치 / 방식                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 공인 IP           | 하드코딩 없음 — `scripts/public-ip.sh` 가 실행 시 조회 (`.env` 의 CORS_ORIGINS/WEB_URL 만 `update-ip.sh` 로 갱신)         |
+| 재부팅 자동 기동  | `systemctl --user status auticare` (→ `scripts/boot.sh`), DB 컨테이너는 `podman-restart.service`                          |
+| DB 백업           | 매일 03:00 `scripts/backup-db.sh` → `backups/` (14일 보관). `.env` 에 `BACKUP_S3_URI=s3://...` + aws CLI 있으면 S3 업로드 |
+| 서버 밖 보관 필수 | `.env` (특히 `ENCRYPTION_MASTER_KEY`) → 비밀번호 관리자, DB 백업 → S3 등                                                  |
 
 ---
 
@@ -28,20 +54,14 @@
 
 ### 1. ENCRYPTION_MASTER_KEY
 
-```
-현재 값: 135OhnKMU1PGRJJBCOEn7jXH60tj6g7TCl+rBswcWn8=
-```
+값은 `.env` 에만 있습니다. **문서/Git 에 절대 기록하지 말고** 비밀번호 관리자에 `.env` 전체를 보관하세요.
 
 **이 키를 잃으면 DB에 저장된 아이 이름, 생년월일 등 암호화된 PII를 영원히 복호화할 수 없습니다.**
 반드시 안전한 곳에 별도 백기 후 새 서버 `.env`에 동일하게 입력해야 합니다.
 
 ### 2. JWT 시크릿 (선택)
 
-```
-JWT_ACCESS_SECRET=DFEtcTb/WaozwSMeE4rPZPkZKGfuAsUb6AKu/drHEy0=
-JWT_SECRET=DFEtcTb/WaozwSMeE4rPZPkZKGfuAsUb6AKu/drHEy0=
-JWT_REFRESH_SECRET=135OhnKMU1PGRJJBCOEn7jXH60tj6g7TCl+rBswcWn8=
-```
+`.env` 의 `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` (값은 문서에 기록하지 않음).
 
 새로 생성해도 되지만, 그러면 기존 로그인 세션이 모두 만료됩니다. (재로그인 필요)
 DB를 복원할 거면 동일한 값을 쓰는 게 편합니다.
@@ -49,7 +69,7 @@ DB를 복원할 거면 동일한 값을 쓰는 게 편합니다.
 ### 3. DB 백업 파일
 
 ```
-위치: ASD/auticare/backups/auticare-db-20260830.sql (2.3MB, 9973줄)
+위치: ASD/backups/auticare-db-YYYYMMDD-HHMM.sql.gz (scripts/backup-db.sh 가 매일 생성)
 ```
 
 이 파일은 Git에 포함되지 않으므로 **직접 복사**해야 합니다.
@@ -61,7 +81,7 @@ DB를 복원할 거면 동일한 값을 쓰는 게 편합니다.
 ### 1-1. Git 최신 상태 확인 + Push
 
 ```bash
-cd /home/ec2-user/workspace/ASD/auticare
+cd /home/ec2-user/workspace/ASD
 git status          # 변경사항 없는지 확인
 git push origin master   # 최신 코드 Push
 ```
@@ -84,10 +104,10 @@ docker exec auticare-postgres pg_dump -U auticare --clean --if-exists auticare >
 
 ```bash
 # 1) .env (환경변수 + 시크릿 키)
-scp ec2-user@<EC2-IP>:/home/ec2-user/workspace/ASD/auticare/.env ./auticare-env-backup
+scp ec2-user@<EC2-IP>:/home/ec2-user/workspace/ASD/.env ./auticare-env-backup
 
 # 2) DB 백업
-scp ec2-user@<EC2-IP>:/home/ec2-user/workspace/ASD/auticare/backups/auticare-db-20260830.sql ./
+scp ec2-user@<EC2-IP>:/home/ec2-user/workspace/ASD/backups/auticare-db-20260830.sql ./
 
 # 3) OpenCode 설정 (AI 프로바이더 설정)
 scp ec2-user@<EC2-IP>:/home/ec2-user/.config/opencode/opencode.json ./opencode-config-backup.json
@@ -297,15 +317,15 @@ cat ~/.ssh/id_ed25519.pub
 mkdir -p ~/workspace
 cd ~/workspace
 git clone git@github.com:kykisk/ASD.git
-cd ASD/auticare
+cd ASD
 ```
 
 ### 4-3. .env 파일 복원
 
-EC2에서 가져온 `.env` 파일을 `~/workspace/ASD/auticare/.env`로 복사.
+EC2에서 가져온 `.env` 파일을 `~/workspace/ASD/.env`로 복사.
 
 ```bash
-cp /path/to/auticare-env-backup ~/workspace/ASD/auticare/.env
+cp /path/to/auticare-env-backup ~/workspace/ASD/.env
 ```
 
 **⚠️ 반드시 확인할 항목:**
@@ -324,7 +344,7 @@ cp /path/to/auticare-env-backup ~/workspace/ASD/auticare/.env
 ### 4-4. 의존성 설치
 
 ```bash
-cd ~/workspace/ASD/auticare
+cd ~/workspace/ASD
 pnpm install
 # 약 3~5분 소요 (node_modules ~4GB)
 ```
@@ -412,12 +432,14 @@ docker exec auticare-postgres psql -U auticare -d auticare -c "SELECT count(*) F
 | Admin  | `http://<새IP>:4300`    | admin@auticare.com / Admin123!@# |
 | 모바일 | `http://<새IP>:8081`    | 브라우저 접속                    |
 
-### 6-4. Watchdog Crontab 등록
+### 6-4. Watchdog Crontab 등록 (선택)
+
+> `setup-server.sh` 는 재부팅 자동 기동(systemd)과 매일 DB 백업 cron 만 등록합니다. 실행 중 죽은 web/admin 자동 복구가 필요하면 아래를 추가하세요.
 
 ```bash
 crontab -e
 # 아래 한 줄 추가:
-*/5 * * * * /home/$USER/workspace/ASD/auticare/scripts/watchdog.sh >> /home/$USER/workspace/ASD/auticare/logs/watchdog.log 2>&1
+*/5 * * * * /home/$USER/workspace/ASD/scripts/watchdog.sh >> /home/$USER/workspace/ASD/logs/watchdog.log 2>&1
 ```
 
 ---
@@ -429,7 +451,7 @@ crontab -e
 ### 첫 번째 메시지 (프로젝트 인식)
 
 ```
-ASD/auticare 폴더로 가서 작업을 이어하자.
+ASD 폴더로 가서 작업을 이어하자.
 AGENTS.md와 HANDOFF.md를 읽고 현재 프로젝트 상태를 파악해줘.
 서비스 상태도 ./scripts/status.sh로 확인해줘.
 ```
@@ -535,7 +557,11 @@ OpenCode:
 | `AGENTS.md`                 | AI 에이전트용 전체 기술 지식베이스 (23절, 프로젝트 백과사전) |
 | `HANDOFF.md`                | 현재 상태 + 최근 변경사항 + 남은 작업 목록                   |
 | `.env`                      | 환경변수 (Git에 없음, 수동 관리)                             |
-| `scripts/update-ip.sh`      | IP 변경 시 .env + 스크립트 자동 업데이트                     |
+| `scripts/setup-server.sh`   | 새 서버 재구축 (패키지~서비스 기동까지 한 번에)              |
+| `scripts/public-ip.sh`      | 공인 IP 조회 (IMDSv2 → IMDSv1 → checkip)                     |
+| `scripts/update-ip.sh`      | IP 변경 시 .env 의 IP 갱신 + API/모바일 재시작               |
+| `scripts/boot.sh`           | 재부팅 시 전체 서비스 기동 (systemd --user auticare.service) |
+| `scripts/backup-db.sh`      | DB 백업 (cron 매일 03:00, 14일 보관, 선택적 S3 업로드)       |
 | `scripts/status.sh`         | 전체 서비스 상태 확인                                        |
 | `scripts/start-*.sh`        | 각 서비스 시작                                               |
 | `scripts/restart-*.sh`      | 각 서비스 재시작                                             |

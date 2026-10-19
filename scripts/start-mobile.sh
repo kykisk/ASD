@@ -33,7 +33,8 @@ if lsof -ti :$PORT > /dev/null 2>&1; then
   exit 1
 fi
 
-EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-http://3.38.146.1:3100/v1}"
+PUBLIC_IP=$("$ROOT/scripts/public-ip.sh" || echo localhost)
+EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-http://$PUBLIC_IP:3100/v1}"
 
 echo "📱 Expo Web 빌드 시작 (2~3분 소요됩니다)..."
 echo "  API: $EXPO_PUBLIC_API_URL"
@@ -70,7 +71,7 @@ sleep 2
 if kill -0 "$(cat $PID_FILE)" 2>/dev/null; then
   echo "  ✅ 서버 시작됨 (PID: $(cat $PID_FILE))"
   echo "     앱:   http://localhost:$PORT"
-  echo "     외부: http://3.38.146.1:$PORT"
+  echo "     외부: http://$PUBLIC_IP:$PORT"
 else
   echo "  ❌ 서버 시작 실패. 로그 확인: $LOG"
   exit 1

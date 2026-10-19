@@ -3,7 +3,7 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-NEW_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null)
+NEW_IP=$("$ROOT/scripts/public-ip.sh" || true)
 
 if [ -z "$NEW_IP" ]; then
   echo "❌ IP를 가져올 수 없습니다. 직접 입력하세요:"
@@ -13,9 +13,7 @@ fi
 echo "🔄 IP 업데이트: $NEW_IP"
 
 sed -i "s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}:/$NEW_IP:/g" \
-  "$ROOT/.env" \
-  "$ROOT/scripts/start-mobile.sh" \
-  "$ROOT/scripts/restart-mobile.sh"
+  "$ROOT/.env"
 
 echo "✅ 완료"
 echo ""

@@ -23,7 +23,7 @@ else
   echo "  ▶️  auticare-postgres 새로 생성 중..."
   podman run -d --name auticare-postgres \
     -e POSTGRES_USER=auticare \
-    -e POSTGRES_PASSWORD=password \
+    -e POSTGRES_PASSWORD=auticare \
     -e POSTGRES_DB=auticare \
     -p 5433:5432 \
     docker.io/library/postgres:16-alpine
@@ -52,7 +52,7 @@ sleep 5
 
 echo ""
 echo "🔍 연결 확인..."
-if PGPASSWORD=password psql -h localhost -p 5433 -U auticare -d auticare -c "SELECT 1" > /dev/null 2>&1; then
+if PGPASSWORD=auticare psql -h localhost -p 5433 -U auticare -d auticare -c "SELECT 1" > /dev/null 2>&1; then
   echo "  ✅ PostgreSQL 연결 OK"
 else
   echo "  ⚠️  PostgreSQL 아직 준비 중 — 10초 후 API 서버를 실행하세요"

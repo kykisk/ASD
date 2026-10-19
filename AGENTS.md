@@ -338,7 +338,12 @@ export PATH="$HOME/.local/node_modules/.bin:$PATH"
 ./scripts/restart-fe.sh    # 프론트엔드 둘 다 재시작
 ./scripts/status.sh        # 전체 상태 확인 (mobile 포함)
 ./scripts/stop-servers.sh  # 전체 종료 (mobile 포함)
+./scripts/backup-db.sh     # DB 백업 → backups/ (cron 매일 03:00 자동)
+./scripts/setup-server.sh  # 새 서버 재구축 (SERVER_MIGRATION_GUIDE.md 참고)
 ```
+
+재부팅 시 `systemctl --user` 의 `auticare.service`(→ `scripts/boot.sh`)가 DB → api → web → admin → mobile 순으로 자동 기동.
+공인 IP 는 스크립트에 하드코딩하지 않음 — `scripts/public-ip.sh` 로 실행 시 조회.
 
 ### 8.11 Prisma 스키마 위치
 
@@ -350,12 +355,12 @@ export PATH="$HOME/.local/node_modules/.bin:$PATH"
 | -------------- | ------------------------------- |
 | Remote         | `git@github.com:kykisk/ASD.git` |
 | 브랜치         | `master`                        |
-| SSH 키 위치    | `~/.ssh/id_ed25519` (EC2 전용)  |
-| GitHub 등록 키 | `auticare-ec2` (Title)          |
+| SSH 키 위치    | `~/.ssh/id_ed25519` (서버 전용) |
+| GitHub 등록 키 | `auticare-dev-server` (Title)   |
 
 ```bash
 # 현재 EC2에서 push 방법
-cd /home/ec2-user/workspace/ASD/auticare
+cd /home/ec2-user/workspace/ASD
 git add .
 git commit -m "..."
 git push origin master
