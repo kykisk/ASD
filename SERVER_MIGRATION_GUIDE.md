@@ -552,19 +552,22 @@ OpenCode:
 
 ## 핵심 파일 위치
 
-| 파일                        | 역할                                                         |
-| --------------------------- | ------------------------------------------------------------ |
-| `AGENTS.md`                 | AI 에이전트용 전체 기술 지식베이스 (23절, 프로젝트 백과사전) |
-| `HANDOFF.md`                | 현재 상태 + 최근 변경사항 + 남은 작업 목록                   |
-| `.env`                      | 환경변수 (Git에 없음, 수동 관리)                             |
-| `scripts/setup-server.sh`   | 새 서버 재구축 (패키지~서비스 기동까지 한 번에)              |
-| `scripts/public-ip.sh`      | 공인 IP 조회 (IMDSv2 → IMDSv1 → checkip)                     |
-| `scripts/update-ip.sh`      | IP 변경 시 .env 의 IP 갱신 + API/모바일 재시작               |
-| `scripts/boot.sh`           | 재부팅 시 전체 서비스 기동 (systemd --user auticare.service) |
-| `scripts/backup-db.sh`      | DB 백업 (cron 매일 03:00, 14일 보관, 선택적 S3 업로드)       |
-| `scripts/status.sh`         | 전체 서비스 상태 확인                                        |
-| `scripts/start-*.sh`        | 각 서비스 시작                                               |
-| `scripts/restart-*.sh`      | 각 서비스 재시작                                             |
-| `scripts/watchdog.sh`       | web/admin 자동 복구 (crontab 등록)                           |
-| `docker/docker-compose.yml` | PostgreSQL + Redis 컨테이너 정의                             |
-| `ASD/SPEC/`                 | 요구사항, 구현계획, 디자인가이드 문서                        |
+| 파일                        | 역할                                                           |
+| --------------------------- | -------------------------------------------------------------- |
+| `AGENTS.md`                 | AI 에이전트용 전체 기술 지식베이스 (23절, 프로젝트 백과사전)   |
+| `HANDOFF.md`                | 현재 상태 + 최근 변경사항 + 남은 작업 목록                     |
+| `.env`                      | 환경변수 (Git에 없음, 수동 관리)                               |
+| `scripts/setup-server.sh`   | 새 서버 재구축 (패키지~서비스 기동까지 한 번에)                |
+| `scripts/public-ip.sh`      | 공인 IP 조회 (IMDSv2 → IMDSv1 → checkip)                       |
+| `scripts/update-ip.sh`      | IP 변경 시 .env 의 IP 갱신 + API/모바일 재시작                 |
+| `scripts/boot.sh`           | 재부팅 시 전체 서비스 기동 (systemd --user auticare.service)   |
+| `scripts/backup-db.sh`      | DB 백업 (cron 매일 03:00, 14일 보관, 선택적 S3 업로드)         |
+| `scripts/create-env.sh`     | `.env` 생성 (setup-server / cloud-setup 공용, 기존 파일 유지)  |
+| `scripts/cloud-setup.sh`    | 클라우드 세션 SessionStart hook (DB 기동·migrate·devdata 복원) |
+| `scripts/export-devdata.sh` | 정리된 DB 스냅샷 → 비공개 리포 `kykisk/ASD-devdata` push       |
+| `scripts/status.sh`         | 전체 서비스 상태 확인                                          |
+| `scripts/start-*.sh`        | 각 서비스 시작                                                 |
+| `scripts/restart-*.sh`      | 각 서비스 재시작                                               |
+| `scripts/watchdog.sh`       | web/admin 자동 복구 (crontab 등록)                             |
+| `docker/docker-compose.yml` | PostgreSQL + Redis 컨테이너 정의                               |
+| `ASD/SPEC/`                 | 요구사항, 구현계획, 디자인가이드 문서                          |

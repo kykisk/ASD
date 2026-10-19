@@ -53,18 +53,8 @@ if [ -f "$ROOT/.env" ]; then
   sed -i "s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}:/$PUBLIC_IP:/g" "$ROOT/.env"
 else
   echo "  ⚠️  .env 없음 → 새 비밀값으로 생성 (기존 DB 백업의 암호화 데이터는 복호화 불가)"
-  sed -E '/^[A-Z_]+=/ s/[[:space:]]+#.*$//' .env.example > .env
-  setv() { sed -i "s|^$1=.*|$1=$2|" .env; }
-  setv DATABASE_URL 'postgresql://auticare:auticare@localhost:5433/auticare?schema=public'
-  setv REDIS_PORT 6380
-  setv JWT_ACCESS_SECRET "$(openssl rand -hex 32)"
-  setv JWT_REFRESH_SECRET "$(openssl rand -hex 32)"
-  setv ENCRYPTION_MASTER_KEY "$(openssl rand -base64 32)"
-  setv AI_DEFAULT_PROVIDER anthropic
-  setv CORS_ORIGINS "http://localhost:4200,http://localhost:4300,http://localhost:8081,http://$PUBLIC_IP:4200,http://$PUBLIC_IP:4300,http://$PUBLIC_IP:8081"
-  setv WEB_URL "http://$PUBLIC_IP:4200"
-  chmod 600 .env
-  echo "  👉 ANTHROPIC_API_KEY 등은 직접 입력하세요. .env 는 비밀번호 관리자에 백업하세요."
+  "$ROOT/scripts/create-env.sh" "$PUBLIC_IP"
+  echo "  👉 .env 는 비밀번호 관리자에 백업하세요."
 fi
 
 step "5. 의존성 + Prisma"
@@ -111,6 +101,8 @@ CRON_LINE="0 3 * * * $ROOT/scripts/backup-db.sh >> $ROOT/logs/backup.log 2>&1"
 ( crontab -l 2>/dev/null | grep -v 'scripts/backup-db.sh' || true; echo "$CRON_LINE" ) | crontab -
 
 grep -q AUTICARE_NO_CLOUD_SETUP "$HOME/.bashrc" || echo 'export AUTICARE_NO_CLOUD_SETUP=1' >> "$HOME/.bashrc"
+# 클라우드 전용 SessionStart hook(scripts/cloud-setup.sh)이 이 서버에서 돌지 않게 하는 표시
+touch "$HOME/.auticare-no-cloud-setup"
 
 step "7. 서비스 시작"
 systemctl --user restart auticare.service

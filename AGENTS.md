@@ -345,6 +345,17 @@ export PATH="$HOME/.local/node_modules/.bin:$PATH"
 재부팅 시 `systemctl --user` 의 `auticare.service`(→ `scripts/boot.sh`)가 DB → api → web → admin → mobile 순으로 자동 기동.
 공인 IP 는 스크립트에 하드코딩하지 않음 — `scripts/public-ip.sh` 로 실행 시 조회.
 
+### 8.10.1 클라우드 세션 (Claude Code on the web)
+
+- `.claude/settings.json` 의 SessionStart hook → `scripts/cloud-setup.sh` (`CLAUDE_CODE_REMOTE=true` 일 때만 동작)
+  - 클라우드 VM 기본 설치된 PostgreSQL(:5433)·Redis(:6380) 기동, `.env` 생성, pnpm install, migrate, seed
+  - 빈 DB 이면 비공개 리포 `kykisk/ASD-devdata` 의 `snapshot.sql.gz` 복원 + `dev-encryption-key` 사용
+- 개발 서버에서는 `~/.auticare-no-cloud-setup` 파일(또는 `AUTICARE_NO_CLOUD_SETUP=1`)로 건너뜀
+- 스냅샷 갱신 (개발 서버에서): `./scripts/export-devdata.sh`
+  - 아이 이름 → "아이N" 마스킹 + 개발용 키로 재암호화 (실제 `ENCRYPTION_MASTER_KEY` 는 서버 밖으로 나가지 않음)
+  - AI API 키·토큰·IP·전화번호 제거, 사용자 비밀번호 `Dev123!@#` (admin@auticare.com 은 `Admin123!@#`)
+- 클라우드에서 `start-db.sh`(Podman 전용)·`status.sh` 의 DB 항목은 사용 불가. `start-api/web/admin.sh` 는 사용 가능
+
 ### 8.11 Prisma 스키마 위치
 
 표준 위치(`prisma/`)가 아닌 `libs/prisma-client/prisma/`에 있으므로 모든 prisma 명령에 `--schema` 플래그 필수.
