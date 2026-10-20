@@ -7,13 +7,11 @@ export class ClaudeDirectProvider implements AIProvider {
   private client: Anthropic;
   private modelId: string;
   private maxTokens: number;
-  private temperature: number;
 
   constructor(private config: ProviderConfig) {
     this.client = new Anthropic({ apiKey: config.apiKey! });
-    this.modelId = config.modelId || 'claude-sonnet-4-20250514';
+    this.modelId = config.modelId || 'claude-haiku-5-5';
     this.maxTokens = config.maxTokens || 4096;
-    this.temperature = config.temperature ?? 0.7;
   }
 
   isConfigured(): boolean {
@@ -22,15 +20,15 @@ export class ClaudeDirectProvider implements AIProvider {
 
   async generate(options: AIRequestOptions): Promise<AIResponse> {
     const start = Date.now();
-    const system = options.messages.find(m => m.role === 'system')?.content;
+    const system = options.messages.find((m) => m.role === 'system')?.content;
     const messages = options.messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
     const response = await this.client.messages.create({
       model: options.model || this.modelId,
       max_tokens: options.maxTokens || this.maxTokens,
-      temperature: options.temperature ?? this.temperature,
+      // 최신 Claude 모델은 temperature 기본값 외 값을 400 으로 거부하므로 보내지 않음
       ...(system && { system }),
       messages,
     });
