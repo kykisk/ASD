@@ -340,6 +340,8 @@ export PATH="$HOME/.local/node_modules/.bin:$PATH"
 ./scripts/stop-servers.sh  # 전체 종료 (mobile 포함)
 ./scripts/backup-db.sh     # DB 백업 → backups/ (cron 매일 03:00 자동)
 ./scripts/setup-server.sh  # 새 서버 재구축 (SERVER_MIGRATION_GUIDE.md 참고)
+./scripts/start-claude.sh  # Claude Code Remote Control 시작 (systemd --user claude-rc-ASD, 기본 권한모드 auto)
+./scripts/stop-claude.sh   # Remote Control 종료
 ```
 
 재부팅 시 `systemctl --user` 의 `auticare.service`(→ `scripts/boot.sh`)가 DB → api → web → admin → mobile 순으로 자동 기동.
