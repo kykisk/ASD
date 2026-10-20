@@ -23,6 +23,21 @@
   - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com / Admin123!@#) · 모바일 http://localhost:8081
 - Claude Code: 이 서버의 `~/workspace/ASD` 에서 시작 + Remote Control (CLAUDE.md → AGENTS.md 자동 로드)
 
+## 외부 접속 (2026-10-20, 가족 테스트용)
+
+| 주소                       | 대상              |
+| -------------------------- | ----------------- |
+| https://m.auticare.app     | 모바일 웹 (:8081) |
+| https://app.auticare.app   | 웹 (:4200)        |
+| https://admin.auticare.app | Admin (:4300)     |
+
+- 도메인 `auticare.app` (Cloudflare 등록, 갱신 $14/년). `auticare.com` 은 타인 소유(Sedo 판매 중)
+- Cloudflare Tunnel: 서버 `cloudflared.service` (systemd, `--token-file /etc/cloudflared/token`, root 600). 라우트는 Zero Trust → Networks → Tunnels → auticare → Routes 에서 관리
+- Cloudflare Access: 앱 `AutiCare` (3개 호스트), 정책 `가족` = 허용 이메일만, One-time PIN, 세션 1개월
+- 터널 경로는 모두 same-origin `/v1` 프록시라 CORS 추가 불필요
+- Tailscale 도 설치됨 (`auticare` 100.103.21.27) — 은행앱 VPN 감지 문제로 가족용은 Cloudflare Access 사용
+- 공개 차단 확인: 인증 없이 접근 시 모든 경로(/v1 포함) 302 → cloudflareaccess 로그인
+
 ## 최근 완료 작업 (2026-10-19~20, 새 개발 서버 구축)
 
 예전 EC2 를 쓸 수 없게 되어 새 서버에 환경을 다시 구축. 서버를 또 잃어도 빠르게 복구할 수 있게 자동화.
