@@ -149,6 +149,34 @@ describe('ClaudeDirectProvider', () => {
     expect(unconfigured.isConfigured()).toBe(false);
   });
 
+  it('generate() skips leading thinking blocks and joins text blocks', async () => {
+    mockCreate.mockResolvedValue({
+      content: [
+        { type: 'thinking', thinking: '' },
+        { type: 'text', text: '{"a":' },
+        { type: 'text', text: '1}' },
+      ],
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 1, output_tokens: 1 },
+      model: 'claude-haiku-5-5',
+    });
+
+    const result = await provider.generate(defaultOptions);
+    expect(result.content).toBe('{"a":1}');
+    expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('temperature');
+  });
+
+  it('generate() throws when the response hits max_tokens', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: '{"a":' }],
+      stop_reason: 'max_tokens',
+      usage: { input_tokens: 1, output_tokens: 16000 },
+      model: 'claude-haiku-5-5',
+    });
+
+    await expect(provider.generate(defaultOptions)).rejects.toThrow('truncated');
+  });
+
   it('generate() returns AIResponse shape with correct token counts', async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: 'text', text: 'Direct response' }],
@@ -182,7 +210,7 @@ describe('ClaudeDirectProvider', () => {
       expect.objectContaining({
         system: 'You are a helpful assistant.',
         messages: [{ role: 'user', content: 'Hello' }],
-      })
+      }),
     );
   });
 });
@@ -328,7 +356,7 @@ describe('OpenAIProvider', () => {
           { role: 'system', content: 'You are a helpful assistant.' },
           { role: 'user', content: 'Hello' },
         ],
-      })
+      }),
     );
   });
 });

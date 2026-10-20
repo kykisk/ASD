@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { AIProvider, AIRequestOptions, AIResponse } from '../ai-provider.interface.js';
 import type { ProviderConfig } from '../ai-provider.factory.js';
 
+const MIN_MAX_TOKENS = 16000;
+
 export class ClaudeDirectProvider implements AIProvider {
   readonly name = 'CLAUDE_DIRECT';
   private client: Anthropic;
@@ -27,13 +29,22 @@ export class ClaudeDirectProvider implements AIProvider {
 
     const response = await this.client.messages.create({
       model: options.model || this.modelId,
-      max_tokens: options.maxTokens || this.maxTokens,
+      // 최신 모델은 thinking 이 기본 on 이고 max_tokens 에 포함되므로 출력이 잘리지 않게 하한을 둠
+      max_tokens: Math.max(options.maxTokens || this.maxTokens, MIN_MAX_TOKENS),
       // 최신 Claude 모델은 temperature 기본값 외 값을 400 으로 거부하므로 보내지 않음
       ...(system && { system }),
       messages,
     });
 
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
+    if (response.stop_reason === 'max_tokens') {
+      throw new Error(`Claude response truncated at max_tokens (${response.usage.output_tokens})`);
+    }
+
+    // 응답 앞에 thinking 블록이 오므로 text 블록만 모아서 사용
+    const content = response.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map((block) => block.text)
+      .join('');
 
     return {
       content,
