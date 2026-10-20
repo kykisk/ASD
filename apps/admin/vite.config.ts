@@ -9,6 +9,7 @@ export default defineConfig(() => ({
   server: {
     port: 4300,
     host: '0.0.0.0',
+    allowedHosts: ['.auticare.app'],
     proxy: {
       '/v1': {
         target: 'http://localhost:3100',
@@ -19,6 +20,7 @@ export default defineConfig(() => ({
   preview: {
     port: 4300,
     host: '0.0.0.0',
+    allowedHosts: ['.auticare.app'],
     proxy: {
       '/v1': {
         target: 'http://localhost:3100',

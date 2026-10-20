@@ -9,7 +9,7 @@ export default defineConfig(() => ({
   server: {
     port: 4200,
     host: '0.0.0.0',
-    allowedHosts: ['.trycloudflare.com'],
+    allowedHosts: ['.trycloudflare.com', '.auticare.app'],
     proxy: {
       '/v1': {
         target: 'http://localhost:3100',
@@ -20,7 +20,7 @@ export default defineConfig(() => ({
   preview: {
     port: 4200,
     host: '0.0.0.0',
-    allowedHosts: ['.trycloudflare.com'],
+    allowedHosts: ['.trycloudflare.com', '.auticare.app'],
     proxy: {
       '/v1': {
         target: 'http://localhost:3100',
