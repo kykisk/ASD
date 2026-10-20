@@ -51,5 +51,6 @@ export function useGenerateReport() {
 
 export function getReportUrl(reportId: string): string {
   const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3100/v1';
-  return `${baseUrl}/reports/${reportId}`;
+  // 상대 경로(/v1)는 blob 문서 안에서 해석되지 않으므로 절대 URL 로 변환 (웹 전용 호출)
+  return new URL(`${baseUrl}/reports/${reportId}`, window.location.origin).href;
 }

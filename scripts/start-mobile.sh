@@ -34,11 +34,11 @@ if lsof -ti :$PORT > /dev/null 2>&1; then
 fi
 
 PUBLIC_IP=$("$ROOT/scripts/public-ip.sh" || echo localhost)
-# .env 의 EXPO_PUBLIC_API_URL 우선 (SSH 터널 사용 시 http://localhost:3100/v1)
+# .env 의 EXPO_PUBLIC_API_URL 우선. 기본 /v1 (serve-mobile.js 가 API 로 프록시)
 if [ -z "${EXPO_PUBLIC_API_URL:-}" ] && [ -f "$ROOT/.env" ]; then
   EXPO_PUBLIC_API_URL=$(grep -E '^EXPO_PUBLIC_API_URL=' "$ROOT/.env" | cut -d= -f2- || true)
 fi
-EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-http://$PUBLIC_IP:3100/v1}"
+EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-/v1}"
 
 echo "📱 Expo Web 빌드 시작 (2~3분 소요됩니다)..."
 echo "  API: $EXPO_PUBLIC_API_URL"
@@ -55,20 +55,8 @@ fi
 echo ""
 echo "🌐 정적 서버 시작 중 (:$PORT)..."
 
-node -e "
-const http = require('http');
-const fs   = require('fs');
-const path = require('path');
-const dir  = '$DIST';
-const mime = {html:'text/html',js:'application/javascript',css:'text/css',json:'application/json',png:'image/png',svg:'image/svg+xml',ico:'image/x-icon',woff2:'font/woff2'};
-http.createServer((req,res)=>{
-  let f=path.join(dir,req.url.split('?')[0]);
-  if(!fs.existsSync(f)||fs.statSync(f).isDirectory()) f=path.join(dir,'index.html');
-  const ext=path.extname(f).slice(1);
-  res.writeHead(200,{'Content-Type':mime[ext]||'text/plain'});
-  fs.createReadStream(f).pipe(res);
-}).listen($PORT,()=>console.log('ready'));
-" > "$LOG" 2>&1 &
+cd "$ROOT"
+nohup node scripts/serve-mobile.js > "$LOG" 2>&1 &
 echo $! > "$PID_FILE"
 
 sleep 2

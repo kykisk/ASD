@@ -26,6 +26,6 @@ setv ENCRYPTION_MASTER_KEY "${ENCRYPTION_MASTER_KEY:-$(openssl rand -base64 32)}
 setv AI_DEFAULT_PROVIDER anthropic
 setv CORS_ORIGINS "$CORS"
 setv WEB_URL "http://localhost:4200"
-printf '\n# Mobile web API URL (SSH 터널 접속용, 비우면 공인 IP 사용)\nEXPO_PUBLIC_API_URL=http://localhost:3100/v1\n' >> "$ENV_FILE"
+printf '\n# Mobile web API URL (기본 /v1: serve-mobile.js 가 API 로 프록시)\nEXPO_PUBLIC_API_URL=/v1\n' >> "$ENV_FILE"
 
 echo "  ✅ .env 생성됨 (ANTHROPIC_API_KEY 등은 직접 입력)"

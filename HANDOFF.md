@@ -33,7 +33,7 @@
 | 재부팅 자동 기동 | linger + `podman-restart.service`(DB 컨테이너) + `systemctl --user` `auticare.service` → `scripts/boot.sh` (db→api→web→admin→mobile). 로그 `logs/boot.log`                                             |
 | DB 백업          | cron 매일 03:00 `scripts/backup-db.sh` → `backups/*.sql.gz` (14일 보관, 600 권한). `.env` 에 `BACKUP_S3_URI` + aws CLI 있으면 S3 업로드 (아직 미설정)                                                  |
 | IP 하드코딩 제거 | `scripts/public-ip.sh` (IMDSv2) 로 실행 시 조회. `update-ip.sh` 는 `.env` 만 수정                                                                                                                      |
-| 모바일           | `.env` 의 `EXPO_PUBLIC_API_URL`(현재 `http://localhost:3100/v1`, 터널용) 우선. Metro 캐시 때문에 `expo export --clear`                                                                                 |
+| 모바일           | `.env` 의 `EXPO_PUBLIC_API_URL`(기본 `/v1`, `serve-mobile.js` 가 API 로 프록시 → 터널·Tailscale 공통) 우선. Metro 캐시 때문에 `expo export --clear`                                                    |
 | DB 비밀번호      | `start-db.sh` 의 Postgres 비밀번호를 `auticare` 로 통일 (DATABASE_URL·seed-test-env.sh 와 일치)                                                                                                        |
 | 클라우드 세션    | `.claude/settings.json` SessionStart hook → `scripts/cloud-setup.sh` (`CLAUDE_CODE_REMOTE=true` 일 때만). 클라우드 VM 의 Postgres :5433 / Redis :6380 기동, .env, install, migrate, seed, devdata 복원 |
 | devdata 스냅샷   | `scripts/export-devdata.sh` → 비공개 리포 `kykisk/ASD-devdata` (아이 이름 "아이N" 마스킹 + 개발용 키 재암호화, API 키·토큰·IP·전화 제거, 비밀번호 `Dev123!@#`). 실제 암호화 키는 서버 밖으로 안 나감   |
