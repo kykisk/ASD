@@ -11,6 +11,13 @@ import { curriculumOutputSchema } from '../ai/schemas/curriculum.schema.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { Curriculum } from '@prisma/client';
 
+const KST_DATE_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 @Injectable()
 export class CurriculumService {
   private readonly logger = new Logger(CurriculumService.name);
@@ -374,6 +381,16 @@ export class CurriculumService {
 
     await this.verifyFamilyMember(curriculum.familyId, userId);
 
+    // 커리큘럼을 지우면 활동 기록도 함께 삭제되므로, 기록이 있으면 재생성하지 않음
+    const loggedCount = await this.prisma.activityLog.count({ where: { curriculumId } });
+    if (loggedCount > 0) {
+      throw new ApiException(
+        409,
+        'CURRICULUM_409',
+        '이미 기록한 활동이 있어 다시 만들 수 없어요. 오늘 기록은 다음 커리큘럼에 반영됩니다',
+      );
+    }
+
     await this.prisma.curriculum.delete({ where: { id: curriculumId } });
 
     const dateStr =
@@ -424,9 +441,9 @@ export class CurriculumService {
     return results;
   }
 
+  /** 서버 TZ(UTC)와 무관하게 한국 날짜(YYYY-MM-DD)를 커리큘럼 날짜로 사용 */
   private getTargetDate(): string {
-    const now = new Date();
-    return now.toISOString().split('T')[0];
+    return KST_DATE_FORMAT.format(new Date());
   }
 
   private calculateAgeMonths(birthDate: string): number {

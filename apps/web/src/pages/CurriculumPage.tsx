@@ -442,7 +442,10 @@ export function CurriculumPage() {
   const handleRegenerate = (curriculumId: string) => {
     regenerateCurriculum.mutate(curriculumId, {
       onError: (err) => {
-        const msg = getAiErrorMessage(err);
+        const msg =
+          getAiErrorMessage(err) ??
+          (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
+            ?.message;
         if (msg) alert(msg);
       },
     });

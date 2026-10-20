@@ -27,11 +27,16 @@ export class CurriculumBatchService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit() {
-    this.task = cron.schedule('0 18 * * *', () => {
-      this.runNightlyGeneration().catch((err) => {
-        this.logger.error('Nightly curriculum generation failed:', err);
-      });
-    });
+    // 매일 04:00 KST — 부모가 아침에 그날 커리큘럼을 볼 수 있도록 (전날 활동 기록 반영)
+    this.task = cron.schedule(
+      '0 4 * * *',
+      () => {
+        this.runNightlyGeneration().catch((err) => {
+          this.logger.error('Nightly curriculum generation failed:', err);
+        });
+      },
+      { timezone: 'Asia/Seoul' },
+    );
   }
 
   onModuleDestroy() {
@@ -88,15 +93,21 @@ export class CurriculumBatchService implements OnModuleInit, OnModuleDestroy {
             await this.delay(RETRY_DELAYS_MS[attempt]);
           } else {
             errors.push({ childId: child.id, error: errorMessage });
-            this.logger.warn(`Failed to generate curriculum for child ${child.id}: ${errorMessage}`);
+            this.logger.warn(
+              `Failed to generate curriculum for child ${child.id}: ${errorMessage}`,
+            );
           }
         }
       }
 
       if (success) {
         successCount++;
-        await this.notificationTrigger.triggerAssessmentReminder(child.id, child.familyId).catch(() => {});
-        await this.notificationTrigger.triggerInputReminder(child.id, child.familyId).catch(() => {});
+        await this.notificationTrigger
+          .triggerAssessmentReminder(child.id, child.familyId)
+          .catch(() => {});
+        await this.notificationTrigger
+          .triggerInputReminder(child.id, child.familyId)
+          .catch(() => {});
       } else {
         failureCount++;
       }

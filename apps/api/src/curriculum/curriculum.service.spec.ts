@@ -62,6 +62,7 @@ const mockPrismaService = {
   },
   activityLog: {
     findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
   },
 };
 
@@ -301,6 +302,29 @@ describe('CurriculumService', () => {
       expect(result).toBeNull();
     });
 
+    it('should look up today by Korean date, not the UTC date', async () => {
+      vi.useFakeTimers();
+      // 2026-10-20 18:00 UTC = 2026-10-21 03:00 KST
+      vi.setSystemTime(new Date('2026-10-20T18:00:00.000Z'));
+      mockPrismaService.child.findUnique.mockResolvedValue(mockChild);
+      mockPrismaService.familyMember.findUnique.mockResolvedValue(mockMembership);
+      mockPrismaService.curriculum.findFirst.mockResolvedValue(null);
+
+      await service.getTodayCurriculum('child-1', 'user-1');
+
+      expect(mockPrismaService.curriculum.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            date: {
+              gte: new Date('2026-10-21T00:00:00.000Z'),
+              lte: new Date('2026-10-21T23:59:59.999Z'),
+            },
+          }),
+        }),
+      );
+      vi.useRealTimers();
+    });
+
     it('should return existing curriculum for today', async () => {
       mockPrismaService.child.findUnique.mockResolvedValue(mockChild);
       mockPrismaService.familyMember.findUnique.mockResolvedValue(mockMembership);
@@ -379,6 +403,18 @@ describe('CurriculumService', () => {
 
       expect(mockPrismaService.curriculum.delete).toHaveBeenCalledWith({ where: { id: 'curr-1' } });
       expect(result.weeklyGoal).toBe('새로운 목표');
+    });
+
+    it('should refuse when activities were already logged (would delete the logs)', async () => {
+      mockPrismaService.curriculum.findUnique.mockResolvedValue(mockCurriculumRecord);
+      mockPrismaService.familyMember.findUnique.mockResolvedValue(mockMembership);
+      mockPrismaService.curriculum.delete.mockClear();
+      mockPrismaService.activityLog.count.mockResolvedValueOnce(2);
+
+      await expect(service.regenerateCurriculum('curr-1', 'user-1')).rejects.toThrow(
+        '이미 기록한 활동이 있어',
+      );
+      expect(mockPrismaService.curriculum.delete).not.toHaveBeenCalled();
     });
   });
 });
