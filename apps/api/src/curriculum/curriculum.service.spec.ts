@@ -60,6 +60,9 @@ const mockPrismaService = {
   sessionFeedback: {
     findMany: vi.fn().mockResolvedValue([]),
   },
+  activityLog: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
 };
 
 const mockAiService = {
@@ -188,6 +191,60 @@ describe('CurriculumService', () => {
       expect(mockAiService.generateStructured).toHaveBeenCalled();
       expect(mockPrismaService.curriculum.create).toHaveBeenCalled();
       expect(result).toEqual(mockCurriculumRecord);
+    });
+
+    it('should pass recent activity logs (latest per activity) into the AI prompt', async () => {
+      mockPrismaService.child.findUnique.mockResolvedValue(mockChild);
+      mockPrismaService.familyMember.findUnique.mockResolvedValue(mockMembership);
+      mockPrismaService.curriculum.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      mockPrismaService.assessment.findMany.mockResolvedValue([]);
+      mockPrismaService.sensoryProfile.findFirst.mockResolvedValue(null);
+      const prevCurriculum = {
+        date: new Date('2026-05-19T00:00:00.000Z'),
+        activities: [{ domain: 'COMMUNICATION' }, { domain: 'motor' }],
+      };
+      mockPrismaService.activityLog.findMany.mockResolvedValueOnce([
+        {
+          curriculumId: 'c-1',
+          activityIndex: 0,
+          activityTitle: '간식 고르기',
+          result: 'SUCCESS',
+          notes: '두 번 가리킴',
+          curriculum: prevCurriculum,
+        },
+        {
+          curriculumId: 'c-1',
+          activityIndex: 0,
+          activityTitle: '간식 고르기',
+          result: 'FAILED',
+          notes: null,
+          curriculum: prevCurriculum,
+        },
+        {
+          curriculumId: 'c-1',
+          activityIndex: 1,
+          activityTitle: '빨래집게',
+          result: 'SKIPPED',
+          notes: null,
+          curriculum: prevCurriculum,
+        },
+      ]);
+      mockAiService.generateStructured.mockResolvedValue({
+        weeklyGoal: '의사소통 능력 향상',
+        activities: mockCurriculumRecord.activities,
+        notes: '참고사항',
+      });
+      mockPrismaService.curriculum.create.mockResolvedValue(mockCurriculumRecord);
+
+      await service.generateForChild('child-1', 'user-1', '2026-05-20');
+
+      const prompt = mockAiService.generateStructured.mock.calls.at(-1)[0].messages[1].content;
+      expect(prompt).toContain('총 2건');
+      expect(prompt).toContain('05-19 [의사소통] 간식 고르기: 성공 / 부모 메모: 두 번 가리킴');
+      expect(prompt).toContain('05-19 [운동] 빨래집게: 건너뜀');
+      expect(prompt).not.toContain('간식 고르기: 어려움');
     });
 
     it('should mark as FAILED on AI error', async () => {

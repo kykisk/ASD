@@ -24,6 +24,14 @@ export interface ClinicalReportSnapshot {
   clinicalFindings: string | null;
 }
 
+export interface ActivityResultSnapshot {
+  date: string; // YYYY-MM-DD
+  title: string;
+  domain: string | null;
+  result: string; // SUCCESS | PARTIAL | FAILED | SKIPPED
+  notes: string | null;
+}
+
 export interface CurriculumPromptParams {
   childAgeMonths: number;
   domainScores: Array<{
@@ -64,7 +72,27 @@ export interface CurriculumPromptParams {
     monthlyGoal?: string;
   };
   behaviorIssueSummary?: string;
+  recentActivityResults?: ActivityResultSnapshot[];
 }
+
+const ACTIVITY_RESULT_LABELS: Record<string, string> = {
+  SUCCESS: '성공',
+  PARTIAL: '부분 성공',
+  FAILED: '어려움',
+  SKIPPED: '건너뜀',
+};
+
+const ACTIVITY_DOMAIN_LABELS: Record<string, string> = {
+  DAILY_LIVING: '일상생활',
+  COMMUNICATION: '의사소통',
+  COGNITIVE: '인지',
+  SOCIAL: '사회성',
+  MOTOR: '운동',
+  EMOTIONAL: '정서',
+  OTHER: '기타',
+};
+
+const MAX_ACTIVITY_RESULT_LINES = 12;
 
 @Injectable()
 export class CurriculumPromptService {
@@ -189,6 +217,10 @@ ${domainText}`;
       userContent += `\n\n최근 문제행동 기록:\n${params.behaviorIssueSummary}\n위 문제행동 패턴을 고려하여 예방 및 개선에 도움이 되는 활동을 설계해주세요.\n`;
     }
 
+    if (params.recentActivityResults && params.recentActivityResults.length > 0) {
+      userContent += `\n\n${this.formatActivityResults(params.recentActivityResults)}`;
+    }
+
     if (params.userInput) {
       const ui = params.userInput;
       const hasGoals = ui.dailyGoal || ui.weeklyGoal || ui.monthlyGoal;
@@ -231,6 +263,41 @@ ${domainText}`;
     };
 
     return [systemMessage, userMessage];
+  }
+
+  private formatActivityResults(results: ActivityResultSnapshot[]): string {
+    const byDomain = new Map<string, Record<string, number>>();
+    for (const r of results) {
+      const domain = r.domain ? (ACTIVITY_DOMAIN_LABELS[r.domain] ?? r.domain) : '기타';
+      const counts = byDomain.get(domain) ?? {};
+      counts[r.result] = (counts[r.result] ?? 0) + 1;
+      byDomain.set(domain, counts);
+    }
+
+    const domainLines = [...byDomain.entries()].map(([domain, counts]) => {
+      const parts = Object.keys(ACTIVITY_RESULT_LABELS)
+        .filter((key) => counts[key])
+        .map((key) => `${ACTIVITY_RESULT_LABELS[key]} ${counts[key]}`);
+      return `- ${domain}: ${parts.join(', ')}`;
+    });
+
+    const recentLines = results.slice(0, MAX_ACTIVITY_RESULT_LINES).map((r) => {
+      const domain = r.domain ? (ACTIVITY_DOMAIN_LABELS[r.domain] ?? r.domain) : '기타';
+      const note = r.notes ? ` / 부모 메모: ${r.notes.slice(0, 100)}` : '';
+      return `- ${r.date.slice(5)} [${domain}] ${r.title}: ${ACTIVITY_RESULT_LABELS[r.result] ?? r.result}${note}`;
+    });
+
+    return `최근 2주 가정 활동 결과 (부모 기록, 총 ${results.length}건):
+영역별 결과:
+${domainLines.join('\n')}
+최근 기록:
+${recentLines.join('\n')}
+위 결과를 바탕으로 오늘 활동을 조정해주세요:
+- 성공이 반복된 활동은 같은 목표를 한 단계 어렵게 하거나 다음 단계로 넘어가세요
+- 부분 성공·어려움이 있었던 활동은 단계를 더 잘게 쪼개거나 도움을 늘려 쉽게 다시 시도하세요
+- 건너뛴 활동이 반복되면 시간을 줄이거나 아이가 좋아하는 놀이 방식으로 바꾸세요
+- 부모 메모의 내용(아이 반응, 어려웠던 점)을 구체적으로 반영하세요
+`;
   }
 
   private formatAge(months: number): string {

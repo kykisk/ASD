@@ -16,7 +16,12 @@ describe('CurriculumPromptService', () => {
     const baseParams = {
       childAgeMonths: 38,
       domainScores: [
-        { domain: 'COMMUNICATION', label: '의사소통', currentScore: 3.5, trend: { direction: 'up' } },
+        {
+          domain: 'COMMUNICATION',
+          label: '의사소통',
+          currentScore: 3.5,
+          trend: { direction: 'up' },
+        },
         { domain: 'SOCIAL', label: '사회성', currentScore: 2.8, trend: { direction: 'down' } },
       ],
       recentAssessmentCount: 5,
@@ -79,6 +84,46 @@ describe('CurriculumPromptService', () => {
       const userContent = messages[1].content;
 
       expect(userContent).toContain('아직 평가 데이터가 없습니다');
+    });
+
+    it('should include recent activity results with domain counts and notes', () => {
+      const messages = service.buildCurriculumPrompt({
+        ...baseParams,
+        recentActivityResults: [
+          {
+            date: '2026-05-19',
+            title: '간식 고르기',
+            domain: 'COMMUNICATION',
+            result: 'SUCCESS',
+            notes: '가리키기 잘함',
+          },
+          {
+            date: '2026-05-18',
+            title: '간식 고르기',
+            domain: 'COMMUNICATION',
+            result: 'PARTIAL',
+            notes: null,
+          },
+          {
+            date: '2026-05-18',
+            title: '색 짝 맞추기',
+            domain: 'COGNITIVE',
+            result: 'SKIPPED',
+            notes: null,
+          },
+        ],
+      });
+
+      const content = messages[1].content;
+      expect(content).toContain('최근 2주 가정 활동 결과 (부모 기록, 총 3건)');
+      expect(content).toContain('- 의사소통: 성공 1, 부분 성공 1');
+      expect(content).toContain('- 인지: 건너뜀 1');
+      expect(content).toContain('05-19 [의사소통] 간식 고르기: 성공 / 부모 메모: 가리키기 잘함');
+    });
+
+    it('should omit activity results section when there are none', () => {
+      const messages = service.buildCurriculumPrompt(baseParams);
+      expect(messages[1].content).not.toContain('가정 활동 결과');
     });
 
     it('should contain system prompt with ASD curriculum designer instructions', () => {

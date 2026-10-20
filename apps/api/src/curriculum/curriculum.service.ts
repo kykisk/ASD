@@ -3,6 +3,7 @@ import { PrismaService } from '@auticare/prisma-client';
 import { EncryptionService } from '@auticare/encryption';
 import { AIService } from '../ai/ai.service.js';
 import { CurriculumPromptService } from './curriculum-prompt.service.js';
+import type { ActivityResultSnapshot } from './curriculum-prompt.service.js';
 import { DomainAggregationService } from '../assessments/domain-aggregation.service.js';
 import { NotificationTriggerService } from '../notifications/notification-trigger.service.js';
 import { SessionFeedbacksService } from '../session-feedbacks/session-feedbacks.service.js';
@@ -179,6 +180,8 @@ export class CurriculumService {
               .join('\n')
           : null;
 
+      const recentActivityResults = await this.getRecentActivityResults(childId);
+
       const messages = this.promptService.buildCurriculumPrompt({
         childAgeMonths: ageMonths,
         domainScores: aggregated.domains.map((d) => ({
@@ -231,6 +234,7 @@ export class CurriculumService {
             : undefined,
         sessionFeedbackSummary: sessionFeedbackSummary ?? undefined,
         behaviorIssueSummary: behaviorIssueSummary ?? undefined,
+        recentActivityResults: recentActivityResults.length > 0 ? recentActivityResults : undefined,
         userInput: userInput ?? undefined,
       });
 
@@ -387,6 +391,37 @@ export class CurriculumService {
     }
     await this.verifyFamilyMember(curriculum.familyId, userId);
     await this.prisma.curriculum.delete({ where: { id: curriculumId } });
+  }
+
+  /** 최근 14일 활동 기록 (같은 활동을 여러 번 기록했으면 최신 1건만) */
+  private async getRecentActivityResults(childId: string): Promise<ActivityResultSnapshot[]> {
+    const since = new Date();
+    since.setDate(since.getDate() - 14);
+
+    const logs = await this.prisma.activityLog.findMany({
+      where: { childId, loggedAt: { gte: since } },
+      orderBy: { loggedAt: 'desc' },
+      include: { curriculum: { select: { date: true, activities: true } } },
+    });
+
+    const seen = new Set<string>();
+    const results: ActivityResultSnapshot[] = [];
+    for (const log of logs) {
+      const key = `${log.curriculumId}:${log.activityIndex}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const activities = log.curriculum.activities as unknown as Array<{ domain?: string }> | null;
+      const domain = activities?.[log.activityIndex]?.domain;
+      results.push({
+        date: log.curriculum.date.toISOString().split('T')[0],
+        title: log.activityTitle,
+        domain: domain ? domain.toUpperCase() : null,
+        result: log.result,
+        notes: log.notes,
+      });
+    }
+    return results;
   }
 
   private getTargetDate(): string {
