@@ -390,7 +390,7 @@ SSH 키는 이 EC2 인스턴스 전용으로 생성됨. 다른 시스템 영향 
 
 - 코드 변경 후 반드시 `./scripts/restart-mobile.sh` 로 재빌드
 - 빌드 소요 시간: 2~3분
-- 웹 접속: `http://localhost:8081` 또는 `http://3.35.36.62:8081`
+- 웹 접속: `http://localhost:8081` (SSH 터널)
 
 ### 8.14 모바일 SplashScreen (CRITICAL)
 
@@ -1222,14 +1222,16 @@ const cappedString = (max: number) =>
 - EC2 IP 변경: `3.35.36.62` → `3.38.146.1`
 - 신규 스크립트: `scripts/update-ip.sh` — IP 변경 시 `.env` + 스크립트 자동 업데이트
 
-### 23.9 현재 접속 주소
+### 23.9 현재 접속 주소 (2026-10-19 새 서버, SSH 터널)
 
-| 서비스 | URL                       |
-| ------ | ------------------------- |
-| 웹     | http://3.38.146.1:4200    |
-| Admin  | http://3.38.146.1:4300    |
-| 모바일 | http://3.38.146.1:8081    |
-| API    | http://3.38.146.1:3100/v1 |
+| 서비스 | URL                      |
+| ------ | ------------------------ |
+| 웹     | http://localhost:4200    |
+| Admin  | http://localhost:4300    |
+| 모바일 | http://localhost:8081    |
+| API    | http://localhost:3100/v1 |
+
+PC 에서 `ssh -N auticare` (LocalForward 4200/4300/3100/8081) 로 터널 연결 후 접속. 서버: Elastic IP 3.34.223.12.
 
 ---
 

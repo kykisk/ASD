@@ -10,16 +10,37 @@
 
 ## GOAL
 
-운영 준비 단계. 사용자 테스트 피드백 반영 중.
+운영 준비 단계. 새 개발 서버에서 **빈 DB로 새로 테스트** 시작 (사용자가 본인 가족·아이 데이터를 직접 등록).
 
 ## CURRENT STATE
 
 - Phase 1~5 + UX 개선 완료
-- Git: **260 커밋**, master 브랜치
+- Git: master 브랜치 (`git@github.com:kykisk/ASD.git`)
 - 테스트: 282개 통과 (3개 기존 사전 실패)
-- 웹: http://3.38.146.1:4200
-- Admin: http://3.38.146.1:4300
-- 모바일: http://3.38.146.1:8081
+- 개발 서버: 새 EC2 (RHEL 10.2, 8 vCPU / 61GB, Elastic IP `3.34.223.12`), `~/workspace/ASD` = 리포 루트
+- DB: **빈 DB로 새 시작** (2026-10-19, admin 계정만 seed). 예전 서버 데이터는 복원하지 않음
+- 접속: **SSH 터널** (보안 그룹은 22번만 사용). PC 의 `~/.ssh/config` 에 `Host auticare` + LocalForward 4200/4300/3100/8081 설정 후 `ssh -N auticare`
+  - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com / Admin123!@#) · 모바일 http://localhost:8081
+- Claude Code: 이 서버의 `~/workspace/ASD` 에서 시작 + Remote Control (CLAUDE.md → AGENTS.md 자동 로드)
+
+## 최근 완료 작업 (2026-10-19~20, 새 개발 서버 구축)
+
+예전 EC2 를 쓸 수 없게 되어 새 서버에 환경을 다시 구축. 서버를 또 잃어도 빠르게 복구할 수 있게 자동화.
+
+| 항목             | 내용                                                                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 서버 재구축      | `scripts/setup-server.sh` 한 번으로 패키지·Node 20(nvm)·pnpm·Podman DB·.env·migrate·seed·자동기동·백업 cron 까지 (재실행 안전, .env 덮어쓰지 않음)                                                     |
+| 재부팅 자동 기동 | linger + `podman-restart.service`(DB 컨테이너) + `systemctl --user` `auticare.service` → `scripts/boot.sh` (db→api→web→admin→mobile). 로그 `logs/boot.log`                                             |
+| DB 백업          | cron 매일 03:00 `scripts/backup-db.sh` → `backups/*.sql.gz` (14일 보관, 600 권한). `.env` 에 `BACKUP_S3_URI` + aws CLI 있으면 S3 업로드 (아직 미설정)                                                  |
+| IP 하드코딩 제거 | `scripts/public-ip.sh` (IMDSv2) 로 실행 시 조회. `update-ip.sh` 는 `.env` 만 수정                                                                                                                      |
+| 모바일           | `.env` 의 `EXPO_PUBLIC_API_URL`(현재 `http://localhost:3100/v1`, 터널용) 우선. Metro 캐시 때문에 `expo export --clear`                                                                                 |
+| DB 비밀번호      | `start-db.sh` 의 Postgres 비밀번호를 `auticare` 로 통일 (DATABASE_URL·seed-test-env.sh 와 일치)                                                                                                        |
+| 클라우드 세션    | `.claude/settings.json` SessionStart hook → `scripts/cloud-setup.sh` (`CLAUDE_CODE_REMOTE=true` 일 때만). 클라우드 VM 의 Postgres :5433 / Redis :6380 기동, .env, install, migrate, seed, devdata 복원 |
+| devdata 스냅샷   | `scripts/export-devdata.sh` → 비공개 리포 `kykisk/ASD-devdata` (아이 이름 "아이N" 마스킹 + 개발용 키 재암호화, API 키·토큰·IP·전화 제거, 비밀번호 `Dev123!@#`). 실제 암호화 키는 서버 밖으로 안 나감   |
+| 보안             | `SERVER_MIGRATION_GUIDE.md` 에 있던 예전 서버의 실제 ENCRYPTION_MASTER_KEY·JWT 시크릿 값 삭제 (git 히스토리에는 남아 있음 — 공개 리포)                                                                 |
+| 문서             | `CLAUDE.md`(@AGENTS.md) 추가, 가이드의 옛 경로 `ASD/auticare` 수정                                                                                                                                     |
+
+검증: setup-server.sh 재실행, 재부팅 서비스 기동, 백업→복원, Ubuntu 24.04 컨테이너에서 cloud-setup.sh 전체 흐름(스냅샷 복원→API 로그인→아이 복호화) 확인. **실제 클라우드 세션에서는 아직 미검증.**
 
 ## 최근 완료 작업 (2026-07-02, AI 스키마 안정화)
 
@@ -79,6 +100,16 @@
 가족: 아이 추가, 가족 설정, 설정
 ```
 
+## PENDING TASKS (개발 서버 / 인프라)
+
+1. 사용자: 웹에서 가족·아이 등록 → `./scripts/export-devdata.sh` 로 스냅샷 갱신
+2. 사용자: Claude GitHub App 을 `ASD-devdata` 에 설치 → 실제 클라우드 세션에서 `logs/cloud-setup.log` 로 복원 여부 확인 (두 번째 비공개 리포 clone 가능 여부 미검증)
+3. DB 백업 S3 연동 (버킷 + 인스턴스 IAM Role + `.env` 의 `BACKUP_S3_URI`)
+4. admin 비밀번호 변경 (Admin123!@# 는 공개 리포에 노출)
+5. git 히스토리의 예전 키 노출 정리 여부 결정 (history rewrite + force push 필요)
+6. `.env` 를 비밀번호 관리자에 보관 (특히 ENCRYPTION_MASTER_KEY)
+7. `.env` 의 ANTHROPIC_API_KEY 입력 (AI_DEFAULT_PROVIDER=anthropic, Bedrock 미사용)
+
 ## PENDING TASKS (운영 준비)
 
 1. consent.service.ts CONSENT_DOCUMENTS 실제 저작권 문구 교체
@@ -97,16 +128,16 @@
 
 ## KEY FILES
 
-- ASD/auticare/AGENTS.md — 전체 개발 지식베이스 (23절)
-- ASD/auticare/HANDOFF.md — 현재 상태 + 최근 변경사항 + 남은 작업
-- ASD/auticare/SERVER_MIGRATION_GUIDE.md — 서버 이전 가이드 (새 환경 세팅 절차)
-- ASD/auticare/scripts/update-ip.sh — EC2 IP 바뀌면 실행
-- ASD/auticare/apps/api/src/session-feedbacks/ — 수업 피드백 + 도메인 추출 모듈
-- ASD/auticare/apps/api/src/medications/ — 복약 관리 모듈
-- ASD/auticare/apps/web/src/pages/SessionFeedbackPage.tsx — 일일피드백 3탭
-- ASD/auticare/apps/mobile/app/session-feedback.tsx — 모바일 일일피드백
-- ASD/auticare/apps/mobile/app/medication.tsx — 모바일 복약 관리
-- ASD/auticare/apps/web/src/pages/SchedulePage.tsx — 일정 + 피드백 팝업
+- AGENTS.md — 전체 개발 지식베이스 (23절)
+- HANDOFF.md — 현재 상태 + 최근 변경사항 + 남은 작업
+- SERVER_MIGRATION_GUIDE.md — 서버 이전 가이드 (새 환경 세팅 절차)
+- scripts/update-ip.sh — EC2 IP 바뀌면 실행
+- apps/api/src/session-feedbacks/ — 수업 피드백 + 도메인 추출 모듈
+- apps/api/src/medications/ — 복약 관리 모듈
+- apps/web/src/pages/SessionFeedbackPage.tsx — 일일피드백 3탭
+- apps/mobile/app/session-feedback.tsx — 모바일 일일피드백
+- apps/mobile/app/medication.tsx — 모바일 복약 관리
+- apps/web/src/pages/SchedulePage.tsx — 일정 + 피드백 팝업
 
 ## IMPORTANT DECISIONS
 
@@ -120,7 +151,10 @@
 - 시스템 질문지 "AI 발달 추출": familyId 기준 getOrCreate (Assessment.questionnaireId 필수 대응)
 - Assessment 데이터 윈도우: 30일 이내 take:15
 - 임상보고서 참조: 최신 1건만
-- EC2 IP 바뀌면: ./scripts/update-ip.sh 실행
+- EC2 IP 바뀌면: ./scripts/update-ip.sh 실행 (현재 Elastic IP 라 보통 불필요)
+- 서버 재구축: `scripts/setup-server.sh` (SERVER_MIGRATION_GUIDE.md 맨 위 "빠른 재구축")
+- 외부 접속은 SSH 터널만 사용 (서비스 포트를 보안 그룹에 열지 않음)
+- 클라우드 세션 DB 는 devdata 스냅샷 (실데이터·실제 키를 클라우드로 보내지 않음)
 - 도메인 표시 순서: DAILY_LIVING → COMMUNICATION → COGNITIVE → SOCIAL → MOTOR → OTHER
 - 정밀 발달 체크: UI 제거됨, DB/API는 유지 (AI 자동 추출로 대체)
 - 질문지 관리: Admin 전용, 사용자 메뉴에서 제거됨
