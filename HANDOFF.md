@@ -34,7 +34,7 @@
 ## 개편 작업 형상관리 (2026-10-21~)
 
 - 개편 전 기준점: git 태그 **`v1.0-before-redesign`** (`04d1027`) + DB 백업 `backups/milestones/v1.0-before-redesign.sql.gz` (자동 정리 대상 아님)
-- 개편 작업 브랜치: **`redesign/today`** (4 '오늘' 홈 · 5 메뉴 정리 · 6 첫 사용 안내). 확인 후 master 로 merge
+- 개편 작업 브랜치: **`redesign/today`** — '오늘' 홈·오늘 하루 기록, PC 오늘 화면, 메뉴 정리(모바일 탭 5 / PC 메인 5 + 더보기, 성장 3탭), 사용 가이드, 화면별 따라하기 투어(driver.js), 첫 사용 안내(/welcome). 사용자 테스트 후 master 로 merge
 - 원칙: DB 변경은 **추가만** (새 컬럼은 nullable/default) → 코드만 되돌려도 기존 버전이 그대로 동작
 - 되돌리기 (코드):
   ```bash
