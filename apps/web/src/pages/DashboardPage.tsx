@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useChildStore } from '../stores/child.store';
+import { useAuthStore } from '../stores/auth.store';
 import { useDashboard, DomainScore } from '../hooks/use-dashboard';
 import { useWeeklyInsight, InsightRecord } from '../hooks/use-insights';
 import { useResearchFeed, ResearchMatch } from '../hooks/use-research';
@@ -379,6 +380,7 @@ function ResearchTicker({ articles }: { articles: ResearchMatch[] }) {
 
 export function DashboardPage() {
   const { selectedChildId } = useChildStore();
+  const userName = useAuthStore((s) => s.user?.name);
   const { data, isLoading, isError, refetch } = useDashboard(selectedChildId);
   const {
     data: insight,
@@ -480,7 +482,8 @@ export function DashboardPage() {
         <div className="absolute -top-8 -right-5 w-[120px] h-[120px] rounded-full bg-white/8" />
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-xl sm:text-[22px] font-bold">
-            {greeting}, {child.name}님.
+            {greeting}
+            {userName ? `, ${userName}님` : ''}.
           </h1>
           <span className="text-xs font-semibold bg-white/20 px-2.5 py-1 rounded-lg">
             치료 {child.therapyDays}일째

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { sessionTypeLabel } from '../utils/session-type';
 import {
   addMonths,
   subMonths,
@@ -117,7 +118,7 @@ function FeedbackPopupCard({
           {badge.label}
         </span>
         {fb.sessionType && fb.sessionType !== fb.feedbackType && (
-          <span className="text-[11px] text-neutral-400">{fb.sessionType}</span>
+          <span className="text-[11px] text-neutral-400">{sessionTypeLabel(fb.sessionType)}</span>
         )}
         {fb.rating && fb.rating > 0 && (
           <span className="text-[11px] text-amber-500">{'⭐'.repeat(fb.rating)}</span>

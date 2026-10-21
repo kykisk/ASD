@@ -98,7 +98,7 @@ export function ClinicalPage() {
           <div className="text-4xl mb-3">🏥</div>
           <p className="text-[15px] text-neutral-600 font-medium">아이를 먼저 선택해주세요</p>
           <p className="text-sm text-neutral-400 mt-1">
-            좌측 메뉴에서 아이를 선택하면 임상 평가를 관리할 수 있습니다.
+            상단에서 아이를 선택하면 임상 평가를 관리할 수 있습니다.
           </p>
         </div>
       </div>

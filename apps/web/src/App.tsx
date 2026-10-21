@@ -5,6 +5,7 @@ import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
+import { TodayPage } from './pages/TodayPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { FamilyPage } from './pages/FamilyPage';
 import { ChildrenPage } from './pages/ChildrenPage';
@@ -48,7 +49,8 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<Navigate to="/today" replace />} />
+        <Route path="today" element={<TodayPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="family" element={<FamilyPage />} />

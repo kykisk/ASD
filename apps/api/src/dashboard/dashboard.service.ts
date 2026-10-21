@@ -336,17 +336,16 @@ export class DashboardService {
         orderBy: { createdAt: 'desc' },
       });
 
-      if (!last || last.createdAt < cutoff) {
-        const monthsAgo = last
-          ? Math.round((Date.now() - last.createdAt.getTime()) / (30 * 24 * 60 * 60 * 1000))
-          : null;
+      // 한 번도 안 한 검사는 알리지 않음 (새 가족에게 전문 검사를 압박하지 않도록). 했던 검사의 주기만 알림
+      if (last && last.createdAt < cutoff) {
+        const monthsAgo = Math.round(
+          (Date.now() - last.createdAt.getTime()) / (30 * 24 * 60 * 60 * 1000),
+        );
         alerts.push({
           type: 'RE_EVALUATION_DUE',
           message: `${label} 재평가가 필요합니다`,
           severity: 'warning',
-          detail: last
-            ? `마지막 평가: ${monthsAgo}개월 전 (${months}개월 주기 권고)`
-            : `아직 ${label} 평가 기록이 없습니다`,
+          detail: `마지막 평가: ${monthsAgo}개월 전 (${months}개월 주기 권고)`,
         });
       }
     }
@@ -357,7 +356,7 @@ export class DashboardService {
       orderBy: [{ assessmentDate: 'desc' }, { createdAt: 'desc' }],
     });
 
-    if (!lastReport || (lastReport.assessmentDate ?? lastReport.createdAt) < reportCutoff) {
+    if (lastReport && (lastReport.assessmentDate ?? lastReport.createdAt) < reportCutoff) {
       const monthsAgo = lastReport
         ? Math.round(
             (Date.now() - (lastReport.assessmentDate ?? lastReport.createdAt).getTime()) /

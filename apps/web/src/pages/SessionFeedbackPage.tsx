@@ -11,6 +11,7 @@ import {
 } from '../hooks/use-session-feedbacks.js';
 import { SessionFeedbackModal } from '../components/session-feedback/SessionFeedbackModal.js';
 import { PageHeader } from '../components/ui/index.js';
+import { sessionTypeLabel } from '../utils/session-type.js';
 
 type PageTab = 'session' | 'daily' | 'digest';
 
@@ -182,7 +183,7 @@ function SessionFeedbackCard({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <span className="px-2.5 py-1 rounded-lg bg-[#e8f5ee] text-[#3d6b54] text-xs font-semibold">
-            {feedback.sessionType}
+            {sessionTypeLabel(feedback.sessionType)}
           </span>
           <span className="text-xs text-neutral-400">{formatDate(feedback.sessionDate)}</span>
           {feedback.schedule && (
@@ -648,14 +649,14 @@ export function SessionFeedbackPage() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <PageHeader
-          title="수업 피드백"
+          title="일일피드백"
           subtitle="치료 수업 후 피드백을 기록하고 AI 주간 요약을 확인하세요"
         />
         <div className="bg-white rounded-2xl border border-[#e8e4df] p-12 text-center shadow-[0_2px_16px_rgba(91,138,114,0.06)]">
           <div className="text-4xl mb-3">📝</div>
           <p className="text-[15px] text-neutral-600 font-medium">아이를 먼저 선택해주세요</p>
           <p className="text-sm text-neutral-400 mt-1">
-            좌측 메뉴에서 아이를 선택하면 수업 피드백을 관리할 수 있습니다.
+            상단에서 아이를 선택하면 수업 피드백을 관리할 수 있습니다.
           </p>
         </div>
       </div>
@@ -665,7 +666,7 @@ export function SessionFeedbackPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <PageHeader
-        title="수업 피드백"
+        title="일일피드백"
         subtitle="치료 수업 후 피드백을 기록하고 AI 주간 요약을 확인하세요"
       />
 

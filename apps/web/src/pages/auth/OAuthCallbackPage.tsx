@@ -33,7 +33,7 @@ export function OAuthCallbackPage() {
         });
 
         setAuth(accessToken, data.data);
-        navigate('/dashboard', { replace: true });
+        navigate('/today', { replace: true });
       } catch {
         setError('사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.');
       }
@@ -77,11 +77,7 @@ export function OAuthCallbackPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 px-4">
       <div className="text-center">
         <div className="w-10 h-10 mx-auto mb-4">
-          <svg
-            className="w-10 h-10 animate-spin text-primary-500"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
+          <svg className="w-10 h-10 animate-spin text-primary-500" viewBox="0 0 24 24" fill="none">
             <circle
               className="opacity-25"
               cx="12"

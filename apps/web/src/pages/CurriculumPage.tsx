@@ -137,6 +137,14 @@ function ActivityCard({ activity, index, curriculumId, existingLog }: ActivityCa
   const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(!!existingLog);
 
+  // 기록은 카드가 그려진 뒤에 불러와지므로, 도착하면 저장된 결과로 맞춤 (새로고침 후에도 결과 유지)
+  useEffect(() => {
+    if (existingLog) {
+      setSelectedResult(existingLog.result);
+      setSaved(true);
+    }
+  }, [existingLog?.id, existingLog?.result]);
+
   const logActivity = useLogActivity();
 
   const domainColor = DOMAIN_COLORS[activity.domain];

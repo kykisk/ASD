@@ -48,7 +48,7 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       setAuth(data.accessToken, data.user);
-      navigate('/dashboard');
+      navigate('/today');
     },
   });
 }
@@ -67,7 +67,7 @@ export function useRegister() {
     },
     onSuccess: (data) => {
       setAuth(data.accessToken, data.user);
-      navigate('/dashboard');
+      navigate('/today');
     },
   });
 }

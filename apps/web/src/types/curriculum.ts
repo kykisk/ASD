@@ -8,14 +8,9 @@ export type ActivityDomain =
 
 export type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD';
 
-export type CurriculumStatus =
-  | 'PENDING'
-  | 'GENERATED'
-  | 'CONFIRMED'
-  | 'COMPLETED'
-  | 'FAILED';
+export type CurriculumStatus = 'PENDING' | 'GENERATED' | 'CONFIRMED' | 'COMPLETED' | 'FAILED';
 
-export type ActivityResult = 'SUCCESS' | 'PARTIAL' | 'SKIPPED';
+export type ActivityResult = 'SUCCESS' | 'PARTIAL' | 'SKIPPED' | 'FAILED';
 
 export interface CurriculumActivity {
   title: string;
