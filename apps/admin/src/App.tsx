@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Dropdown } from 'antd';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -12,6 +12,8 @@ import {
   AuditOutlined,
   TeamOutlined,
   SafetyCertificateOutlined,
+  KeyOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import { LoginPage } from './pages/LoginPage';
 import { UsersPage } from './pages/UsersPage';
@@ -24,6 +26,8 @@ import { AuditLogPage } from './pages/AuditLogPage';
 import { LicenseManagementPage } from './pages/LicenseManagementPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAdminAuthStore } from './stores/auth.store';
+import { adminApi } from './services/api';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
 
 const { Sider, Content, Header } = Layout;
 
@@ -55,13 +59,26 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, clearAuth } = useAdminAuthStore();
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const selectedKey = getSelectedKey(location.pathname);
 
+  const signOut = () => {
+    clearAuth();
+    navigate('/login');
+  };
+
   const handleMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') {
-      clearAuth();
-      navigate('/login');
+      // 서버의 로그인 토큰도 폐기 (실패해도 이 기기에서는 로그아웃)
+      adminApi
+        .post('/auth/logout')
+        .catch(() => undefined)
+        .finally(signOut);
+      return;
+    }
+    if (key === 'change-password') {
+      setPasswordOpen(true);
       return;
     }
     navigate(`/${key}`);
@@ -110,7 +127,42 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           }}
         >
           <span style={{ fontWeight: 500 }}>관리자 패널</span>
-          {user && <span style={{ color: '#64748b', fontSize: '14px' }}>{user.name}</span>}
+          {user && (
+            <Dropdown
+              menu={{
+                onClick: handleMenuClick,
+                items: [
+                  { key: 'change-password', icon: <KeyOutlined />, label: '비밀번호 변경' },
+                  { key: 'logout', icon: <LogoutOutlined />, label: '로그아웃' },
+                ],
+              }}
+              trigger={['click']}
+            >
+              <button
+                type="button"
+                style={{
+                  color: '#475569',
+                  fontSize: '14px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                {user.name} <DownOutlined style={{ fontSize: 10 }} />
+              </button>
+            </Dropdown>
+          )}
+          <ChangePasswordModal
+            open={passwordOpen}
+            onClose={() => setPasswordOpen(false)}
+            onChanged={() => {
+              setPasswordOpen(false);
+              signOut();
+            }}
+          />
         </Header>
         <Content
           style={{ margin: '24px', padding: '24px', background: '#fff', borderRadius: '8px' }}

@@ -362,9 +362,7 @@ describe('AuthService', () => {
       });
 
       const createCall = mockPrismaService.refreshToken.create.mock.calls[0][0];
-      const expectedHash = createHash('sha256')
-        .update(result.refreshToken)
-        .digest('hex');
+      const expectedHash = createHash('sha256').update(result.refreshToken).digest('hex');
 
       expect(createCall.data.tokenHash).toBe(expectedHash);
       expect(createCall.data.userId).toBe('user-1');
@@ -400,6 +398,36 @@ describe('AuthService', () => {
         where: { id: 'token-0' },
         data: { revokedAt: expect.any(Date) },
       });
+    });
+  });
+
+  describe('changePassword', () => {
+    it('updates the hash and logs out every session', async () => {
+      const bcrypt = await import('bcrypt');
+      const passwordHash = await bcrypt.hash('OldPass1!', 4);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
+      mockPrismaService.user.update.mockClear();
+      mockPrismaService.refreshToken.updateMany.mockClear();
+
+      await service.changePassword('user-1', 'OldPass1!', 'NewPass2@', undefined);
+
+      const saved = mockPrismaService.user.update.mock.calls[0][0].data.passwordHash;
+      expect(await bcrypt.compare('NewPass2@', saved)).toBe(true);
+      expect(mockPrismaService.refreshToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-1', revokedAt: null } }),
+      );
+    });
+
+    it('rejects a wrong current password without changing anything', async () => {
+      const bcrypt = await import('bcrypt');
+      const passwordHash = await bcrypt.hash('OldPass1!', 4);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
+      mockPrismaService.user.update.mockClear();
+
+      await expect(
+        service.changePassword('user-1', 'Wrong1!x', 'NewPass2@', undefined),
+      ).rejects.toMatchObject({ code: 'AUTH_011' });
+      expect(mockPrismaService.user.update).not.toHaveBeenCalled();
     });
   });
 });

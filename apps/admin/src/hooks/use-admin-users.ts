@@ -1,17 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../services/api';
 
+export type UserRole = 'SYSTEM_ADMIN' | 'FAMILY_ADMIN' | 'FAMILY_MEMBER' | 'THERAPIST';
+export type UserStatus = 'active' | 'inactive';
+
 export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: string;
+  role: UserRole;
   isActive: boolean;
   lastLoginAt: string | null;
   createdAt: string;
 }
 
-export function useAdminUsers(params?: { search?: string; role?: string; status?: string; page?: number }) {
+export function useAdminUsers(params?: {
+  search?: string;
+  role?: string;
+  status?: string;
+  page?: number;
+}) {
   return useQuery({
     queryKey: ['admin-users', params],
     queryFn: async () => {

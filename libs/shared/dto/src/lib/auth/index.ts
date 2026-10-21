@@ -6,3 +6,6 @@ export type { LoginInput, LoginOutput } from './login.dto.js';
 
 export { authResponseSchema, authUserSchema } from './auth-response.dto.js';
 export type { AuthResponse, AuthUser } from './auth-response.dto.js';
+
+export { ChangePasswordDto, changePasswordSchema } from './change-password.dto.js';
+export type { ChangePasswordInput } from './change-password.dto.js';

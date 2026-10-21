@@ -100,7 +100,9 @@ export class AuthService {
     };
   }
 
-  async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string; user: AuthUser }> {
+  async refresh(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string; user: AuthUser }> {
     const tokenHash = this.hashRefreshToken(refreshToken);
 
     const storedToken = await this.prisma.refreshToken.findFirst({
@@ -117,7 +119,11 @@ export class AuthService {
         where: { userId: storedToken.userId, revokedAt: null },
         data: { revokedAt: new Date() },
       });
-      throw new ApiException(401, 'AUTH_005', '토큰 재사용이 감지되었습니다. 모든 세션이 종료됩니다');
+      throw new ApiException(
+        401,
+        'AUTH_005',
+        '토큰 재사용이 감지되었습니다. 모든 세션이 종료됩니다',
+      );
     }
 
     if (storedToken.expiresAt < new Date()) {
@@ -216,6 +222,29 @@ export class AuthService {
       refreshToken: tokens.refreshToken,
       user: this.mapUserToAuthUser(user),
     };
+  }
+
+  /** 비밀번호 변경. 바꾸고 나면 모든 기기에서 로그아웃되어 새 비밀번호로 다시 로그인해야 함 */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    accessToken: string | undefined,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.passwordHash) {
+      throw new ApiException(400, 'AUTH_010', '소셜 로그인 계정은 비밀번호를 바꿀 수 없습니다');
+    }
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw new ApiException(400, 'AUTH_011', '현재 비밀번호가 올바르지 않습니다');
+    }
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      throw new ApiException(400, 'AUTH_012', '새 비밀번호가 지금 비밀번호와 같습니다');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await this.logoutAll(userId, accessToken);
   }
 
   async logoutAll(userId: string, accessToken: string | undefined): Promise<void> {

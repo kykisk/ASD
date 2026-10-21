@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
-import { RegisterDto, LoginDto } from '@auticare/dto';
+import { RegisterDto, LoginDto, ChangePasswordDto } from '@auticare/dto';
 import { Public } from '../common/decorators/public.decorator.js';
 import { AuthService } from './auth.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
@@ -93,6 +93,28 @@ export class AuthController {
       req.cookies?.['__auticare_rt'] || (req.body as { refreshToken?: string })?.refreshToken;
     const accessToken = req.headers.authorization?.replace('Bearer ', '');
     await this.authService.logout(refreshToken, accessToken);
+    res.clearCookie('__auticare_rt', { path: '/v1/auth' });
+    return null;
+  }
+
+  @Throttle({ auth: { ttl: 60000, limit: 5 } })
+  @Post('change-password')
+  async changePassword(
+    @Req() req: Request,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = (req as Request & { user?: { id: string } }).user;
+    if (!user) {
+      throw new ApiException(401, 'AUTH_003', '유효하지 않은 토큰입니다');
+    }
+    const accessToken = req.headers.authorization?.replace('Bearer ', '');
+    await this.authService.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+      accessToken,
+    );
     res.clearCookie('__auticare_rt', { path: '/v1/auth' });
     return null;
   }

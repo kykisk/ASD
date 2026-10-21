@@ -1,15 +1,5 @@
 import { useState, useCallback } from 'react';
-import {
-  Table,
-  Input,
-  Select,
-  Tag,
-  Switch,
-  Space,
-  Typography,
-  App,
-  Tooltip,
-} from 'antd';
+import { Table, Input, Select, Tag, Switch, Space, Typography, App, Tooltip } from 'antd';
 import { EyeOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -62,7 +52,7 @@ export function UsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL');
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const { data: usersData, isLoading } = useAdminUsers({
     page,
@@ -77,18 +67,37 @@ export function UsersPage() {
 
   const handleRoleChange = useCallback(
     async (userId: string, role: UserRole) => {
-      updateRole.mutate({ userId, role });
-      message.success('역할이 변경되었습니다.');
+      try {
+        await updateRole.mutateAsync({ userId, role });
+        message.success('역할이 변경되었습니다.');
+      } catch {
+        message.error('역할을 바꾸지 못했습니다. 다시 시도해주세요.');
+      }
     },
-    [updateRole],
+    [updateRole, message],
   );
 
   const handleStatusToggle = useCallback(
-    async (userId: string, active: boolean) => {
-      toggleStatus.mutate({ userId, isActive: active });
-      message.success(active ? '계정이 활성화되었습니다.' : '계정이 비활성화되었습니다.');
+    (user: AdminUser, active: boolean) => {
+      modal.confirm({
+        title: active ? '계정을 활성화할까요?' : '계정을 비활성화할까요?',
+        content: active
+          ? `${user.name} (${user.email}) 님이 다시 로그인할 수 있게 됩니다.`
+          : `${user.name} (${user.email}) 님은 더 이상 로그인할 수 없습니다.`,
+        okText: active ? '활성화' : '비활성화',
+        okButtonProps: { danger: !active },
+        cancelText: '취소',
+        onOk: async () => {
+          try {
+            await toggleStatus.mutateAsync({ userId: user.id, isActive: active });
+            message.success(active ? '계정이 활성화되었습니다.' : '계정이 비활성화되었습니다.');
+          } catch {
+            message.error('상태를 바꾸지 못했습니다. 다시 시도해주세요.');
+          }
+        },
+      });
     },
-    [toggleStatus],
+    [toggleStatus, message, modal],
   );
 
   const columns: ColumnsType<AdminUser> = [
@@ -127,14 +136,14 @@ export function UsersPage() {
     },
     {
       title: '상태',
-      dataIndex: 'status',
-      key: 'status',
+      dataIndex: 'isActive',
+      key: 'isActive',
       width: 90,
-      render: (status: UserStatus, record) => (
+      render: (isActive: boolean, record) => (
         <Switch
-          checked={status === 'active'}
+          checked={isActive}
           size="small"
-          onChange={(checked) => handleStatusToggle(record.id, checked)}
+          onChange={(checked) => handleStatusToggle(record, checked)}
           disabled={record.role === 'SYSTEM_ADMIN'}
         />
       ),

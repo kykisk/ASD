@@ -43,7 +43,7 @@ echo "  시작 대기 중..."
 for i in $(seq 1 10); do
   if curl -sf http://localhost:4300 -o /dev/null 2>/dev/null; then
     echo "  ✅ Admin 서버 준비됨 → http://localhost:4300"
-    echo "     계정: admin@auticare.com / Admin123!@#"
+    echo "     계정: admin@auticare.com (새 DB 는 seed 기본 비밀번호 — 바로 변경하세요)"
     exit 0
   fi
   sleep 1

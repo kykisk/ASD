@@ -15,6 +15,8 @@ import { EncryptionService } from '../libs/encryption/src/index.js';
 
 const DEV_PASSWORD = 'Dev123!@#';
 const ADMIN_EMAIL = 'admin@auticare.com';
+// 개발 서버의 실제 관리자 비밀번호(해시)는 스냅샷으로 내보내지 않고 seed 기본값으로 되돌림
+const DEV_ADMIN_PASSWORD = 'Admin123!@#';
 
 function encryptionWith(keyBase64: string): EncryptionService {
   const prev = process.env['ENCRYPTION_MASTER_KEY'];
@@ -79,6 +81,10 @@ async function main() {
     const users = await prisma.user.updateMany({
       where: { email: { not: ADMIN_EMAIL } },
       data: { passwordHash: devHash, phone: null },
+    });
+    await prisma.user.updateMany({
+      where: { email: ADMIN_EMAIL },
+      data: { passwordHash: await bcrypt.hash(DEV_ADMIN_PASSWORD, 12), phone: null },
     });
 
     await prisma.refreshToken.deleteMany();

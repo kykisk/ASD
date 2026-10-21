@@ -20,7 +20,7 @@
 - 개발 서버: 새 EC2 (RHEL 10.2, 8 vCPU / 61GB, Elastic IP `3.34.223.12`), `~/workspace/ASD` = 리포 루트
 - DB: **빈 DB로 새 시작** (2026-10-19, admin 계정만 seed). 예전 서버 데이터는 복원하지 않음
 - 접속: **SSH 터널** (보안 그룹은 22번만 사용). PC 의 `~/.ssh/config` 에 `Host auticare` + LocalForward 4200/4300/3100/8081 설정 후 `ssh -N auticare`
-  - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com / Admin123!@#) · 모바일 http://localhost:8081
+  - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com, 비밀번호는 2026-10-21 변경 — 비밀번호 관리자 보관) · 모바일 http://localhost:8081
 - Claude Code: 이 서버의 `~/workspace/ASD` 에서 시작 + Remote Control (CLAUDE.md → AGENTS.md 자동 로드)
 
 ## 사용 가이드 (앱 안 매뉴얼)
@@ -142,7 +142,7 @@
 1. 사용자: 웹에서 가족·아이 등록 → `./scripts/export-devdata.sh` 로 스냅샷 갱신
 2. 사용자: Claude GitHub App 을 `ASD-devdata` 에 설치 → 실제 클라우드 세션에서 `logs/cloud-setup.log` 로 복원 여부 확인 (두 번째 비공개 리포 clone 가능 여부 미검증)
 3. DB 백업 S3 연동 (버킷 + 인스턴스 IAM Role + `.env` 의 `BACKUP_S3_URI`)
-4. admin 비밀번호 변경 (Admin123!@# 는 공개 리포에 노출)
+4. ~~admin 비밀번호 변경~~ 완료 (2026-10-21, `POST /v1/auth/change-password`). 새 DB 는 seed 기본값이라 설치 직후 관리자 화면에서 바로 변경할 것
 5. git 히스토리의 예전 키 노출 정리 여부 결정 (history rewrite + force push 필요)
 6. `.env` 를 비밀번호 관리자에 보관 (특히 ENCRYPTION_MASTER_KEY)
 7. `.env` 의 ANTHROPIC_API_KEY 입력 (AI_DEFAULT_PROVIDER=anthropic, Bedrock 미사용)
@@ -182,7 +182,7 @@
 - AI 응답: 시스템 프롬프트에 마크다운 금지 필수
 - vite preview = 정적 서빙 + /v1 proxy (개발서버 아님)
 - 코드 변경 후: ./scripts/rebuild-web.sh → ./scripts/restart-fe.sh
-- Admin 비밀번호: Admin123!@#
+- Admin 비밀번호: 개발 서버는 변경됨(비밀번호 관리자). seed 기본값 `Admin123!@#` 는 새 DB·클라우드 스냅샷에서만 유효
 - feedbackType: SESSION(수업) | DAILY_LOG(일상) | BEHAVIORAL_ISSUE(문제행동)
 - AI 도메인 추출: fire-and-forget (피드백 저장 즉시, 실패해도 피드백 저장 영향 없음)
 - 시스템 질문지 "AI 발달 추출": familyId 기준 getOrCreate (Assessment.questionnaireId 필수 대응)
