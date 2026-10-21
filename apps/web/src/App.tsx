@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/auth/LoginPage';
+import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -42,6 +43,14 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+      <Route
+        path="/change-password"
+        element={
+          <ProtectedRoute>
+            <ChangePasswordPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/welcome"
         element={

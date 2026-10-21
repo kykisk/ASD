@@ -130,10 +130,11 @@ export function useTestAiConfig() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await adminApi.get<{ success: boolean; latencyMs: number; error?: string }>(
-        `/admin/ai-config/${id}/test`,
-      );
-      return data;
+      const { data } = await adminApi.get<{
+        success: true;
+        data: { success: boolean; latencyMs: number; model?: string; error?: string };
+      }>(`/admin/ai-config/${id}/test`);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-configs'] });

@@ -3,7 +3,7 @@ import { Table, Select, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { adminApi } from '../services/api';
 
-const { Title } = Typography;
+const { Text } = Typography;
 
 type AiTier = 'DISABLED' | 'BASIC' | 'STANDARD' | 'UNLIMITED';
 
@@ -45,9 +45,7 @@ export function FamilyTierPage() {
   const handleTierChange = useCallback(async (familyId: string, aiTier: AiTier) => {
     try {
       await adminApi.patch(`/admin/families/${familyId}/tier`, { aiTier });
-      setFamilies((prev) =>
-        prev.map((f) => (f.id === familyId ? { ...f, aiTier } : f)),
-      );
+      setFamilies((prev) => prev.map((f) => (f.id === familyId ? { ...f, aiTier } : f)));
       message.success('AI 티어가 변경되었습니다.');
     } catch {
       message.error('AI 티어 변경에 실패했습니다.');
@@ -101,9 +99,9 @@ export function FamilyTierPage() {
 
   return (
     <div>
-      <Title level={4} style={{ marginBottom: 16 }}>
-        가족 AI 관리
-      </Title>
+      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+        가족마다 하루에 쓸 수 있는 AI 횟수를 정해요. 비활성이면 그 가족은 AI 기능을 쓰지 않아요.
+      </Text>
       <Table
         columns={columns}
         dataSource={families}

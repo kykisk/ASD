@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,10 +14,7 @@ const profileSchema = z.object({
     .regex(/^[가-힣a-zA-Z\s\-'.]+$/, '이름은 한글, 영문, 공백, 하이픈(-)만 입력 가능합니다'),
   phone: z
     .string()
-    .regex(
-      /^01[0-9]-\d{3,4}-\d{4}$/,
-      '유효한 휴대폰 번호를 입력해주세요 (예: 010-1234-5678)',
-    )
+    .regex(/^01[0-9]-\d{3,4}-\d{4}$/, '유효한 휴대폰 번호를 입력해주세요 (예: 010-1234-5678)')
     .or(z.literal(''))
     .nullable()
     .optional(),
@@ -61,20 +59,13 @@ function Toggle({ label, enabled, onToggle }: ToggleProps) {
 }
 
 function NotificationSettingsSection() {
-  const {
-    assessmentAlerts,
-    curriculumAlerts,
-    weeklyInsights,
-    inputReminders,
-    setPreference,
-  } = useNotificationSettings();
+  const { assessmentAlerts, curriculumAlerts, weeklyInsights, inputReminders, setPreference } =
+    useNotificationSettings();
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
       <h3 className="text-lg font-semibold text-neutral-800 mb-1">알림 설정</h3>
-      <p className="text-sm text-neutral-500 mb-4">
-        받고 싶은 알림을 선택하세요.
-      </p>
+      <p className="text-sm text-neutral-500 mb-4">받고 싶은 알림을 선택하세요.</p>
       <div className="divide-y divide-neutral-100">
         <Toggle
           label="평가 알림"
@@ -179,9 +170,7 @@ export function ProfilePage() {
 
       <div>
         <h1 className="text-2xl font-bold text-neutral-800">프로필 설정</h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          계정 정보를 확인하고 수정하세요.
-        </p>
+        <p className="text-sm text-neutral-500 mt-1">계정 정보를 확인하고 수정하세요.</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm">
@@ -191,9 +180,7 @@ export function ProfilePage() {
               {profile?.name?.charAt(0) || 'U'}
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-neutral-800">
-                {profile?.name}
-              </h2>
+              <h2 className="text-lg font-semibold text-neutral-800">{profile?.name}</h2>
               <p className="text-sm text-neutral-500">{profile?.email}</p>
               <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700">
                 {profile?.role === 'ADMIN' ? '관리자' : '사용자'}
@@ -204,10 +191,7 @@ export function ProfilePage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
           <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-neutral-700 mb-1.5"
-            >
+            <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-1.5">
               이름
             </label>
             <input
@@ -221,18 +205,11 @@ export function ProfilePage() {
               }`}
               {...register('name')}
             />
-            {errors.name && (
-              <p className="mt-1.5 text-xs text-red-500">
-                {errors.name.message}
-              </p>
-            )}
+            {errors.name && <p className="mt-1.5 text-xs text-red-500">{errors.name.message}</p>}
           </div>
 
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-neutral-700 mb-1.5"
-            >
+            <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1.5">
               이메일
             </label>
             <input
@@ -242,16 +219,11 @@ export function ProfilePage() {
               disabled
               className="w-full px-4 py-3 rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-500 cursor-not-allowed"
             />
-            <p className="mt-1.5 text-xs text-neutral-400">
-              이메일은 변경할 수 없습니다.
-            </p>
+            <p className="mt-1.5 text-xs text-neutral-400">이메일은 변경할 수 없습니다.</p>
           </div>
 
           <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-neutral-700 mb-1.5"
-            >
+            <label htmlFor="phone" className="block text-sm font-medium text-neutral-700 mb-1.5">
               휴대폰 번호
             </label>
             <input
@@ -271,11 +243,7 @@ export function ProfilePage() {
               }}
               maxLength={13}
             />
-            {errors.phone && (
-              <p className="mt-1.5 text-xs text-red-500">
-                {errors.phone.message}
-              </p>
-            )}
+            {errors.phone && <p className="mt-1.5 text-xs text-red-500">{errors.phone.message}</p>}
           </div>
 
           <div className="pt-2">
@@ -287,8 +255,19 @@ export function ProfilePage() {
               {updateProfile.isPending ? (
                 <span className="flex items-center gap-2">
                   <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                   저장 중...
                 </span>
@@ -301,18 +280,16 @@ export function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-neutral-800 mb-2">
-          비밀번호 변경
-        </h3>
+        <h3 className="text-lg font-semibold text-neutral-800 mb-2">비밀번호 변경</h3>
         <p className="text-sm text-neutral-500 mb-4">
           보안을 위해 정기적으로 비밀번호를 변경해주세요.
         </p>
-        <button
-          disabled
-          className="px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-medium text-neutral-400 cursor-not-allowed"
+        <Link
+          to="/change-password"
+          className="inline-block px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
         >
-          비밀번호 변경 (준비 중)
-        </button>
+          비밀번호 바꾸기
+        </Link>
       </div>
 
       <NotificationSettingsSection />

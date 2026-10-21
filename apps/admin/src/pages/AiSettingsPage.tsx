@@ -29,7 +29,6 @@ import {
   DeleteOutlined,
   StarFilled,
   StarOutlined,
-  CloudOutlined,
 } from '@ant-design/icons';
 import {
   useAiConfigs,
@@ -44,7 +43,7 @@ import {
   type UpdateAiConfigInput,
 } from '../hooks/use-ai-config';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
   CLAUDE_BEDROCK: 'Claude Bedrock (AWS)',
@@ -94,24 +93,28 @@ function ConfigCard({
         marginBottom: 12,
         borderLeft: config.isDefault ? '3px solid #14b8a6' : '3px solid transparent',
       }}
-      bodyStyle={{ padding: '16px 20px' }}
+      styles={{ body: { padding: '16px 20px' } }}
     >
       <Row align="middle" justify="space-between" wrap={false}>
         <Col flex="auto">
-          <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <Space size={8} align="center">
               {config.isDefault ? (
                 <StarFilled style={{ color: '#14b8a6', fontSize: 14 }} />
               ) : (
                 <StarOutlined style={{ color: '#d9d9d9', fontSize: 14 }} />
               )}
-              <Text strong style={{ fontSize: 15 }}>{config.name}</Text>
+              <Text strong style={{ fontSize: 15 }}>
+                {config.name}
+              </Text>
               <Badge
                 status={config.isActive ? 'success' : 'default'}
                 text={config.isActive ? '활성' : '비활성'}
               />
               {config.isDefault && (
-                <Tag color="cyan" style={{ marginLeft: 4 }}>기본</Tag>
+                <Tag color="cyan" style={{ marginLeft: 4 }}>
+                  기본
+                </Tag>
               )}
             </Space>
             <Space size={8} style={{ marginLeft: 22 }}>
@@ -120,10 +123,20 @@ function ConfigCard({
               </Text>
               {config.modelId && (
                 <>
-                  <Text type="secondary" style={{ fontSize: 13 }}>·</Text>
-                  <Text type="secondary" style={{ fontSize: 13 }}>{config.modelId}</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    ·
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    {config.modelId}
+                  </Text>
                 </>
               )}
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                ·
+              </Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                하루 {config.dailyBudgetLimit.toLocaleString()}회
+              </Text>
             </Space>
             {config.lastTestedAt && (
               <Space size={8} style={{ marginLeft: 22 }}>
@@ -133,7 +146,8 @@ function ConfigCard({
                   <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 12 }} />
                 )}
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  마지막 테스트: {config.lastTestSuccess ? '성공' : '실패'} · {formatRelativeTime(config.lastTestedAt)}
+                  마지막 테스트: {config.lastTestSuccess ? '성공' : '실패'} ·{' '}
+                  {formatRelativeTime(config.lastTestedAt)}
                 </Text>
               </Space>
             )}
@@ -154,11 +168,12 @@ function ConfigCard({
             />
             <Button
               size="small"
-              type="text"
               icon={<ThunderboltOutlined />}
               loading={isTesting}
               onClick={() => onTest(config.id)}
-            />
+            >
+              연결 테스트
+            </Button>
             <Popconfirm
               title="이 설정을 삭제하시겠습니까?"
               onConfirm={() => onDelete(config.id)}
@@ -191,6 +206,7 @@ function ConfigFormModal({
   const isEditing = editingConfig !== null;
 
   const provider: AiProvider | undefined = Form.useWatch('provider', form);
+  const isClaudeDirect = (provider ?? editingConfig?.provider) === 'CLAUDE_DIRECT';
 
   const handleOk = () => {
     form.validateFields().then((values) => {
@@ -215,7 +231,7 @@ function ConfigFormModal({
     : {
         maxTokens: 4096,
         temperature: 0.7,
-        dailyBudgetLimit: 100,
+        dailyBudgetLimit: 1000,
         isActive: false,
         isDefault: false,
       };
@@ -230,14 +246,9 @@ function ConfigFormModal({
       okText="저장"
       cancelText="취소"
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={initialValues}
-        style={{ marginTop: 16 }}
-      >
+      <Form form={form} layout="vertical" initialValues={initialValues} style={{ marginTop: 16 }}>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -245,7 +256,7 @@ function ConfigFormModal({
               name="name"
               rules={[{ required: true, message: '이름을 입력하세요' }]}
             >
-              <Input placeholder="Bedrock Sonnet 4.5" />
+              <Input placeholder="Quality (Sonnet)" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -311,7 +322,7 @@ function ConfigFormModal({
               </Col>
               <Col span={12}>
                 <Form.Item label="Model ID" name="modelId">
-                  <Input placeholder="claude-sonnet-4-20250514" />
+                  <Input placeholder="claude-sonnet-5-5 또는 claude-haiku-5-5" />
                 </Form.Item>
               </Col>
             </Row>
@@ -358,26 +369,45 @@ function ConfigFormModal({
           </>
         )}
 
-        <Text type="secondary" style={{ display: 'block', marginBottom: 12, marginTop: 8, fontSize: 13 }}>
+        <Text
+          type="secondary"
+          style={{ display: 'block', marginBottom: 12, marginTop: 8, fontSize: 13 }}
+        >
           공통 설정
         </Text>
         <Row gutter={16}>
+          {!isClaudeDirect && (
+            <>
+              <Col span={8}>
+                <Form.Item label="Max Tokens" name="maxTokens">
+                  <InputNumber min={100} max={32000} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item label="Temperature" name="temperature">
+                  <Slider min={0} max={2} step={0.1} />
+                </Form.Item>
+              </Col>
+            </>
+          )}
           <Col span={8}>
-            <Form.Item label="Max Tokens" name="maxTokens">
-              <InputNumber min={100} max={32000} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item label="Temperature" name="temperature">
-              <Slider min={0} max={2} step={0.1} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item label="일일 예산 (원)" name="dailyBudgetLimit">
+            <Form.Item
+              label="하루 호출 한도 (회)"
+              name="dailyBudgetLimit"
+              tooltip="기본 연결의 한도가 하루 전체 AI 호출 수 상한이에요. 넘으면 그날은 AI 기능이 멈춰요."
+            >
               <InputNumber min={1} max={10000} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
+        {isClaudeDirect && (
+          <Text
+            type="secondary"
+            style={{ display: 'block', marginTop: -8, marginBottom: 12, fontSize: 12 }}
+          >
+            Claude 최신 모델은 온도를 받지 않고, 출력 길이는 서버가 기능별로 정해요.
+          </Text>
+        )}
 
         <Row gutter={16}>
           <Col span={6}>
@@ -457,7 +487,9 @@ export function AiSettingsPage() {
         onSuccess: (result) => {
           setTestingId(null);
           if (result.success) {
-            message.success(`연결 성공 (${result.latencyMs}ms)`);
+            message.success(
+              `연결 성공 · ${result.model ?? ''} 응답 ${(result.latencyMs / 1000).toFixed(1)}초`,
+            );
           } else {
             message.error(`연결 실패: ${result.error || '설정을 확인해주세요.'}`);
           }
@@ -503,10 +535,10 @@ export function AiSettingsPage() {
     <div style={{ maxWidth: 800 }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
         <Col>
-          <Space align="center">
-            <CloudOutlined style={{ fontSize: 22, color: '#14b8a6' }} />
-            <Title level={4} style={{ margin: 0 }}>AI 프로바이더 설정</Title>
-          </Space>
+          <Text type="secondary">
+            ★ 기본 연결이 기능별 모델에서 '기본'으로 쓰여요. 번개 버튼으로 실제 호출을 보내 연결을
+            확인해요.
+          </Text>
         </Col>
         <Col>
           <Button
@@ -521,10 +553,7 @@ export function AiSettingsPage() {
       </Row>
 
       {configs.length === 0 ? (
-        <Empty
-          description="등록된 AI 설정이 없습니다"
-          style={{ padding: 48 }}
-        >
+        <Empty description="등록된 AI 설정이 없습니다" style={{ padding: 48 }}>
           <Button type="primary" onClick={handleCreate}>
             첫 설정 추가하기
           </Button>

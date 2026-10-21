@@ -27,13 +27,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const onChangePassword = (segments[0] as string) === 'change-password';
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
+    } else if (isAuthenticated && user?.mustChangePassword && !onChangePassword) {
+      // 임시 비밀번호로 들어온 계정은 비밀번호부터 바꾸게 함
+      router.replace('/change-password' as never);
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, user?.mustChangePassword]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -143,6 +147,10 @@ export default function RootLayout() {
             options={{ headerShown: true, title: '오늘 하루 기록', presentation: 'card' }}
           />
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="change-password"
+            options={{ headerShown: true, title: '비밀번호 바꾸기', presentation: 'card' }}
+          />
           <Stack.Screen
             name="guide"
             options={{ headerShown: true, title: '사용 가이드', presentation: 'card' }}

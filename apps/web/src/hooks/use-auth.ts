@@ -22,6 +22,7 @@ interface AuthUser {
   name: string;
   role: string;
   familyId: string | null;
+  mustChangePassword?: boolean;
 }
 
 interface AuthResponse {
@@ -48,7 +49,7 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       setAuth(data.accessToken, data.user);
-      navigate('/today');
+      navigate(data.user.mustChangePassword ? '/change-password' : '/today');
     },
   });
 }

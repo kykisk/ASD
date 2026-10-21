@@ -8,6 +8,8 @@ interface AuthUser {
   name: string;
   role: string;
   familyId: string | null;
+  /** 관리자가 임시 비밀번호를 발급한 계정: 비밀번호를 바꾸기 전에는 다른 화면 사용 불가 */
+  mustChangePassword?: boolean;
 }
 
 interface AuthState {

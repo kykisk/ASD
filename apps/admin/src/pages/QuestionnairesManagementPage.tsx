@@ -1,215 +1,167 @@
-import { useState, useMemo } from 'react';
-import {
-  Table,
-  Input,
-  Select,
-  Tag,
-  Button,
-  Space,
-  Typography,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  message,
-} from 'antd';
-import {
-  SearchOutlined,
-  FileTextOutlined,
-  CheckCircleOutlined,
-  OrderedListOutlined,
-  EyeOutlined,
-  StopOutlined,
-} from '@ant-design/icons';
+import { useMemo, useState } from 'react';
+import { App, Drawer, Input, List, Segmented, Space, Switch, Table, Tag, Typography } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  useAdminQuestionnaires,
+  useQuestionnaireItems,
+  useSetQuestionnaireActive,
+  type AdminQuestionnaire,
+} from '../hooks/use-admin-ops';
+import { kstShort } from '../lib/labels';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
-type QuestionnaireDomain = '의사소통' | '사회성' | '행동' | '감각' | '인지' | '일상생활';
-type QuestionnaireStatus = 'active' | 'disabled';
+const TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  NON_LICENSED_USER_INPUT: { label: '직접 만든', color: 'cyan' },
+  NON_LICENSED_AI_GENERATED: { label: 'AI가 만든', color: 'blue' },
+  LICENSED: { label: '임상 도구', color: 'purple' },
+};
 
-interface Questionnaire {
-  id: string;
-  name: string;
-  familyName: string;
-  domain: QuestionnaireDomain;
-  questionCount: number;
-  createdAt: string;
-  status: QuestionnaireStatus;
-}
-
-const DOMAINS: QuestionnaireDomain[] = ['의사소통', '사회성', '행동', '감각', '인지', '일상생활'];
-
-const MOCK_DATA: Questionnaire[] = [
-  { id: '1', name: '사회적 상호작용 평가', familyName: '박지혜 가족', domain: '사회성', questionCount: 25, createdAt: '2025-04-10T09:00:00Z', status: 'active' },
-  { id: '2', name: '의사소통 능력 체크리스트', familyName: '이민호 가족', domain: '의사소통', questionCount: 30, createdAt: '2025-04-12T14:00:00Z', status: 'active' },
-  { id: '3', name: '행동 패턴 관찰 기록', familyName: '최유나 가족', domain: '행동', questionCount: 20, createdAt: '2025-04-15T10:30:00Z', status: 'active' },
-  { id: '4', name: '감각 민감도 설문', familyName: '정시우 가족', domain: '감각', questionCount: 35, createdAt: '2025-04-18T08:00:00Z', status: 'disabled' },
-  { id: '5', name: '인지 발달 평가지', familyName: '김수진 가족', domain: '인지', questionCount: 28, createdAt: '2025-04-20T11:15:00Z', status: 'active' },
-  { id: '6', name: '일상생활 자립도 평가', familyName: '오준혁 가족', domain: '일상생활', questionCount: 22, createdAt: '2025-04-22T13:45:00Z', status: 'active' },
-  { id: '7', name: '또래 관계 설문', familyName: '한소연 가족', domain: '사회성', questionCount: 18, createdAt: '2025-04-25T09:30:00Z', status: 'active' },
-  { id: '8', name: '언어 표현 능력 평가', familyName: '윤도현 가족', domain: '의사소통', questionCount: 32, createdAt: '2025-04-28T15:00:00Z', status: 'disabled' },
-  { id: '9', name: '반복 행동 모니터링', familyName: '서민지 가족', domain: '행동', questionCount: 15, createdAt: '2025-05-01T10:00:00Z', status: 'active' },
-  { id: '10', name: '청각 민감도 체크', familyName: '강현주 가족', domain: '감각', questionCount: 20, createdAt: '2025-05-03T11:00:00Z', status: 'active' },
-  { id: '11', name: '문제 해결 능력 평가', familyName: '신우진 가족', domain: '인지', questionCount: 24, createdAt: '2025-05-05T08:30:00Z', status: 'active' },
-  { id: '12', name: '식사 자립도 평가', familyName: '임하영 가족', domain: '일상생활', questionCount: 16, createdAt: '2025-05-07T14:20:00Z', status: 'active' },
-];
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-}
+const DOMAIN_LABELS: Record<string, string> = {
+  COMMUNICATION: '의사소통',
+  SOCIAL: '사회성',
+  MOTOR: '운동',
+  COGNITIVE: '인지',
+  DAILY_LIVING: '일상생활',
+  EMOTIONAL: '정서',
+  OTHER: '기타',
+};
 
 export function QuestionnairesManagementPage() {
+  const { message } = App.useApp();
+  const { data = [], isLoading } = useAdminQuestionnaires();
+  const setActive = useSetQuestionnaireActive();
   const [search, setSearch] = useState('');
-  const [domainFilter, setDomainFilter] = useState<QuestionnaireDomain | 'ALL'>('ALL');
+  const [type, setType] = useState<string>('ALL');
+  const [viewing, setViewing] = useState<AdminQuestionnaire | null>(null);
+  const { data: items = [], isLoading: itemsLoading } = useQuestionnaireItems(viewing?.id ?? null);
 
-  const filtered = useMemo(() => {
-    let result = MOCK_DATA;
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((item) => item.name.toLowerCase().includes(q));
+  const types = useMemo(() => [...new Set(data.map((q) => q.type))], [data]);
+  const filtered = useMemo(
+    () =>
+      data.filter(
+        (q) =>
+          (type === 'ALL' || q.type === type) &&
+          (!search || `${q.name} ${q.familyName}`.toLowerCase().includes(search.toLowerCase())),
+      ),
+    [data, type, search],
+  );
+
+  const toggle = async (q: AdminQuestionnaire, isActive: boolean) => {
+    try {
+      await setActive.mutateAsync({ id: q.id, isActive });
+      message.success(
+        isActive ? `${q.name}: 다시 쓸 수 있어요` : `${q.name}: 가족 화면에서 숨겼어요`,
+      );
+    } catch {
+      message.error('바꾸지 못했어요. 다시 시도해주세요.');
     }
-    if (domainFilter !== 'ALL') {
-      result = result.filter((item) => item.domain === domainFilter);
-    }
-    return result;
-  }, [search, domainFilter]);
+  };
 
-  const stats = useMemo(() => ({
-    total: MOCK_DATA.length,
-    active: MOCK_DATA.filter((q) => q.status === 'active').length,
-    totalQuestions: MOCK_DATA.reduce((sum, q) => sum + q.questionCount, 0),
-  }), []);
-
-  const columns: ColumnsType<Questionnaire> = [
-    { title: '이름', dataIndex: 'name', key: 'name', ellipsis: true },
-    { title: '가족', dataIndex: 'familyName', key: 'familyName', width: 130 },
+  const columns: ColumnsType<AdminQuestionnaire> = [
     {
-      title: '영역',
-      dataIndex: 'domain',
-      key: 'domain',
-      width: 100,
-      render: (domain: QuestionnaireDomain) => <Tag color="cyan">{domain}</Tag>,
-    },
-    { title: '문항수', dataIndex: 'questionCount', key: 'questionCount', width: 80, align: 'center' },
-    {
-      title: '생성일',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 120,
-      render: formatDate,
-    },
-    {
-      title: '상태',
-      dataIndex: 'status',
-      key: 'status',
-      width: 80,
-      render: (status: QuestionnaireStatus) => (
-        <Tag color={status === 'active' ? 'success' : 'default'}>
-          {status === 'active' ? '활성' : '비활성'}
-        </Tag>
+      title: '이름',
+      dataIndex: 'name',
+      render: (name: string, q) => (
+        <a onClick={() => setViewing(q)}>
+          {name}
+          {q.licensedTool && <Text type="secondary"> · {q.licensedTool}</Text>}
+        </a>
       ),
     },
     {
-      title: '액션',
-      key: 'actions',
-      width: 120,
-      align: 'center',
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="text"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => message.info(`${record.name} 상세 보기 (추후 구현)`)}
-          />
-          <Button
-            type="text"
-            size="small"
-            danger={record.status === 'active'}
-            icon={<StopOutlined />}
-            onClick={() =>
-              message.success(
-                record.status === 'active'
-                  ? `${record.name} 비활성화됨`
-                  : `${record.name} 활성화됨`,
-              )
-            }
-          />
-        </Space>
+      title: '종류',
+      dataIndex: 'type',
+      width: 110,
+      render: (t: string) => <Tag color={TYPE_LABELS[t]?.color}>{TYPE_LABELS[t]?.label ?? t}</Tag>,
+    },
+    { title: '가족', dataIndex: 'familyName', width: 160, ellipsis: true },
+    { title: '문항', dataIndex: 'itemCount', width: 70, align: 'right' },
+    { title: '평가 횟수', dataIndex: 'assessmentCount', width: 90, align: 'right' },
+    {
+      title: '만든 날',
+      dataIndex: 'createdAt',
+      width: 110,
+      render: (iso: string) => kstShort(iso).slice(0, 5),
+    },
+    {
+      title: '사용',
+      dataIndex: 'isActive',
+      width: 70,
+      render: (on: boolean, q) => (
+        <Switch size="small" checked={on} onChange={(v) => toggle(q, v)} />
       ),
     },
   ];
 
   return (
-    <div>
-      <Title level={4} style={{ marginBottom: 16 }}>
-        질문지 관리
-      </Title>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <Title level={4} style={{ margin: 0 }}>
+          질문지
+        </Title>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          모든 가족의 질문지예요. 끄면 그 가족 화면에서 더 이상 고를 수 없어요 (지난 평가 기록은
+          남아요).
+        </Text>
+      </div>
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
-          <Card size="small">
-            <Statistic
-              title="총 질문지"
-              value={stats.total}
-              prefix={<FileTextOutlined style={{ color: '#14b8a6' }} />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card size="small">
-            <Statistic
-              title="활성 질문지"
-              value={stats.active}
-              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card size="small">
-            <Statistic
-              title="총 문항수"
-              value={stats.totalQuestions}
-              prefix={<OrderedListOutlined style={{ color: '#1890ff' }} />}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Space wrap size="middle" style={{ marginBottom: 16 }}>
+      <Space wrap>
         <Input
-          placeholder="질문지 이름 검색"
+          placeholder="이름 · 가족 검색"
           prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: 240 }}
           allowClear
         />
-        <Select
-          value={domainFilter}
-          onChange={setDomainFilter}
-          style={{ width: 140 }}
+        <Segmented
+          value={type}
+          onChange={(v) => setType(v as string)}
           options={[
-            { value: 'ALL', label: '전체 영역' },
-            ...DOMAINS.map((d) => ({ value: d, label: d })),
+            { value: 'ALL', label: `전체 (${data.length})` },
+            ...types.map((t) => ({ value: t, label: TYPE_LABELS[t]?.label ?? t })),
           ]}
         />
       </Space>
 
       <Table
+        rowKey="id"
         columns={columns}
         dataSource={filtered}
-        rowKey="id"
-        pagination={{ pageSize: 10, showTotal: (t) => `총 ${t}건` }}
-        scroll={{ x: 800 }}
+        loading={isLoading}
+        pagination={{ pageSize: 20, showTotal: (t) => `${t}개` }}
         size="middle"
-        locale={{ emptyText: '질문지가 없습니다.' }}
+        scroll={{ x: 800 }}
+        locale={{ emptyText: '질문지가 없어요' }}
       />
+
+      <Drawer open={!!viewing} onClose={() => setViewing(null)} title={viewing?.name} size={520}>
+        {viewing && (
+          <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+            {viewing.familyName} · 문항 {viewing.itemCount}개 · 평가 {viewing.assessmentCount}회
+          </Text>
+        )}
+        <List
+          loading={itemsLoading}
+          dataSource={items}
+          locale={{ emptyText: '문항이 없어요' }}
+          renderItem={(item) => (
+            <List.Item>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Text type="secondary" style={{ width: 24 }}>
+                  {item.orderIndex + 1}
+                </Text>
+                <div>
+                  <div>{item.text}</div>
+                  <Tag style={{ marginTop: 4 }}>{DOMAIN_LABELS[item.domain] ?? item.domain}</Tag>
+                </div>
+              </div>
+            </List.Item>
+          )}
+        />
+      </Drawer>
     </div>
   );
 }

@@ -56,7 +56,7 @@ export function LoginPage() {
         name: data.user.name,
         role: 'SYSTEM_ADMIN',
       });
-      navigate('/dashboard');
+      navigate('/overview');
     },
     onError: (error: unknown) => {
       if (error instanceof AxiosError && error.response?.data) {
@@ -164,9 +164,7 @@ export function LoginPage() {
           <Form.Item
             name="password"
             label="비밀번호"
-            rules={[
-              { required: true, message: '비밀번호를 입력해주세요.' },
-            ]}
+            rules={[{ required: true, message: '비밀번호를 입력해주세요.' }]}
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: '#94a3b8' }} />}

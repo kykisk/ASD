@@ -10,13 +10,14 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../stores/auth.store.js';
 import { useProfile, useUpdateProfile, useDataExport } from '../hooks/use-profile.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 
 export default function SettingsScreen() {
   const { user } = useAuthStore();
+  const router = useRouter();
   const { data: profile, isLoading } = useProfile();
   const updateMutation = useUpdateProfile();
   const exportMutation = useDataExport();
@@ -183,6 +184,13 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>개인정보</Text>
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => router.push('/change-password' as never)}
+        >
+          <Text style={styles.actionLabel}>비밀번호 바꾸기</Text>
+          <Text style={styles.editHint}>›</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionRow, exportMutation.isPending && { opacity: 0.6 }]}
           onPress={handleExport}

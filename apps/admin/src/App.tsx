@@ -4,24 +4,25 @@ import axios from 'axios';
 import { Layout, Menu, Dropdown } from 'antd';
 import {
   DashboardOutlined,
-  UserOutlined,
+  TeamOutlined,
   LogoutOutlined,
   RobotOutlined,
   FileTextOutlined,
-  MonitorOutlined,
+  ScheduleOutlined,
   AuditOutlined,
-  TeamOutlined,
   SafetyCertificateOutlined,
   KeyOutlined,
   DownOutlined,
+  ReadOutlined,
 } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
 import { LoginPage } from './pages/LoginPage';
-import { UsersPage } from './pages/UsersPage';
-import { AiSettingsPage } from './pages/AiSettingsPage';
-import { AiFeatureConfigPage } from './pages/AiFeatureConfigPage';
-import { FamilyTierPage } from './pages/FamilyTierPage';
+import { OverviewPage } from './pages/OverviewPage';
+import { UsersFamiliesPage } from './pages/UsersFamiliesPage';
+import { AiPage } from './pages/AiPage';
+import { JobsPage } from './pages/JobsPage';
+import { ResearchPage } from './pages/ResearchPage';
 import { QuestionnairesManagementPage } from './pages/QuestionnairesManagementPage';
-import { MonitoringPage } from './pages/MonitoringPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { LicenseManagementPage } from './pages/LicenseManagementPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -31,28 +32,31 @@ import { ChangePasswordModal } from './components/ChangePasswordModal';
 
 const { Sider, Content, Header } = Layout;
 
-const MENU_ITEMS = [
-  { key: 'dashboard', icon: <DashboardOutlined />, label: '대시보드' },
-  { key: 'users', icon: <UserOutlined />, label: '사용자 관리' },
-  { key: 'family-tier', icon: <TeamOutlined />, label: '가족 AI 관리' },
-  { key: 'licenses', icon: <SafetyCertificateOutlined />, label: '라이선스 관리' },
-  { key: 'ai-settings', icon: <RobotOutlined />, label: 'AI 프로바이더 설정' },
-  { key: 'ai-feature-config', icon: <RobotOutlined />, label: '기능별 AI 설정' },
-  { key: 'questionnaires', icon: <FileTextOutlined />, label: '질문지 관리' },
-  { key: 'monitoring', icon: <MonitorOutlined />, label: '모니터링' },
-  { key: 'audit-logs', icon: <AuditOutlined />, label: '감사 로그' },
+const MENU_ITEMS: MenuProps['items'] = [
+  { key: 'overview', icon: <DashboardOutlined />, label: '운영 현황' },
+  { key: 'users', icon: <TeamOutlined />, label: '사용자 · 가족' },
+  { key: 'ai', icon: <RobotOutlined />, label: 'AI' },
+  { key: 'jobs', icon: <ScheduleOutlined />, label: '자동 작업' },
+  {
+    type: 'group',
+    label: '콘텐츠',
+    children: [
+      { key: 'research', icon: <ReadOutlined />, label: '논문' },
+      { key: 'questionnaires', icon: <FileTextOutlined />, label: '질문지' },
+      { key: 'licenses', icon: <SafetyCertificateOutlined />, label: '라이선스' },
+    ],
+  },
+  {
+    type: 'group',
+    label: '기록',
+    children: [{ key: 'audit-logs', icon: <AuditOutlined />, label: '감사 로그' }],
+  },
 ];
 
+const PAGE_KEYS = ['users', 'ai', 'jobs', 'research', 'questionnaires', 'licenses', 'audit-logs'];
+
 function getSelectedKey(pathname: string): string {
-  if (pathname.startsWith('/users')) return 'users';
-  if (pathname.startsWith('/family-tier')) return 'family-tier';
-  if (pathname.startsWith('/ai-feature-config')) return 'ai-feature-config';
-  if (pathname.startsWith('/ai-settings')) return 'ai-settings';
-  if (pathname.startsWith('/questionnaires')) return 'questionnaires';
-  if (pathname.startsWith('/licenses')) return 'licenses';
-  if (pathname.startsWith('/monitoring')) return 'monitoring';
-  if (pathname.startsWith('/audit-logs')) return 'audit-logs';
-  return 'dashboard';
+  return PAGE_KEYS.find((k) => pathname.startsWith(`/${k}`)) ?? 'overview';
 }
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -174,15 +178,6 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AdminDashboard() {
-  return (
-    <div>
-      <h1>관리자 대시보드</h1>
-      <p>시스템 현황이 여기에 표시됩니다.</p>
-    </div>
-  );
-}
-
 function ProtectedPage({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, setAuth, clearAuth } = useAdminAuthStore();
   const REFRESH_THRESHOLD = 5 * 60 * 1000;
@@ -217,83 +212,37 @@ function ProtectedPage({ children }: { children: React.ReactNode }) {
   );
 }
 
+const PAGES: Array<[string, React.ReactNode]> = [
+  ['/overview', <OverviewPage />],
+  ['/users', <UsersFamiliesPage />],
+  ['/ai', <AiPage />],
+  ['/jobs', <JobsPage />],
+  ['/research', <ResearchPage />],
+  ['/questionnaires', <QuestionnairesManagementPage />],
+  ['/licenses', <LicenseManagementPage />],
+  ['/audit-logs', <AuditLogPage />],
+];
+
+/** 예전 메뉴 주소 → 새 주소 (즐겨찾기 호환) */
+const REDIRECTS: Array<[string, string]> = [
+  ['/dashboard', '/overview'],
+  ['/family-tier', '/users?tab=families'],
+  ['/ai-settings', '/ai?tab=connections'],
+  ['/ai-feature-config', '/ai'],
+  ['/monitoring', '/jobs'],
+];
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedPage>
-            <AdminDashboard />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/users"
-        element={
-          <ProtectedPage>
-            <UsersPage />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/family-tier"
-        element={
-          <ProtectedPage>
-            <FamilyTierPage />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/ai-settings"
-        element={
-          <ProtectedPage>
-            <AiSettingsPage />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/ai-feature-config"
-        element={
-          <ProtectedPage>
-            <AiFeatureConfigPage />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/questionnaires"
-        element={
-          <ProtectedPage>
-            <QuestionnairesManagementPage />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/licenses"
-        element={
-          <ProtectedPage>
-            <LicenseManagementPage />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/monitoring"
-        element={
-          <ProtectedPage>
-            <MonitoringPage />
-          </ProtectedPage>
-        }
-      />
-      <Route
-        path="/audit-logs"
-        element={
-          <ProtectedPage>
-            <AuditLogPage />
-          </ProtectedPage>
-        }
-      />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {PAGES.map(([path, page]) => (
+        <Route key={path} path={path} element={<ProtectedPage>{page}</ProtectedPage>} />
+      ))}
+      {REDIRECTS.map(([from, to]) => (
+        <Route key={from} path={from} element={<Navigate to={to} replace />} />
+      ))}
+      <Route path="*" element={<Navigate to="/overview" replace />} />
     </Routes>
   );
 }

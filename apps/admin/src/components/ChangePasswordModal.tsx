@@ -55,7 +55,7 @@ export function ChangePasswordModal({ open, onClose, onChanged }: Props) {
       }}
       okText="변경"
       cancelText="취소"
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" requiredMark={false}>
         <Form.Item
