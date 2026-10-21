@@ -34,6 +34,8 @@ const SESSION_TYPES = [
   { key: 'SENSORY', label: '감각통합' },
   { key: 'OCCUPATIONAL', label: '작업치료' },
   { key: 'BEHAVIORAL', label: '행동치료' },
+  { key: 'SPECIAL_PE', label: '특수체육' },
+  { key: 'PLAY', label: '놀이치료' },
   { key: 'OTHER', label: '기타' },
 ];
 

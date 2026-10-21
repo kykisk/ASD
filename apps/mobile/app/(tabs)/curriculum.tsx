@@ -18,6 +18,7 @@ import {
   useLogActivity,
   useGenerateCurriculum,
   useCurriculumHistory,
+  useActivityLogs,
 } from '../../hooks/use-curricula.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
@@ -87,7 +88,13 @@ export default function CurriculumScreen() {
   const generateMutation = useGenerateCurriculum();
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [loggedActivities, setLoggedActivities] = useState<Record<number, ActivityResult>>({});
+  const [justLogged, setJustLogged] = useState<Record<number, ActivityResult>>({});
+  // 저장된 기록을 불러와 새로고침 후에도 결과가 유지되도록 함
+  const { data: savedLogs } = useActivityLogs(curriculum?.id);
+  const loggedActivities: Record<number, ActivityResult> = {
+    ...Object.fromEntries((savedLogs ?? []).map((l) => [l.activityIndex, l.result])),
+    ...justLogged,
+  };
   const [selectedHistoryCurriculum, setSelectedHistoryCurriculum] = useState<Curriculum | null>(
     null,
   );
@@ -157,7 +164,7 @@ export default function CurriculumScreen() {
         activityIndex: index,
         input,
       });
-      setLoggedActivities((prev) => ({ ...prev, [index]: result }));
+      setJustLogged((prev) => ({ ...prev, [index]: result }));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '기록에 실패했습니다';
       Alert.alert('오류', message);

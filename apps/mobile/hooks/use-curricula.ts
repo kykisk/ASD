@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
-import type { Curriculum, LogActivityInput } from '../types/api.types.js';
+import type { ActivityLog, Curriculum, LogActivityInput } from '../types/api.types.js';
 
 export function useTodayCurriculum(childId: string | null) {
   return useQuery<Curriculum | null>({
@@ -21,6 +21,17 @@ export function useCurriculumHistory(childId: string | null, limit = 30) {
       return data.data as Curriculum[];
     },
     enabled: !!childId,
+  });
+}
+
+export function useActivityLogs(curriculumId: string | null | undefined) {
+  return useQuery<ActivityLog[]>({
+    queryKey: ['activity-logs', curriculumId],
+    queryFn: async () => {
+      const { data } = await api.get(`/curricula/${curriculumId}/activities`);
+      return data.data as ActivityLog[];
+    },
+    enabled: !!curriculumId,
   });
 }
 
@@ -100,6 +111,7 @@ export function useLogActivity() {
       return data.data;
     },
     onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['activity-logs', variables.curriculumId] });
       queryClient.invalidateQueries({ queryKey: ['curriculum', 'today', variables.childId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', variables.childId] });
     },

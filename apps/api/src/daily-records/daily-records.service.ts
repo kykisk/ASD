@@ -3,6 +3,7 @@ import { PrismaService } from '@auticare/prisma-client';
 import { DAILY_RECORD_DOMAINS, type CreateDailyRecordInput } from '@auticare/dto';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { SessionFeedbacksService } from '../session-feedbacks/session-feedbacks.service.js';
+import { InsightsService } from '../insights/insights.service.js';
 
 const DAILY_QUESTIONNAIRE_NAME = '일일 발달 체크';
 
@@ -37,6 +38,7 @@ export class DailyRecordsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sessionFeedbacks: SessionFeedbacksService,
+    private readonly insights: InsightsService,
   ) {}
 
   async create(
@@ -120,6 +122,8 @@ export class DailyRecordsService {
         behaviorTags: input.behavior.tags,
       });
     }
+
+    await this.insights.invalidateWeekly(childId);
 
     return this.findByDate(childId, userId, date);
   }

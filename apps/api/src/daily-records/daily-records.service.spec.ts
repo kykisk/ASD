@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PrismaService } from '@auticare/prisma-client';
 import { DailyRecordsService } from './daily-records.service.js';
 import type { SessionFeedbacksService } from '../session-feedbacks/session-feedbacks.service.js';
+import type { InsightsService } from '../insights/insights.service.js';
 
 const prisma = {
   child: { findUnique: vi.fn() },
@@ -11,6 +12,7 @@ const prisma = {
   sessionFeedback: { findMany: vi.fn() },
 };
 const sessionFeedbacks = { create: vi.fn() };
+const insights = { invalidateWeekly: vi.fn() };
 
 const questionnaire = {
   id: 'q-1',
@@ -36,6 +38,7 @@ describe('DailyRecordsService', () => {
     service = new DailyRecordsService(
       prisma as unknown as PrismaService,
       sessionFeedbacks as unknown as SessionFeedbacksService,
+      insights as unknown as InsightsService,
     );
   });
 
@@ -53,6 +56,7 @@ describe('DailyRecordsService', () => {
       { itemId: 'i-so', domain: 'SOCIAL', score: 2 },
     ]);
     expect(sessionFeedbacks.create).not.toHaveBeenCalled();
+    expect(insights.invalidateWeekly).toHaveBeenCalledWith('child-1');
   });
 
   it('skips AI domain extraction for the note when the parent already scored', async () => {

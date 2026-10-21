@@ -23,7 +23,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '홈',
+          title: '오늘',
           tabBarIcon: ({ focused }) => <TabIcon label="🏠" focused={focused} />,
         }}
       />

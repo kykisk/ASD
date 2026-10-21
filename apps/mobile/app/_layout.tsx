@@ -135,6 +135,18 @@ export default function RootLayout() {
             options={{ headerShown: true, title: '복약 관리', presentation: 'card' }}
           />
           <Stack.Screen
+            name="activity"
+            options={{ headerShown: true, title: '오늘의 활동', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="daily-record"
+            options={{ headerShown: true, title: '오늘 하루 기록', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="dashboard"
+            options={{ headerShown: true, title: '자세한 대시보드', presentation: 'card' }}
+          />
+          <Stack.Screen
             name="session-feedback"
             options={{ headerShown: true, title: '수업 피드백', presentation: 'card' }}
           />

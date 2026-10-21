@@ -58,6 +58,11 @@ export class InsightsService {
     return insight;
   }
 
+  /** 새 기록이 들어오면 이번 주 인사이트를 다시 만들도록 캐시를 비움 */
+  async invalidateWeekly(childId: string): Promise<void> {
+    await this.cacheService.del(`insight:${childId}:${this.getCurrentWeekKey()}`);
+  }
+
   async getInsightHistory(
     childId: string,
     userId: string,

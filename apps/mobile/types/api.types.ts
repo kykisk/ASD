@@ -102,6 +102,16 @@ export interface LogActivityInput {
   activityIndex: number;
 }
 
+export interface ActivityLog {
+  id: string;
+  curriculumId: string;
+  activityIndex: number;
+  activityTitle: string;
+  result: LogActivityInput['result'];
+  notes: string | null;
+  loggedAt: string;
+}
+
 export interface QuestionnaireItem {
   id: string;
   text: string;
