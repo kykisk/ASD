@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { Link } from 'expo-router';
@@ -21,21 +20,24 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Alert.alert 는 웹(휴대폰 브라우저)에서 아무것도 안 띄우므로 화면 안에 표시
+  const [error, setError] = useState<string | null>(null);
   const register = useAuthStore((s) => s.register);
 
   const handleRegister = async () => {
+    setError(null);
     if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      Alert.alert('입력 오류', '모든 필드를 입력해주세요.');
+      setError('모든 필드를 입력해주세요.');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('입력 오류', '비밀번호가 일치하지 않습니다.');
+      setError('비밀번호가 일치하지 않습니다.');
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert('입력 오류', '비밀번호는 8자 이상이어야 합니다.');
+      setError('비밀번호는 8자 이상이어야 합니다.');
       return;
     }
 
@@ -44,7 +46,7 @@ export default function RegisterScreen() {
       await register(email.trim(), password, name.trim());
     } catch (error: any) {
       const message = error.response?.data?.error?.message || '회원가입에 실패했습니다.';
-      Alert.alert('회원가입 실패', message);
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -62,6 +64,7 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.form}>
+          {error && <Text style={styles.error}>{error}</Text>}
           <TextInput
             style={styles.input}
             placeholder="이름"
@@ -151,6 +154,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
+  },
+  error: {
+    color: '#B91C1C',
+    backgroundColor: '#FEF2F2',
+    borderRadius: borderRadius.md,
+    padding: spacing.sm + 2,
+    fontSize: fontSize.sm,
   },
   form: {
     gap: spacing.md,

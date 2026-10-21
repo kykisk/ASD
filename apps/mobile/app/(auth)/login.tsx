@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useAuthStore } from '../../stores/auth.store.js';
@@ -18,11 +17,14 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Alert.alert 는 웹(휴대폰 브라우저)에서 아무것도 안 띄우므로 화면 안에 표시
+  const [error, setError] = useState<string | null>(null);
   const login = useAuthStore((s) => s.login);
 
   const handleLogin = async () => {
+    setError(null);
     if (!email.trim() || !password) {
-      Alert.alert('입력 오류', '이메일과 비밀번호를 입력해주세요.');
+      setError('이메일과 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -31,7 +33,7 @@ export default function LoginScreen() {
       await login(email.trim(), password);
     } catch (error: any) {
       const message = error.response?.data?.error?.message || '로그인에 실패했습니다.';
-      Alert.alert('로그인 실패', message);
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -49,6 +51,7 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
+          {error && <Text style={styles.error}>{error}</Text>}
           <TextInput
             style={styles.input}
             placeholder="이메일"
@@ -119,6 +122,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
+  },
+  error: {
+    color: '#B91C1C',
+    backgroundColor: '#FEF2F2',
+    borderRadius: borderRadius.md,
+    padding: spacing.sm + 2,
+    fontSize: fontSize.sm,
   },
   form: {
     gap: spacing.md,
