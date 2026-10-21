@@ -28,20 +28,25 @@ export class WellbeingService {
 
     let aiMessage: string | null = null;
     try {
-      const response = await this.aiService.generate({
-        messages: [
-          {
-            role: 'system',
-            content:
-              '당신은 자폐 아동을 돌보는 부모를 위한 따뜻한 상담사입니다. 짧고 따뜻한 응원 메시지를 작성해주세요.',
-          },
-          {
-            role: 'user',
-            content: `오늘 기분: ${input.mood}/5, 스트레스: ${input.stressLevel}/5, 메모: ${input.notes ?? '없음'}\n번아웃 위험도: ${burnoutRisk}\n50자 이내의 따뜻한 응원 메시지를 한 문장으로만 작성해주세요.`,
-          },
-        ],
-        maxTokens: 100,
-      });
+      const response = await this.aiService.generate(
+        {
+          messages: [
+            {
+              role: 'system',
+              content:
+                '당신은 자폐 아동을 돌보는 부모를 위한 따뜻한 상담사입니다. 짧고 따뜻한 응원 메시지를 작성해주세요.',
+            },
+            {
+              role: 'user',
+              content: `오늘 기분: ${input.mood}/5, 스트레스: ${input.stressLevel}/5, 메모: ${input.notes ?? '없음'}\n번아웃 위험도: ${burnoutRisk}\n50자 이내의 따뜻한 응원 메시지를 한 문장으로만 작성해주세요.`,
+            },
+          ],
+          maxTokens: 100,
+        },
+        undefined,
+        undefined,
+        'WELLBEING',
+      );
       aiMessage = response.content;
     } catch (err) {
       this.logger.warn(

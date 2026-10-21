@@ -39,19 +39,24 @@ export class SensoryService {
 
     let aiRecommendations: string | null = null;
     try {
-      const response = await this.aiService.generate({
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 자폐 아동의 감각 처리 전문가입니다.',
-          },
-          {
-            role: 'user',
-            content: `감각 프로파일 (1=과민, 3=보통, 5=둔감):\n시각: ${input.visual}, 청각: ${input.auditory}, 촉각: ${input.tactile}\n전정감각: ${input.vestibular}, 고유감각: ${input.proprioception}, 후각: ${input.olfactory}\n\n이 아이에게 맞는 감각 통합 활동 3가지를 추천해주세요. 각 활동은 한 줄로 작성하세요.`,
-          },
-        ],
-        maxTokens: 300,
-      });
+      const response = await this.aiService.generate(
+        {
+          messages: [
+            {
+              role: 'system',
+              content: '당신은 자폐 아동의 감각 처리 전문가입니다.',
+            },
+            {
+              role: 'user',
+              content: `감각 프로파일 (1=과민, 3=보통, 5=둔감):\n시각: ${input.visual}, 청각: ${input.auditory}, 촉각: ${input.tactile}\n전정감각: ${input.vestibular}, 고유감각: ${input.proprioception}, 후각: ${input.olfactory}\n\n이 아이에게 맞는 감각 통합 활동 3가지를 추천해주세요. 각 활동은 한 줄로 작성하세요.`,
+            },
+          ],
+          maxTokens: 300,
+        },
+        undefined,
+        undefined,
+        'SENSORY',
+      );
       aiRecommendations = response.content;
     } catch (err) {
       this.logger.warn(

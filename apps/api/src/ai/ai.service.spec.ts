@@ -14,6 +14,7 @@ const mockAiFeatureConfigService = {
 
 const mockCostTracker = {
   trackCall: vi.fn(),
+  trackFailure: vi.fn(),
   checkBudgetLimit: vi.fn(),
 };
 
@@ -151,15 +152,11 @@ describe('AIService', () => {
     it('should skip provider when budget exceeded', async () => {
       mockAiConfigService.findAll.mockResolvedValue(defaultConfigs);
       mockAiConfigService.getDecryptedConfig.mockResolvedValue(decryptedConfig);
-      mockCostTracker.checkBudgetLimit
-        .mockResolvedValueOnce(false)
-        .mockResolvedValueOnce(true);
+      mockCostTracker.checkBudgetLimit.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
       mockProvider.generate.mockResolvedValue({ ...mockResponse, provider: 'GEMINI' });
       mockCostTracker.trackCall.mockResolvedValue(undefined);
 
-      const result = await service.generate(
-        { messages: [{ role: 'user', content: 'Hi' }] },
-      );
+      const result = await service.generate({ messages: [{ role: 'user', content: 'Hi' }] });
 
       expect(result.provider).toBe('GEMINI');
     });

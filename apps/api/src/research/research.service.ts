@@ -29,20 +29,25 @@ export class ResearchService {
     userId: string,
   ): Promise<{ koreanSummary: string; keyFindings: string[] } | null> {
     try {
-      const response = await this.aiService.generate({
-        messages: [
-          {
-            role: 'system',
-            content:
-              '당신은 자폐 스펙트럼 장애 연구 논문 전문 번역가입니다. 반드시 순수 JSON만 반환하세요. 마크다운이나 코드 블록을 절대 사용하지 마세요.',
-          },
-          {
-            role: 'user',
-            content: `다음 논문을 한국어로 요약해주세요:\n제목: ${title}\n초록: ${abstract}\n\n다음 JSON 형식으로만 응답하세요 (코드 블록 없이):\n{"koreanSummary":"3문장 한국어 요약","keyFindings":["핵심 발견1","핵심 발견2","핵심 발견3"]}`,
-          },
-        ],
-        maxTokens: 1000,
-      });
+      const response = await this.aiService.generate(
+        {
+          messages: [
+            {
+              role: 'system',
+              content:
+                '당신은 자폐 스펙트럼 장애 연구 논문 전문 번역가입니다. 반드시 순수 JSON만 반환하세요. 마크다운이나 코드 블록을 절대 사용하지 마세요.',
+            },
+            {
+              role: 'user',
+              content: `다음 논문을 한국어로 요약해주세요:\n제목: ${title}\n초록: ${abstract}\n\n다음 JSON 형식으로만 응답하세요 (코드 블록 없이):\n{"koreanSummary":"3문장 한국어 요약","keyFindings":["핵심 발견1","핵심 발견2","핵심 발견3"]}`,
+            },
+          ],
+          maxTokens: 1000,
+        },
+        undefined,
+        undefined,
+        'RESEARCH_SUMMARIZE',
+      );
 
       const jsonStr = this.extractJson(response.content);
       const parsed = JSON.parse(jsonStr);
@@ -360,10 +365,15 @@ ${articlesContext}
 따뜻하고 격려하는 톤으로 작성해주세요. JSON 형식은 사용하지 마세요.`;
 
     try {
-      const aiResponse = await this.aiService.generate({
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: 2500,
-      });
+      const aiResponse = await this.aiService.generate(
+        {
+          messages: [{ role: 'user', content: prompt }],
+          maxTokens: 2500,
+        },
+        undefined,
+        undefined,
+        'RESEARCH_DIGEST',
+      );
 
       const text = (aiResponse.content ?? '').trim();
       if (!text) throw new Error('Empty AI response');

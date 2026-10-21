@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@auticare/prisma-client';
 import { EncryptionService } from '@auticare/encryption';
+import { AIProviderFactory } from '@auticare/ai-provider';
+import type { AIProviderName } from '@auticare/ai-provider';
 import type { AiProvider } from '@auticare/prisma-client';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type {
@@ -32,9 +34,7 @@ export class AiConfigService {
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
 
-    return Promise.all(
-      configs.map(async (config) => this.toResponse(config)),
-    );
+    return Promise.all(configs.map(async (config) => this.toResponse(config)));
   }
 
   async findOne(id: string): Promise<AiConfigResponse> {
@@ -43,11 +43,7 @@ export class AiConfigService {
     });
 
     if (!config) {
-      throw new ApiException(
-        404,
-        'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${id}`,
-      );
+      throw new ApiException(404, 'AI_CONFIG_NOT_FOUND', `AI 설정을 찾을 수 없습니다: ${id}`);
     }
 
     return this.toResponse(config);
@@ -86,11 +82,7 @@ export class AiConfigService {
     });
 
     if (!existing) {
-      throw new ApiException(
-        404,
-        'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${id}`,
-      );
+      throw new ApiException(404, 'AI_CONFIG_NOT_FOUND', `AI 설정을 찾을 수 없습니다: ${id}`);
     }
 
     const encryptedFields = await this.encryptCredentials(dto, existing);
@@ -125,11 +117,7 @@ export class AiConfigService {
     });
 
     if (!config) {
-      throw new ApiException(
-        404,
-        'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${id}`,
-      );
+      throw new ApiException(404, 'AI_CONFIG_NOT_FOUND', `AI 설정을 찾을 수 없습니다: ${id}`);
     }
 
     await this.prisma.aiConfig.delete({ where: { id } });
@@ -141,11 +129,7 @@ export class AiConfigService {
     });
 
     if (!config) {
-      throw new ApiException(
-        404,
-        'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${id}`,
-      );
+      throw new ApiException(404, 'AI_CONFIG_NOT_FOUND', `AI 설정을 찾을 수 없습니다: ${id}`);
     }
 
     await this.prisma.aiConfig.updateMany({
@@ -161,38 +145,49 @@ export class AiConfigService {
     return this.toResponse(updated);
   }
 
+  /** 실제로 AI 를 짧게 한 번 불러서 키·모델이 동작하는지 확인 */
   async testConnectionById(
     id: string,
-  ): Promise<{ success: boolean; latencyMs: number; error?: string }> {
-    const config = await this.prisma.aiConfig.findUnique({
-      where: { id },
-    });
-
-    if (!config) {
-      return { success: false, latencyMs: 0, error: 'Configuration not found' };
+  ): Promise<{ success: boolean; latencyMs: number; model?: string; error?: string }> {
+    const exists = await this.prisma.aiConfig.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) {
+      return { success: false, latencyMs: 0, error: '설정을 찾을 수 없습니다' };
     }
 
     const start = Date.now();
-
-    const hasCredentials =
-      config.encApiKey !== null || config.encAccessKeyId !== null;
-
-    if (!hasCredentials) {
-      await this.prisma.aiConfig.update({
-        where: { id },
-        data: { lastTestedAt: new Date(), lastTestSuccess: false },
+    let result: { success: boolean; latencyMs: number; model?: string; error?: string };
+    try {
+      const config = await this.getDecryptedConfig(id);
+      if (!config.apiKey && !config.accessKeyId) {
+        throw new Error('저장된 키가 없습니다');
+      }
+      const provider = await AIProviderFactory.create(config.provider as AIProviderName, {
+        apiKey: config.apiKey ?? undefined,
+        region: config.region ?? undefined,
+        accessKeyId: config.accessKeyId ?? undefined,
+        secretKey: config.secretKey ?? undefined,
+        modelId: config.modelId ?? undefined,
+        maxTokens: config.maxTokens,
+        temperature: config.temperature,
       });
-      return { success: false, latencyMs: 0, error: 'No credentials configured' };
+      const response = await provider.generate({
+        messages: [{ role: 'user', content: '연결 확인입니다. "OK" 한 단어로만 답하세요.' }],
+        maxTokens: 50,
+      });
+      result = { success: true, latencyMs: Date.now() - start, model: response.model };
+    } catch (err) {
+      result = {
+        success: false,
+        latencyMs: Date.now() - start,
+        error: (err instanceof Error ? err.message : String(err)).slice(0, 300),
+      };
     }
-
-    const latencyMs = Date.now() - start;
 
     await this.prisma.aiConfig.update({
       where: { id },
-      data: { lastTestedAt: new Date(), lastTestSuccess: true },
+      data: { lastTestedAt: new Date(), lastTestSuccess: result.success },
     });
-
-    return { success: true, latencyMs };
+    return result;
   }
 
   async getDecryptedConfig(id: string): Promise<DecryptedAiConfig> {
@@ -201,11 +196,7 @@ export class AiConfigService {
     });
 
     if (!config) {
-      throw new ApiException(
-        404,
-        'AI_CONFIG_NOT_FOUND',
-        `AI 설정을 찾을 수 없습니다: ${id}`,
-      );
+      throw new ApiException(404, 'AI_CONFIG_NOT_FOUND', `AI 설정을 찾을 수 없습니다: ${id}`);
     }
 
     let apiKey: string | null = null;
@@ -273,9 +264,43 @@ export class AiConfigService {
     return this.getDecryptedConfig(anyActive.id);
   }
 
+  private async decryptPayload(existing: {
+    encApiKey: string | null;
+    encIv: string | null;
+    encAuthTag: string | null;
+    encSalt: string | null;
+  }): Promise<Record<string, string>> {
+    if (!existing.encApiKey || !existing.encIv || !existing.encAuthTag || !existing.encSalt) {
+      return {};
+    }
+    try {
+      const decrypted = await this.encryption.decryptString({
+        ciphertext: existing.encApiKey,
+        iv: existing.encIv,
+        authTag: existing.encAuthTag,
+        salt: existing.encSalt,
+      });
+      try {
+        return JSON.parse(decrypted) as Record<string, string>;
+      } catch {
+        return { apiKey: decrypted };
+      }
+    } catch {
+      return {};
+    }
+  }
+
   private async encryptCredentials(
     dto: { apiKey?: string; region?: string; accessKeyId?: string; secretKey?: string },
-    existing: { encApiKey: string | null; encRegion: string | null; encAccessKeyId: string | null; encSecretKey: string | null; encIv: string | null; encAuthTag: string | null; encSalt: string | null } | null,
+    existing: {
+      encApiKey: string | null;
+      encRegion: string | null;
+      encAccessKeyId: string | null;
+      encSecretKey: string | null;
+      encIv: string | null;
+      encAuthTag: string | null;
+      encSalt: string | null;
+    } | null,
   ): Promise<EncryptedFields> {
     const hasNewCredentials =
       dto.apiKey !== undefined ||
@@ -307,15 +332,14 @@ export class AiConfigService {
       };
     }
 
-    const payload: Record<string, string> = {};
+    // 일부 키만 바꿔도 나머지 저장된 키가 지워지지 않도록 기존 값에 덮어씀
+    const payload: Record<string, string> = existing ? await this.decryptPayload(existing) : {};
     if (dto.apiKey !== undefined) payload['apiKey'] = dto.apiKey;
     if (dto.region !== undefined) payload['region'] = dto.region;
     if (dto.accessKeyId !== undefined) payload['accessKeyId'] = dto.accessKeyId;
     if (dto.secretKey !== undefined) payload['secretKey'] = dto.secretKey;
 
-    const encrypted = await this.encryption.encryptString(
-      JSON.stringify(payload),
-    );
+    const encrypted = await this.encryption.encryptString(JSON.stringify(payload));
 
     return {
       encApiKey: encrypted.ciphertext,
@@ -373,9 +397,7 @@ export class AiConfigService {
             maskedAccessKeyId = a.length > 4 ? `****${a.slice(-4)}` : '****';
           }
         } catch {
-          maskedApiKey = decrypted.length > 4
-            ? `****${decrypted.slice(-4)}`
-            : '****';
+          maskedApiKey = decrypted.length > 4 ? `****${decrypted.slice(-4)}` : '****';
         }
       } catch {
         maskedApiKey = '****[error]';

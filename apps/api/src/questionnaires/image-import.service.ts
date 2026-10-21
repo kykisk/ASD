@@ -2,6 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AiConfigService } from '../ai-config/ai-config.service.js';
 import { AiFeatureConfigService } from '../ai-config/ai-feature-config.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import { AICostTrackingService } from '../ai/ai-cost-tracking.service.js';
+import {
+  claudeText,
+  VISION_DEFAULT_MODEL,
+  VISION_MAX_TOKENS,
+  type ClaudeMessageResponse,
+} from '../ai/claude-message.util.js';
 
 export interface ExtractedItem {
   text: string;
@@ -37,6 +44,7 @@ export class ImageImportService {
   constructor(
     private readonly aiConfigService: AiConfigService,
     private readonly aiFeatureConfigService: AiFeatureConfigService,
+    private readonly costTracker: AICostTrackingService,
   ) {}
 
   async extractFromImage(imageBase64: string, mimeType: string): Promise<ImageExtractionResult> {
@@ -63,8 +71,8 @@ export class ImageImportService {
     content.push({ type: 'text', text: EXTRACTION_PROMPT });
 
     const body = {
-      model: config.modelId ?? 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
+      model: config.modelId ?? VISION_DEFAULT_MODEL,
+      max_tokens: VISION_MAX_TOKENS,
       messages: [{ role: 'user', content }],
     };
 
@@ -74,8 +82,8 @@ export class ImageImportService {
 
   private buildClaudeRequest(imageBase64: string, mimeType: string, modelId?: string) {
     return {
-      model: modelId ?? 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
+      model: modelId ?? VISION_DEFAULT_MODEL,
+      max_tokens: VISION_MAX_TOKENS,
       messages: [
         {
           role: 'user',
@@ -118,8 +126,17 @@ export class ImageImportService {
         throw new ApiException(503, 'AI_VISION_001', `AI Vision API 호출 실패: ${res.status}`);
       }
 
-      const data = (await res.json()) as { content: Array<{ text: string }> };
-      return data.content[0]?.text ?? '';
+      const data = (await res.json()) as ClaudeMessageResponse;
+      await this.costTracker.trackCall({
+        provider: 'CLAUDE_DIRECT',
+        model: data.model ?? 'unknown',
+        inputTokens: data.usage?.input_tokens ?? 0,
+        outputTokens: data.usage?.output_tokens ?? 0,
+        latencyMs: 0,
+        operation: 'vision',
+        feature: 'IMAGE_QUESTIONNAIRE',
+      });
+      return claudeText(data);
     }
 
     if (config.provider === 'CLAUDE_BEDROCK' && config.accessKeyId && config.secretKey) {
@@ -145,7 +162,7 @@ export class ImageImportService {
       const decoded = JSON.parse(new TextDecoder().decode(response.body)) as {
         content: Array<{ text: string }>;
       };
-      return decoded.content[0]?.text ?? '';
+      return claudeText(decoded as ClaudeMessageResponse);
     }
 
     throw new ApiException(

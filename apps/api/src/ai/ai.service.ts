@@ -7,7 +7,7 @@ import type { AIProviderName } from '@auticare/ai-provider';
 import { PrismaService } from '@auticare/prisma-client';
 import { AiConfigService } from '../ai-config/ai-config.service.js';
 import { AiFeatureConfigService } from '../ai-config/ai-feature-config.service.js';
-import { AICostTrackingService } from './ai-cost-tracking.service.js';
+import { AICostTrackingService, kstDate } from './ai-cost-tracking.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { z } from 'zod';
 import type { DecryptedAiConfig } from '@auticare/dto';
@@ -91,7 +91,8 @@ export class AIService {
             decrypted.provider,
             decrypted.dailyBudgetLimit,
           );
-          if (withinBudget) {
+          // 비활성화한 설정은 기능별로 지정돼 있어도 쓰지 않음
+          if (decrypted.isActive && withinBudget) {
             const provider = await AIProviderFactory.create(decrypted.provider as AIProviderName, {
               apiKey: decrypted.apiKey ?? undefined,
               region: decrypted.region ?? undefined,
@@ -111,6 +112,7 @@ export class AIService {
               outputTokens: response.outputTokens,
               latencyMs: response.latencyMs,
               operation: 'generate',
+              feature,
             });
 
             return response;
@@ -127,6 +129,7 @@ export class AIService {
     const activeConfigs = configs.filter((c) => c.isActive);
 
     if (activeConfigs.length === 0) {
+      await this.costTracker.trackFailure(feature, '활성화된 AI 프로바이더가 없습니다');
       throw new ApiException(503, 'AI_001', '활성화된 AI 프로바이더가 없습니다');
     }
 
@@ -168,6 +171,7 @@ export class AIService {
           outputTokens: response.outputTokens,
           latencyMs: response.latencyMs,
           operation: 'generate',
+          feature,
         });
 
         return response;
@@ -180,11 +184,9 @@ export class AIService {
       }
     }
 
-    throw new ApiException(
-      503,
-      'AI_002',
-      `모든 AI 프로바이더 실패: ${errors.map((e) => `${e.provider}(${e.error})`).join(', ')}`,
-    );
+    const summary = errors.map((e) => `${e.provider}(${e.error})`).join(', ');
+    await this.costTracker.trackFailure(feature, summary);
+    throw new ApiException(503, 'AI_002', `모든 AI 프로바이더 실패: ${summary}`);
   }
 
   async generateStructured<T>(
@@ -257,7 +259,7 @@ export class AIService {
     const dailyLimit = limits[family.aiTier];
     if (dailyLimit === Infinity) return;
 
-    const key = `auticare:ai-family:${familyId}:${new Date().toISOString().split('T')[0]}`;
+    const key = `auticare:ai-family:${familyId}:${kstDate()}`;
     const count = parseInt((await this.redis.get(key)) || '0');
     if (count >= dailyLimit) {
       throw new ApiException(

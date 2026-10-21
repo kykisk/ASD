@@ -109,19 +109,24 @@ export class EmergencyService {
         occurredAt: e.occurredAt,
       }));
 
-      const response = await this.aiService.generate({
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 자폐 아동 행동 분석 전문가입니다.',
-          },
-          {
-            role: 'user',
-            content: `다음 비상 사건 기록을 분석해서 패턴과 예방 방법을 알려주세요:\n${JSON.stringify(eventsData)}\n100자 이내로 한국어로 답해주세요.`,
-          },
-        ],
-        maxTokens: 200,
-      });
+      const response = await this.aiService.generate(
+        {
+          messages: [
+            {
+              role: 'system',
+              content: '당신은 자폐 아동 행동 분석 전문가입니다.',
+            },
+            {
+              role: 'user',
+              content: `다음 비상 사건 기록을 분석해서 패턴과 예방 방법을 알려주세요:\n${JSON.stringify(eventsData)}\n100자 이내로 한국어로 답해주세요.`,
+            },
+          ],
+          maxTokens: 200,
+        },
+        undefined,
+        undefined,
+        'EMERGENCY',
+      );
 
       await this.prisma.emergencyEvent.update({
         where: { id: events[0].id },

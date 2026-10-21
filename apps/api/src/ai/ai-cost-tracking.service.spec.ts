@@ -3,6 +3,8 @@ import { AICostTrackingService } from './ai-cost-tracking.service';
 const mockPipeline = {
   hincrby: vi.fn().mockReturnThis(),
   expire: vi.fn().mockReturnThis(),
+  lpush: vi.fn().mockReturnThis(),
+  ltrim: vi.fn().mockReturnThis(),
   exec: vi.fn().mockResolvedValue([]),
 };
 
@@ -11,6 +13,7 @@ const mockRedis = {
   scan: vi.fn(),
   hgetall: vi.fn(),
   hget: vi.fn(),
+  lrange: vi.fn().mockResolvedValue([]),
   disconnect: vi.fn(),
 };
 
@@ -101,16 +104,28 @@ describe('AICostTrackingService', () => {
 
   describe('getDailyStats', () => {
     it('should aggregate stats by provider', async () => {
-      mockRedis.scan
-        .mockResolvedValueOnce(['0', [
+      mockRedis.scan.mockResolvedValueOnce([
+        '0',
+        [
           'auticare:ai-cost:2025-05-20:OPENAI',
           'auticare:ai-cost:2025-05-20:GEMINI',
           'auticare:ai-cost:2025-05-20:total',
-        ]]);
+        ],
+      ]);
 
       mockRedis.hgetall
-        .mockResolvedValueOnce({ calls: '10', inputTokens: '500', outputTokens: '200', totalMs: '12000' })
-        .mockResolvedValueOnce({ calls: '5', inputTokens: '300', outputTokens: '100', totalMs: '5000' });
+        .mockResolvedValueOnce({
+          calls: '10',
+          inputTokens: '500',
+          outputTokens: '200',
+          totalMs: '12000',
+        })
+        .mockResolvedValueOnce({
+          calls: '5',
+          inputTokens: '300',
+          outputTokens: '100',
+          totalMs: '5000',
+        });
 
       const result = await service.getDailyStats('2025-05-20');
 
@@ -131,6 +146,50 @@ describe('AICostTrackingService', () => {
         inputTokens: 800,
         outputTokens: 300,
       });
+    });
+  });
+
+  describe('usage by feature and model', () => {
+    it('records feature and model counters alongside the provider totals', async () => {
+      await service.trackCall({
+        provider: 'CLAUDE_DIRECT',
+        model: 'claude-haiku-5-5',
+        inputTokens: 1000,
+        outputTokens: 200,
+        latencyMs: 900,
+        operation: 'generate',
+        feature: 'FEEDBACK_DOMAIN_EXTRACTION',
+      });
+
+      expect(mockPipeline.hincrby).toHaveBeenCalledWith(
+        expect.stringContaining(':model:claude-haiku-5-5'),
+        'inputTokens',
+        1000,
+      );
+      expect(mockPipeline.hincrby).toHaveBeenCalledWith(
+        expect.stringContaining(':feature:FEEDBACK_DOMAIN_EXTRACTION'),
+        'calls',
+        1,
+      );
+    });
+
+    it('estimates this month cost from per-model tokens', async () => {
+      mockRedis.scan.mockImplementation(async (_c: string, _m: string, pattern: string) => {
+        if (pattern.includes(':model:*') && pattern.includes('-*:')) {
+          return ['0', ['auticare:ai-cost:2026-10-20:model:claude-sonnet-5-5']];
+        }
+        return ['0', []];
+      });
+      mockRedis.hgetall.mockResolvedValue({
+        calls: '3',
+        inputTokens: '1000000',
+        outputTokens: '100000',
+      });
+
+      const summary = await service.getUsageSummary(1);
+
+      // Sonnet 5.5: 입력 100만 × $2 + 출력 10만 × $10/100만 = $3
+      expect(summary.month.estimatedCostUsd).toBe(3);
     });
   });
 

@@ -3,6 +3,13 @@ import { PrismaService } from '@auticare/prisma-client';
 import { AiConfigService } from '../ai-config/ai-config.service.js';
 import { AiFeatureConfigService } from '../ai-config/ai-feature-config.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import { AICostTrackingService } from '../ai/ai-cost-tracking.service.js';
+import {
+  claudeText,
+  VISION_DEFAULT_MODEL,
+  VISION_MAX_TOKENS,
+  type ClaudeMessageResponse,
+} from '../ai/claude-message.util.js';
 
 export interface SectionScore {
   name: string;
@@ -44,6 +51,7 @@ export class ClinicalReportsService {
     private readonly prisma: PrismaService,
     private readonly aiConfigService: AiConfigService,
     private readonly aiFeatureConfigService: AiFeatureConfigService,
+    private readonly costTracker: AICostTrackingService,
   ) {}
 
   async create(childId: string, input: CreateClinicalReportInput) {
@@ -93,8 +101,8 @@ export class ClinicalReportsService {
     content.push({ type: 'text', text: EXTRACTION_PROMPT });
 
     const body = {
-      model: config.modelId ?? 'claude-sonnet-4-20250514',
-      max_tokens: 3000,
+      model: config.modelId ?? VISION_DEFAULT_MODEL,
+      max_tokens: VISION_MAX_TOKENS,
       messages: [{ role: 'user', content }],
     };
 
@@ -159,8 +167,17 @@ export class ClinicalReportsService {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new ApiException(503, 'AI_VISION_001', `Claude API 오류: ${res.status}`);
-      const data = (await res.json()) as { content: Array<{ text: string }> };
-      return data.content[0]?.text ?? '';
+      const data = (await res.json()) as ClaudeMessageResponse;
+      await this.costTracker.trackCall({
+        provider: 'CLAUDE_DIRECT',
+        model: data.model ?? 'unknown',
+        inputTokens: data.usage?.input_tokens ?? 0,
+        outputTokens: data.usage?.output_tokens ?? 0,
+        latencyMs: 0,
+        operation: 'vision',
+        feature: 'CLINICAL_REPORT_IMPORT',
+      });
+      return claudeText(data);
     }
     if (config.provider === 'CLAUDE_BEDROCK' && config.accessKeyId && config.secretKey) {
       const { BedrockRuntimeClient, InvokeModelCommand } =
@@ -183,7 +200,7 @@ export class ClinicalReportsService {
       const decoded = JSON.parse(new TextDecoder().decode(response.body)) as {
         content: Array<{ text: string }>;
       };
-      return decoded.content[0]?.text ?? '';
+      return claudeText(decoded as ClaudeMessageResponse);
     }
     throw new ApiException(503, 'AI_VISION_002', 'Vision AI 프로바이더가 설정되지 않았습니다');
   }
