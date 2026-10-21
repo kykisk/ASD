@@ -673,7 +673,7 @@ export function MedicationPage() {
   if (!selectedChildId) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <PageHeader title="복약 관리" subtitle="처방 약물의 복용을 기록하고 진료 시 활용하세요" />
+        <PageHeader title="복약 기록" subtitle="처방 약물의 복용을 기록하고 진료 시 활용하세요" />
         <div className="bg-white rounded-2xl border border-[#e8e4df] p-12 text-center shadow-[0_2px_16px_rgba(91,138,114,0.06)]">
           <div className="text-4xl mb-3">💊</div>
           <p className="text-[15px] text-neutral-600 font-medium">아이를 먼저 선택해주세요</p>
@@ -688,7 +688,7 @@ export function MedicationPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-start justify-between mb-6">
-        <PageHeader title="복약 관리" subtitle="처방 약물의 복용을 기록하고 진료 시 활용하세요" />
+        <PageHeader title="복약 기록" subtitle="처방 약물의 복용을 기록하고 진료 시 활용하세요" />
         <button
           onClick={() => {
             setEditingMed(null);

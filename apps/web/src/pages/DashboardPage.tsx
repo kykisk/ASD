@@ -269,7 +269,7 @@ function InsightCard({
       )}
 
       <Link
-        to="/insights"
+        to="/growth?tab=weekly"
         className="inline-block mt-1 text-[13px] text-primary-600 font-semibold hover:text-primary-700 transition-colors"
       >
         자세히 보기 →

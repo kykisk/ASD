@@ -99,7 +99,7 @@ export function SensoryProfilePage() {
         </div>
       )}
 
-      <PageHeader title="감각 프로파일" subtitle="6가지 감각 채널의 민감도를 평가합니다." />
+      <PageHeader title="감각 특성" subtitle="6가지 감각 채널의 민감도를 평가합니다." />
 
       {/* Guide Card */}
       <div className="bg-primary-50 border border-primary-200 rounded-2xl p-5">

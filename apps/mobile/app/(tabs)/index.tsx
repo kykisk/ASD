@@ -18,7 +18,7 @@ import {
   useGenerateCurriculum,
 } from '../../hooks/use-curricula.js';
 import { useDailyRecord } from '../../hooks/use-daily-record.js';
-import { useWeeklyInsight } from '../../hooks/use-dashboard.js';
+import { useDashboard, useWeeklyInsight } from '../../hooks/use-dashboard.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
 import type { ActivityLog } from '../../types/api.types.js';
@@ -65,6 +65,8 @@ export default function TodayScreen() {
   const { data: logs, refetch: refetchLogs } = useActivityLogs(curriculum?.id);
   const { data: record, refetch: refetchRecord } = useDailyRecord(selectedChildId);
   const { data: insight } = useWeeklyInsight(selectedChildId);
+  const { data: dashboard } = useDashboard(selectedChildId);
+  const todaySchedules = dashboard?.today.schedules ?? [];
   const generateMutation = useGenerateCurriculum();
   const hasActivities = (curriculum?.activities.length ?? 0) > 0;
 
@@ -193,6 +195,19 @@ export default function TodayScreen() {
         </View>
       </View>
 
+      {todaySchedules.length > 0 && (
+        <TouchableOpacity
+          style={styles.scheduleLine}
+          onPress={() => router.push('/schedule')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.scheduleText} numberOfLines={1}>
+            오늘 일정 · {todaySchedules.map((s) => `${s.time ?? ''} ${s.title}`.trim()).join(' · ')}
+          </Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.card} nativeID="tour-activities">
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>오늘 집에서 할 활동</Text>
@@ -312,6 +327,18 @@ const styles = StyleSheet.create({
   content: { padding: spacing.md, gap: 14, paddingBottom: spacing.xl },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   date: { fontSize: 13, color: colors.textSecondary },
+  scheduleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  scheduleText: { flex: 1, fontSize: fontSize.sm, color: colors.text },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   helpBtn: {
     height: 36,

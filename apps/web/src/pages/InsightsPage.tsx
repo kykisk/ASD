@@ -3,7 +3,10 @@ import { useChildStore } from '../stores/child.store';
 import { useWeeklyInsight, useInsightHistory, InsightRecord } from '../hooks/use-insights';
 import { Skeleton, EmptyState } from '../components/ui';
 
-const TREND_CONFIG: Record<InsightRecord['overallTrend'], { label: string; color: string; bg: string }> = {
+const TREND_CONFIG: Record<
+  InsightRecord['overallTrend'],
+  { label: string; color: string; bg: string }
+> = {
   IMPROVING: { label: '성장 중', color: '#5B8A72', bg: '#E8F5EE' },
   STABLE: { label: '안정', color: '#64748B', bg: '#F1F5F9' },
   NEEDS_ATTENTION: { label: '관심 필요', color: '#D97706', bg: '#FFFBEB' },
@@ -29,9 +32,7 @@ function InsightDetailCard({ insight }: { insight: InsightRecord }) {
             {trendCfg.label}
           </span>
         </div>
-        <p className="text-sm text-neutral-700 leading-relaxed">
-          {insight.summary}
-        </p>
+        <p className="text-sm text-neutral-700 leading-relaxed">{insight.summary}</p>
       </div>
 
       {/* Highlights */}
@@ -39,11 +40,16 @@ function InsightDetailCard({ insight }: { insight: InsightRecord }) {
         <div className="bg-white border border-neutral-200 rounded-xl p-5">
           <h4 className="text-[15px] font-semibold text-neutral-800 mb-3 flex items-center gap-2">
             <span>🌟</span> 하이라이트
-            <span className="text-xs font-medium text-neutral-400">({insight.highlights.length}개)</span>
+            <span className="text-xs font-medium text-neutral-400">
+              ({insight.highlights.length}개)
+            </span>
           </h4>
           <div className="grid gap-2.5">
             {insight.highlights.map((h, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-green-50/60 border border-green-100">
+              <div
+                key={i}
+                className="flex items-start gap-3 p-3 rounded-lg bg-green-50/60 border border-green-100"
+              >
                 <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
                 <span className="text-sm text-neutral-700">{h}</span>
               </div>
@@ -60,7 +66,10 @@ function InsightDetailCard({ insight }: { insight: InsightRecord }) {
           </h4>
           <div className="grid gap-2.5">
             {insight.concerns.map((c, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-amber-50/60 border border-amber-100">
+              <div
+                key={i}
+                className="flex items-start gap-3 p-3 rounded-lg bg-amber-50/60 border border-amber-100"
+              >
                 <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                 <span className="text-sm text-neutral-700">{c}</span>
               </div>
@@ -77,7 +86,10 @@ function InsightDetailCard({ insight }: { insight: InsightRecord }) {
           </h4>
           <div className="grid gap-2.5">
             {insight.recommendations.map((r, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-blue-50/60 border border-blue-100">
+              <div
+                key={i}
+                className="flex items-start gap-3 p-3 rounded-lg bg-blue-50/60 border border-blue-100"
+              >
                 <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
                 <span className="text-sm text-neutral-700">{r}</span>
               </div>
@@ -132,9 +144,7 @@ function HistorySection({ history }: { history: InsightRecord[] }) {
                 {trendCfg.label}
               </span>
             </div>
-            <p className="text-sm text-neutral-600 line-clamp-2">
-              {record.summary}
-            </p>
+            <p className="text-sm text-neutral-600 line-clamp-2">{record.summary}</p>
           </div>
         );
       })}
@@ -151,7 +161,7 @@ function HistorySection({ history }: { history: InsightRecord[] }) {
   );
 }
 
-export function InsightsPage() {
+export function InsightsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { selectedChildId } = useChildStore();
   const [weekOffset, setWeekOffset] = useState(0);
   const { data: currentInsight, isLoading } = useWeeklyInsight(selectedChildId);
@@ -176,7 +186,7 @@ export function InsightsPage() {
   return (
     <div className="max-w-[800px] mx-auto">
       {/* Header */}
-      <div className="mb-6">
+      <div className={embedded ? 'hidden' : 'mb-6'}>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xl">✨</span>
           <h1 className="text-2xl font-bold text-neutral-800">AI 성장 분석</h1>
@@ -190,7 +200,13 @@ export function InsightsPage() {
           onClick={() => setWeekOffset((p) => p - 1)}
           className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-neutral-600 hover:bg-neutral-100 transition-colors min-h-[40px]"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           지난주
@@ -204,7 +220,13 @@ export function InsightsPage() {
           className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-neutral-600 hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-h-[40px]"
         >
           다음주
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -229,16 +251,15 @@ export function InsightsPage() {
           <span className="text-4xl mb-3 block">✨</span>
           <h3 className="text-lg font-semibold text-neutral-800 mb-2">AI 분석 준비 중</h3>
           <p className="text-sm text-neutral-500 leading-relaxed">
-            평가 데이터를 조금 더 쌓으면 인사이트를 제공해드릴게요.<br />
+            평가 데이터를 조금 더 쌓으면 인사이트를 제공해드릴게요.
+            <br />
             매주 평가를 기록해주시면 더 정확한 분석이 가능해요.
           </p>
         </div>
       )}
 
       {/* History */}
-      {history && history.length > 0 && (
-        <HistorySection history={history} />
-      )}
+      {history && history.length > 0 && <HistorySection history={history} />}
     </div>
   );
 }

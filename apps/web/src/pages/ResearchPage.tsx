@@ -503,7 +503,7 @@ export function ResearchPage() {
         <ArticleDetailModal item={selectedArticle} onClose={() => setSelectedArticle(null)} />
       )}
       <PageHeader
-        title="연구 자료"
+        title="논문"
         subtitle="자녀의 프로파일에 맞는 최신 연구를 추천합니다."
         action={
           selectedChildId ? (

@@ -93,7 +93,7 @@ export function WellbeingPage() {
         </div>
       )}
 
-      <PageHeader title="부모 웰빙 체크인" subtitle="오늘 나의 컨디션을 기록해보세요." />
+      <PageHeader title="마음 체크인" subtitle="오늘 나의 컨디션을 기록해보세요." />
 
       {/* Check-in Form */}
       <div className="bg-white rounded-2xl border border-[#E8E4DF] p-6 space-y-5">

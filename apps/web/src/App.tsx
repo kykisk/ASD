@@ -7,6 +7,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { TodayPage } from './pages/TodayPage';
 import { GuidePage } from './pages/GuidePage';
+import { GrowthHubPage } from './pages/GrowthHubPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { FamilyPage } from './pages/FamilyPage';
 import { ChildrenPage } from './pages/ChildrenPage';
@@ -14,8 +15,6 @@ import { SchedulePage } from './pages/SchedulePage';
 import { QuestionnairePage } from './pages/QuestionnairePage';
 import { AssessmentPage } from './pages/AssessmentPage';
 import { AssessmentHistoryPage } from './pages/AssessmentHistoryPage';
-import { GrowthPage } from './pages/GrowthPage';
-import { InsightsPage } from './pages/InsightsPage';
 import { CurriculumPage } from './pages/CurriculumPage';
 import { CurriculumHistoryPage } from './pages/CurriculumHistoryPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -61,8 +60,8 @@ export default function App() {
         <Route path="questionnaires" element={<QuestionnairePage />} />
         <Route path="assessment" element={<AssessmentPage />} />
         <Route path="assessment/history" element={<AssessmentHistoryPage />} />
-        <Route path="growth" element={<GrowthPage />} />
-        <Route path="insights" element={<InsightsPage />} />
+        <Route path="growth" element={<GrowthHubPage />} />
+        <Route path="insights" element={<Navigate to="/growth?tab=weekly" replace />} />
         <Route path="curriculum" element={<CurriculumPage />} />
         <Route path="curriculum/history" element={<CurriculumHistoryPage />} />
         <Route path="reports" element={<ReportsPage />} />

@@ -60,36 +60,42 @@ export default function MoreScreen() {
         </TouchableOpacity>
       )}
 
-      <Text style={styles.sectionLabel}>도움말</Text>
       <View style={styles.section}>
-        <MenuItem label="사용 가이드" icon="📖" onPress={() => router.push('/guide')} />
+        <MenuItem label="일정 달력" icon="📅" onPress={() => router.push('/schedule')} />
       </View>
 
-      <Text style={styles.sectionLabel}>치료 도구</Text>
+      <Text style={styles.sectionLabel}>우리 아이 · 가족</Text>
       <View style={styles.section}>
         <MenuItem label="아이 프로필" icon="👤" onPress={() => router.push('/child-profile')} />
-        <MenuItem label="임상 평가" icon="🏥" onPress={() => router.push('../clinical')} />
-        <MenuItem label="일일피드백" icon="📝" onPress={() => router.push('../session-feedback')} />
-        <MenuItem label="감각 프로파일" icon="🎯" onPress={() => router.push('/sensory-profile')} />
-        <MenuItem label="보고서" icon="📊" onPress={() => router.push('/reports')} />
-      </View>
-
-      <Text style={styles.sectionLabel}>건강 관리</Text>
-      <View style={styles.section}>
-        <MenuItem label="복약 관리" icon="💊" onPress={() => router.push('../medication')} />
-      </View>
-
-      <Text style={styles.sectionLabel}>부모 지원</Text>
-      <View style={styles.section}>
-        <MenuItem label="웰빙 체크인" icon="💚" onPress={() => router.push('/wellbeing')} />
-        <MenuItem label="비상 가이드" icon="🆘" onPress={() => router.push('/emergency-guide')} />
-        <MenuItem label="연구 브리핑" icon="📰" onPress={() => router.push('/research')} />
-      </View>
-
-      <Text style={styles.sectionLabel}>가족</Text>
-      <View style={styles.section}>
         <MenuItem label="아이 추가" icon="➕" onPress={() => router.push('../add-child')} />
-        <MenuItem label="가족 설정" icon="👨‍👩‍👧" onPress={() => router.push('/family')} />
+        <MenuItem label="가족 초대 · 관리" icon="👨‍👩‍👧" onPress={() => router.push('/family')} />
+      </View>
+
+      <Text style={styles.sectionLabel}>전문 기록 (필요할 때만)</Text>
+      <View style={styles.section}>
+        <MenuItem label="임상 평가" icon="🏥" onPress={() => router.push('../clinical')} />
+        <MenuItem label="감각 특성" icon="🎯" onPress={() => router.push('/sensory-profile')} />
+        <MenuItem label="월간 보고서" icon="📊" onPress={() => router.push('/reports')} />
+      </View>
+
+      <Text style={styles.sectionLabel}>건강</Text>
+      <View style={styles.section}>
+        <MenuItem label="복약 기록" icon="💊" onPress={() => router.push('../medication')} />
+      </View>
+
+      <Text style={styles.sectionLabel}>부모님을 위해</Text>
+      <View style={styles.section}>
+        <MenuItem label="마음 체크인" icon="💚" onPress={() => router.push('/wellbeing')} />
+        <MenuItem
+          label="힘든 순간 가이드"
+          icon="🆘"
+          onPress={() => router.push('/emergency-guide')}
+        />
+      </View>
+
+      <Text style={styles.sectionLabel}>도움말 · 설정</Text>
+      <View style={styles.section}>
+        <MenuItem label="사용 가이드" icon="📖" onPress={() => router.push('/guide')} />
         <MenuItem label="설정" icon="⚙️" onPress={() => router.push('/settings')} />
       </View>
 

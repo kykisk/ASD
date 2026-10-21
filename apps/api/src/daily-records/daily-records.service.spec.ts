@@ -8,8 +8,9 @@ const prisma = {
   child: { findUnique: vi.fn() },
   familyMember: { findUnique: vi.fn() },
   questionnaire: { findFirst: vi.fn(), create: vi.fn() },
-  assessment: { create: vi.fn(), findFirst: vi.fn() },
+  assessment: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
   sessionFeedback: { findMany: vi.fn() },
+  curriculum: { findMany: vi.fn() },
 };
 const sessionFeedbacks = { create: vi.fn() };
 const insights = { invalidateWeekly: vi.fn() };
@@ -94,6 +95,87 @@ describe('DailyRecordsService', () => {
       rating: 2,
     });
     expect(prisma.assessment.create).not.toHaveBeenCalled();
+  });
+
+  it('groups the timeline by day, newest first, keeping the last check of a day', async () => {
+    prisma.assessment.findMany.mockResolvedValue([
+      // 2026-10-21 10:00 KST (최신) / 2026-10-21 09:00 KST / 2026-10-20 23:30 KST
+      {
+        createdAt: new Date('2026-10-21T01:00:00Z'),
+        notes: '저녁',
+        scores: [{ domain: 'MOTOR', score: 5 }],
+      },
+      {
+        createdAt: new Date('2026-10-21T00:00:00Z'),
+        notes: '아침',
+        scores: [{ domain: 'MOTOR', score: 2 }],
+      },
+      {
+        createdAt: new Date('2026-10-20T14:30:00Z'),
+        notes: null,
+        scores: [{ domain: 'SOCIAL', score: 3 }],
+      },
+    ]);
+    prisma.sessionFeedback.findMany.mockResolvedValue([
+      {
+        id: 'f1',
+        sessionDate: new Date('2026-10-19T00:00:00Z'),
+        feedbackType: 'BEHAVIORAL_ISSUE',
+        sessionType: 'BEHAVIOR',
+        content: '마트에서 울음',
+        severity: 3,
+        behaviorTags: ['멜트다운'],
+      },
+    ]);
+    prisma.curriculum.findMany.mockResolvedValue([
+      {
+        date: new Date('2026-10-21T00:00:00Z'),
+        activities: [{}, {}, {}, {}],
+        activityLogs: [{ activityIndex: 0 }, { activityIndex: 0 }, { activityIndex: 2 }],
+      },
+    ]);
+
+    const days = await service.timeline('child-1', 'user-1', '2026-10-15', '2026-10-21');
+
+    expect(days.map((d) => d.date)).toEqual(['2026-10-21', '2026-10-20', '2026-10-19']);
+    expect(days[0]).toMatchObject({
+      scores: { MOTOR: 5 },
+      note: '저녁',
+      activities: { done: 2, total: 4 },
+    });
+    expect(days[1].scores).toEqual({ SOCIAL: 3 });
+    expect(days[2].feedbacks[0]).toMatchObject({ feedbackType: 'BEHAVIORAL_ISSUE', severity: 3 });
+  });
+
+  it('does not repeat a daily note that is also saved as a daily log', async () => {
+    prisma.assessment.findMany.mockResolvedValue([
+      {
+        createdAt: new Date('2026-10-21T01:00:00Z'),
+        notes: '처음 말했어요',
+        scores: [{ domain: 'MOTOR', score: 4 }],
+      },
+    ]);
+    prisma.sessionFeedback.findMany.mockResolvedValue([
+      {
+        id: 'f1',
+        sessionDate: new Date('2026-10-21T00:00:00Z'),
+        feedbackType: 'DAILY_LOG',
+        sessionType: 'DAILY',
+        content: '처음 말했어요',
+        severity: null,
+        behaviorTags: [],
+      },
+    ]);
+    prisma.curriculum.findMany.mockResolvedValue([]);
+
+    const [day] = await service.timeline('child-1', 'user-1', '2026-10-21', '2026-10-21');
+
+    expect(day.note).toBeNull();
+    expect(day.feedbacks).toHaveLength(1);
+  });
+
+  it('rejects malformed timeline dates', async () => {
+    await expect(service.timeline('child-1', 'user-1', '10/15/2026')).rejects.toThrow('YYYY-MM-DD');
   });
 
   it('rejects users outside the child family', async () => {

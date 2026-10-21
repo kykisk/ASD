@@ -209,7 +209,7 @@ export function EmergencyGuidePage() {
       )}
 
       <PageHeader
-        title="비상 대응 가이드"
+        title="힘든 순간 가이드"
         subtitle="위기 상황 시 단계별 대응을 안내합니다."
         action={
           selectedChildId ? (

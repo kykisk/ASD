@@ -233,7 +233,7 @@ export default function ResearchScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: '연구 브리핑', headerShown: true }} />
+      <Stack.Screen options={{ title: '논문', headerShown: true }} />
 
       {selectedItem && (
         <ArticleDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />

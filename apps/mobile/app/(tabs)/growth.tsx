@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +12,9 @@ import { useChildStore } from '../../stores/child.store.js';
 import { useGrowth } from '../../hooks/use-growth.js';
 import { useAggregatedAssessment, useAssessments } from '../../hooks/use-assessments.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { RecordsTimeline } from '../../components/RecordsTimeline.js';
+import { WeeklySummary } from '../../components/WeeklySummary.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
 import type { AggregatedDomain, TimeSeriesPoint, Assessment } from '../../types/api.types.js';
 
@@ -148,7 +151,7 @@ function OverallTimeline({ points }: { points: TimeSeriesPoint[] }) {
   );
 }
 
-export default function GrowthScreen() {
+function GrowthChangeView() {
   const router = useRouter();
   const selectedChildId = useChildStore((s) => s.selectedChildId);
   const {
@@ -573,4 +576,69 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   clinicalBadgeText: { fontSize: fontSize.xs, fontWeight: '600' },
+});
+
+type GrowthSegment = 'change' | 'records' | 'weekly';
+
+const SEGMENTS: Array<{ key: GrowthSegment; label: string }> = [
+  { key: 'change', label: '변화' },
+  { key: 'records', label: '기록 모아보기' },
+  { key: 'weekly', label: 'AI 주간 요약' },
+];
+
+/** 성장 탭: 변화 그래프 · 기록 모아보기(구 일일피드백) · AI 주간 요약(구 AI 분석) */
+export default function GrowthTab() {
+  const { segment } = useLocalSearchParams<{ segment?: GrowthSegment }>();
+  const [active, setActive] = useState<GrowthSegment>(segment ?? 'change');
+  const selectedChildId = useChildStore((s) => s.selectedChildId);
+
+  useEffect(() => {
+    if (segment) setActive(segment);
+  }, [segment]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={segmentStyles.bar} accessibilityRole="tablist">
+        {SEGMENTS.map((s) => {
+          const on = s.key === active;
+          return (
+            <TouchableOpacity
+              key={s.key}
+              style={[segmentStyles.item, on && segmentStyles.itemActive]}
+              onPress={() => setActive(s.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+            >
+              <Text style={[segmentStyles.text, on && segmentStyles.textActive]}>{s.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <View style={{ flex: 1 }}>
+        {active === 'change' || !selectedChildId ? (
+          <GrowthChangeView />
+        ) : active === 'records' ? (
+          <RecordsTimeline childId={selectedChildId} />
+        ) : (
+          <WeeklySummary childId={selectedChildId} />
+        )}
+      </View>
+    </View>
+  );
+}
+
+const segmentStyles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    gap: 4,
+    margin: spacing.md,
+    marginBottom: 0,
+    padding: 4,
+    borderRadius: borderRadius.md,
+    backgroundColor: '#F2F0EC',
+  },
+  item: { flex: 1, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  itemActive: { backgroundColor: colors.card },
+  text: { fontSize: 13, color: '#4A5A6A' },
+  textActive: { fontWeight: '700', color: colors.text },
 });

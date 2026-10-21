@@ -433,7 +433,7 @@ function DailyFeedbackCard({
 
 // ─── AI Digest Tab ───────────────────────────────────────────────────────────
 
-function DigestTab({ childId }: { childId: string }) {
+export function DigestTab({ childId }: { childId: string }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 

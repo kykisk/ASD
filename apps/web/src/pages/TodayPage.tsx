@@ -236,7 +236,10 @@ export function TodayPage() {
                   다음엔: {insight.recommendations[0]}
                 </p>
               )}
-              <Link to="/insights" className="text-xs text-neutral-500 hover:text-primary-700 mt-1">
+              <Link
+                to="/growth?tab=weekly"
+                className="text-xs text-neutral-500 hover:text-primary-700 mt-1"
+              >
                 AI가 이번 주 기록을 바탕으로 정리했어요 · 자세히 보기
               </Link>
             </section>

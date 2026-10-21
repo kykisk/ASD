@@ -52,10 +52,43 @@ export function useCreateDailyRecord() {
     onSuccess: (summary, { childId }) => {
       queryClient.setQueryData(['daily-record', childId], summary);
       queryClient.invalidateQueries({ queryKey: ['insights', 'weekly', childId] });
+      queryClient.invalidateQueries({ queryKey: ['daily-timeline', childId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['assessments'] });
       queryClient.invalidateQueries({ queryKey: ['growth'] });
       queryClient.invalidateQueries({ queryKey: ['session-feedbacks'] });
     },
+  });
+}
+
+export interface DailyTimelineDay {
+  date: string;
+  scores: Partial<Record<DailyRecordDomain, number>> | null;
+  note: string | null;
+  feedbacks: Array<{
+    id: string;
+    feedbackType: string;
+    sessionType: string;
+    content: string;
+    severity: number | null;
+    behaviorTags: string[];
+  }>;
+  activities: { done: number; total: number } | null;
+}
+
+/** 기록 모아보기: 최근 days 일 날짜별 묶음 (최신순) */
+export function useDailyTimeline(childId: string | null, days: number) {
+  return useQuery({
+    queryKey: ['daily-timeline', childId, days],
+    queryFn: async () => {
+      const from = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const { data } = await api.get<{ success: true; data: DailyTimelineDay[] }>(
+        `/children/${childId}/daily-records/timeline?from=${from}`,
+      );
+      return data.data;
+    },
+    enabled: !!childId,
   });
 }

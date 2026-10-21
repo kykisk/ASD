@@ -28,6 +28,8 @@ export interface Child {
 export interface TodaySchedule {
   id: string;
   title: string;
+  /** KST HH:MM */
+  time?: string;
   startTime: string;
   endTime: string;
   category: string;

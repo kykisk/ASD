@@ -100,7 +100,7 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="family"
-            options={{ headerShown: true, title: '가족 설정', presentation: 'card' }}
+            options={{ headerShown: true, title: '가족 초대 · 관리', presentation: 'card' }}
           />
           <Stack.Screen
             name="settings"
@@ -108,23 +108,23 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="reports"
-            options={{ headerShown: true, title: '보고서', presentation: 'card' }}
+            options={{ headerShown: true, title: '월간 보고서', presentation: 'card' }}
           />
           <Stack.Screen
             name="wellbeing"
-            options={{ headerShown: true, title: '웰빙 체크인', presentation: 'card' }}
+            options={{ headerShown: true, title: '마음 체크인', presentation: 'card' }}
           />
           <Stack.Screen
             name="emergency-guide"
-            options={{ headerShown: true, title: '비상 가이드', presentation: 'card' }}
+            options={{ headerShown: true, title: '힘든 순간 가이드', presentation: 'card' }}
           />
           <Stack.Screen
             name="sensory-profile"
-            options={{ headerShown: true, title: '감각 프로파일', presentation: 'card' }}
+            options={{ headerShown: true, title: '감각 특성', presentation: 'card' }}
           />
           <Stack.Screen
             name="research"
-            options={{ headerShown: true, title: '연구 브리핑', presentation: 'card' }}
+            options={{ headerShown: true, title: '논문', presentation: 'card' }}
           />
           <Stack.Screen
             name="clinical"
@@ -132,7 +132,7 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="medication"
-            options={{ headerShown: true, title: '복약 관리', presentation: 'card' }}
+            options={{ headerShown: true, title: '복약 기록', presentation: 'card' }}
           />
           <Stack.Screen
             name="activity"
@@ -152,7 +152,7 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="session-feedback"
-            options={{ headerShown: true, title: '수업 피드백', presentation: 'card' }}
+            options={{ headerShown: true, title: '일일피드백', presentation: 'card' }}
           />
         </Stack>
       </AuthGate>

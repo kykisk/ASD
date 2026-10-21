@@ -149,7 +149,7 @@ function EmptyState() {
   );
 }
 
-export function GrowthPage() {
+export function GrowthPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [activeTab, setActiveTab] = useState<TabKey>('trend');
   const [dayRange, setDayRange] = useState<DayRange>(30);
   const { selectedChildId } = useChildStore();
@@ -163,7 +163,7 @@ export function GrowthPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 24, display: embedded ? 'none' : undefined }}>
         <h1
           style={{
             fontSize: 22,

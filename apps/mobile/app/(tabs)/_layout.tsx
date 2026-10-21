@@ -35,24 +35,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="assessment"
-        options={{
-          title: '평가',
-          tabBarIcon: ({ focused }) => <TabIcon label="📋" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="schedule"
-        options={{
-          title: '일정',
-          tabBarIcon: ({ focused }) => <TabIcon label="📅" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
         name="growth"
         options={{
           title: '성장',
           tabBarIcon: ({ focused }) => <TabIcon label="📈" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="papers"
+        options={{
+          title: '논문',
+          tabBarIcon: ({ focused }) => <TabIcon label="📰" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -62,6 +55,9 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon label="⋯" focused={focused} />,
         }}
       />
+      {/* 탭에서는 빠졌지만 주소로는 열 수 있음: 평가(→ 오늘 하루 기록), 일정(→ 더보기 › 일정 달력) */}
+      <Tabs.Screen name="assessment" options={{ href: null, title: '평가' }} />
+      <Tabs.Screen name="schedule" options={{ href: null, title: '일정 달력' }} />
     </Tabs>
   );
 }
