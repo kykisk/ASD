@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TodayPage } from './pages/TodayPage';
 import { GuidePage } from './pages/GuidePage';
 import { GrowthHubPage } from './pages/GrowthHubPage';
+import { WelcomePage } from './pages/WelcomePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { FamilyPage } from './pages/FamilyPage';
 import { ChildrenPage } from './pages/ChildrenPage';
@@ -41,6 +42,14 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+      <Route
+        path="/welcome"
+        element={
+          <ProtectedRoute>
+            <WelcomePage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/"
         element={

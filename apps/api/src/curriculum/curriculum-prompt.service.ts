@@ -150,7 +150,9 @@ ${domainText}`;
     if (params.centerInfo && params.centerInfo.length > 0) {
       userContent += `\n\n현재 다니는 치료 센터:\n`;
       for (const center of params.centerInfo) {
-        userContent += `- ${center.name} (${center.type}, ${center.frequency})`;
+        // 첫 사용 안내에서는 수업 종류만 받으므로 빈 항목은 빼고 표시
+        const details = [center.type, center.frequency].filter(Boolean).join(', ');
+        userContent += `- ${center.name}${details && details !== center.name ? ` (${details})` : ''}`;
         if (center.currentGoal) userContent += ` — 현재 목표: ${center.currentGoal}`;
         userContent += `\n`;
       }

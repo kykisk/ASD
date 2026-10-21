@@ -11,6 +11,8 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../lib/api.js';
 import { useChildStore } from '../../stores/child.store.js';
 import {
   useTodayCurriculum,
@@ -71,6 +73,23 @@ export default function TodayScreen() {
   const generateMutation = useGenerateCurriculum();
   const hasActivities = (curriculum?.activities.length ?? 0) > 0;
 
+  // 아이가 아직 없는 새 계정은 첫 사용 안내로
+  const storeFamilyId = useChildStore((s) => s.familyId);
+  const childrenLoading = useChildStore((s) => s.isLoading);
+  const childCount = useChildStore((s) => s.children.length);
+  const { data: myFamilies } = useQuery<Array<{ id: string }>>({
+    queryKey: ['families', 'my'],
+    queryFn: async () => (await api.get('/families/my')).data.data,
+    enabled: !selectedChildId,
+  });
+  const needsWelcome =
+    !selectedChildId &&
+    myFamilies !== undefined &&
+    (myFamilies.length === 0 || (!!storeFamilyId && !childrenLoading && childCount === 0));
+  useEffect(() => {
+    if (needsWelcome) router.replace('/welcome');
+  }, [needsWelcome, router]);
+
   const startTour = useCallback(() => runTour(TOUR_STEPS.today, { id: 'today' }), []);
 
   // 처음 들어온 사람에게 한 번 자동으로 보여줌 (활동이 준비된 뒤)
@@ -123,7 +142,7 @@ export default function TodayScreen() {
           <Text style={styles.emptyText}>
             아이에 대해 알려주시면 오늘 집에서 할 활동을 만들어 드려요
           </Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/add-child')}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/welcome')}>
             <Text style={styles.primaryBtnText}>아이 등록하기</Text>
           </TouchableOpacity>
         </View>

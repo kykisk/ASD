@@ -142,6 +142,7 @@ export default function RootLayout() {
             name="daily-record"
             options={{ headerShown: true, title: '오늘 하루 기록', presentation: 'card' }}
           />
+          <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen
             name="guide"
             options={{ headerShown: true, title: '사용 가이드', presentation: 'card' }}

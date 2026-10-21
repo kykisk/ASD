@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useChildStore } from '../stores/child.store';
 import {
   useTodayCurriculum,
@@ -10,6 +10,8 @@ import {
 import { useDailyRecord } from '../hooks/use-daily-record';
 import { useWeeklyInsight } from '../hooks/use-insights';
 import { useDashboard } from '../hooks/use-dashboard';
+import { useMyFamily } from '../hooks/use-families';
+import { useChildren } from '../hooks/use-children';
 import { ActivityDetailPanel } from '../components/today/ActivityDetailPanel';
 import { DailyRecordModal } from '../components/today/DailyRecordModal';
 import { hasSeenTour, runTour } from '../tours/engine';
@@ -40,6 +42,13 @@ export function TodayPage() {
   const { data: insight } = useWeeklyInsight(selectedChildId);
   const { data: dashboard } = useDashboard(selectedChildId);
   const generate = useGenerateCurriculum();
+  // 아이가 아직 없는 새 계정은 첫 사용 안내로
+  const { data: family, isLoading: familyLoading } = useMyFamily();
+  const { data: familyChildren, isLoading: childrenLoading } = useChildren(family?.id);
+  const needsWelcome =
+    !selectedChildId &&
+    !familyLoading &&
+    (family === null || (!childrenLoading && (familyChildren?.length ?? 0) === 0));
   const [selected, setSelected] = useState(0);
   const [recordOpen, setRecordOpen] = useState(false);
 
@@ -73,6 +82,8 @@ export function TodayPage() {
       alert(getAiErrorMessage(err) ?? '활동을 만들지 못했어요. 잠시 후 다시 시도해주세요.');
     }
   }
+
+  if (needsWelcome) return <Navigate to="/welcome" replace />;
 
   if (!selectedChildId) {
     return (
