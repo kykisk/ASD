@@ -1,28 +1,29 @@
 import { driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import './tour.css';
-import type { TourPart, TourStep } from './tour.js';
+import type { TourId, TourPart, TourStep } from './tour.js';
 
-export type { TourPart, TourStep } from './tour.js';
+export type { TourId, TourPart, TourStep } from './tour.js';
 
-const SEEN_KEY = 'auticare-tour-today-v1';
+const seenKey = (id: TourId) => `auticare-tour-${id}-v1`;
 
 export const tourSupported = true;
 
-export function hasSeenTour(): boolean {
+export function hasSeenTour(id: TourId = 'today'): boolean {
   try {
-    return localStorage.getItem(SEEN_KEY) === '1';
+    return localStorage.getItem(seenKey(id)) === '1';
   } catch {
     return true;
   }
 }
 
-export function markTourSeen(): void {
+export function markTourSeen(id: TourId = 'today'): void {
   try {
-    localStorage.setItem(SEEN_KEY, '1');
+    localStorage.setItem(seenKey(id), '1');
   } catch {
     /* 저장 못 해도 도움말로 다시 볼 수 있음 */
   }
+  window.dispatchEvent(new Event('auticare-tour-seen'));
 }
 
 // 화면을 넘어가며 이어지는 투어: 다음 화면이 열리면 이어서 보여줄 부분
@@ -42,11 +43,18 @@ export function takePendingTour(part: TourPart): boolean {
  * 투어 실행. next 가 있는 단계는 대상을 실제로 눌러야 하고, 누르면 투어를 닫고 이동한 화면에서 이어간다.
  * 끝까지 본 경우에만 onComplete 를 부른다 (중간에 닫으면 이어지는 투어도 멈춤).
  */
-export function runTour(steps: TourStep[], { onComplete }: { onComplete?: () => void } = {}): void {
+export function runTour(
+  steps: TourStep[],
+  { id = 'today', onComplete }: { id?: TourId; onComplete?: () => void } = {},
+): void {
   let movedByClick = false;
   let completed = false;
 
-  const driveSteps: DriveStep[] = steps.map((step) => ({
+  // 데이터가 없어 화면에 안 그려진 대상은 건너뜀
+  const visible = steps.filter((step) => !step.target || document.getElementById(step.target));
+  if (visible.length === 0) return;
+
+  const driveSteps: DriveStep[] = visible.map((step) => ({
     element: step.target ? `#${step.target}` : undefined,
     popover: {
       title: step.title,
@@ -73,7 +81,7 @@ export function runTour(steps: TourStep[], { onComplete }: { onComplete?: () => 
 
   const tour = driver({
     steps: driveSteps,
-    showProgress: steps.length > 1,
+    showProgress: visible.length > 1,
     progressText: '{{current}} / {{total}}',
     nextBtnText: '다음',
     prevBtnText: '이전',
@@ -89,7 +97,7 @@ export function runTour(steps: TourStep[], { onComplete }: { onComplete?: () => 
     onDestroyed: () => {
       if (movedByClick) return;
       pending = null;
-      markTourSeen();
+      markTourSeen(id);
       if (completed) onComplete?.();
     },
   });

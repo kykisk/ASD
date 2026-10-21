@@ -23,6 +23,7 @@ import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
 import type { ActivityLog } from '../../types/api.types.js';
 import { hasSeenTour, runTour, takePendingTour, tourSupported } from '../../lib/tour.js';
+import { TOUR_STEPS } from '../../lib/tour-steps.js';
 
 const DOMAIN_LABELS: Record<string, string> = {
   DAILY_LIVING: '일상생활',
@@ -70,44 +71,11 @@ export default function TodayScreen() {
   const generateMutation = useGenerateCurriculum();
   const hasActivities = (curriculum?.activities.length ?? 0) > 0;
 
-  const startTour = useCallback(() => {
-    if (!tourSupported) {
-      router.push('/guide');
-      return;
-    }
-    runTour(
-      hasActivities
-        ? [
-            {
-              target: 'tour-activities',
-              title: '오늘 집에서 할 활동',
-              body: 'AI가 아이 정보와 지난 기록을 보고 매일 아침 만들어 둔 활동이에요.',
-            },
-            {
-              target: 'tour-activity-0',
-              title: '활동 하나를 눌러보세요 👆',
-              body: '누르면 하는 방법이 나와요.',
-              next: 'activity',
-            },
-          ]
-        : [
-            {
-              target: 'tour-activities',
-              title: '오늘 집에서 할 활동',
-              body: '"오늘 활동 만들기"를 누르면 30초 정도 뒤에 활동이 만들어져요. 만든 뒤 도움말을 다시 누르면 기록하는 방법까지 알려드려요.',
-            },
-            {
-              target: 'tour-record',
-              title: '저녁엔 오늘 하루 기록',
-              body: '아이 상태, 있었던 일, 센터 수업 내용을 한 번에 적어요.',
-            },
-          ],
-    );
-  }, [hasActivities, router]);
+  const startTour = useCallback(() => runTour(TOUR_STEPS.today, { id: 'today' }), []);
 
   // 처음 들어온 사람에게 한 번 자동으로 보여줌 (활동이 준비된 뒤)
   useEffect(() => {
-    if (!tourSupported || !hasActivities || hasSeenTour()) return;
+    if (!tourSupported || !hasActivities || hasSeenTour('today')) return;
     const timer = setTimeout(startTour, 800);
     return () => clearTimeout(timer);
   }, [hasActivities, startTour]);
@@ -182,15 +150,6 @@ export default function TodayScreen() {
           <Text style={styles.greeting}>오늘도 함께해요</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.helpBtn}
-            onPress={startTour}
-            accessibilityRole="button"
-            accessibilityLabel="도움말"
-          >
-            <Text style={styles.helpIcon}>?</Text>
-            <Text style={styles.helpText}>도움말</Text>
-          </TouchableOpacity>
           <ChildSwitcherButton />
         </View>
       </View>
@@ -340,30 +299,6 @@ const styles = StyleSheet.create({
   },
   scheduleText: { flex: 1, fontSize: fontSize.sm, color: colors.text },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  helpBtn: {
-    height: 36,
-    paddingHorizontal: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  helpIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.primaryLight,
-    color: colors.primaryDark,
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 18,
-    overflow: 'hidden',
-  },
-  helpText: { fontSize: 13, color: colors.text },
   greeting: { fontSize: 22, fontWeight: '700', color: colors.text },
   card: {
     backgroundColor: colors.card,

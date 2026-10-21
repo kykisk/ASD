@@ -54,7 +54,7 @@ export function RecordsTimeline({ childId }: { childId: string }) {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.ranges}>
+      <View style={styles.ranges} nativeID="tour-growth-ranges">
         {RANGES.map((r) => {
           const active = r.days === days;
           return (
@@ -81,14 +81,18 @@ export function RecordsTimeline({ childId }: { childId: string }) {
           </TouchableOpacity>
         </View>
       ) : (
-        data.map((day) => {
+        data.map((day, i) => {
           const scoreText = day.scores
             ? DAILY_RECORD_DOMAINS.filter((d) => day.scores?.[d.key] !== undefined)
                 .map((d) => `${d.label} ${day.scores?.[d.key]}`)
                 .join(' · ')
             : null;
           return (
-            <View key={day.date} style={styles.card}>
+            <View
+              key={day.date}
+              style={styles.card}
+              nativeID={i === 0 ? 'tour-growth-day' : undefined}
+            >
               <View style={styles.cardHeader}>
                 <Text style={styles.date}>{dayLabel(day.date)}</Text>
                 {day.activities && day.activities.total > 0 && (

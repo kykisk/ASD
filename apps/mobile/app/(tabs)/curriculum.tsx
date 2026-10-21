@@ -186,7 +186,7 @@ export default function CurriculumScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabRow}>
+      <View style={styles.tabRow} nativeID="tour-cur-toggle">
         <TouchableOpacity
           style={[styles.tab, activeTab === 'today' && styles.tabActive]}
           onPress={() => setActiveTab('today')}
@@ -277,7 +277,7 @@ export default function CurriculumScreen() {
                 </Text>
               </View>
               {curriculum.weeklyGoal && (
-                <Text style={styles.weeklyGoal} numberOfLines={2}>
+                <Text style={styles.weeklyGoal} numberOfLines={2} nativeID="tour-cur-goal">
                   {curriculum.weeklyGoal}
                 </Text>
               )}
@@ -465,7 +465,7 @@ function ActivityCard({
   const domainColor = DOMAIN_COLORS[activity.domain] ?? colors.textMuted;
 
   return (
-    <View style={styles.activityCard}>
+    <View style={styles.activityCard} nativeID={index === 0 ? 'tour-cur-activity' : undefined}>
       <TouchableOpacity style={styles.activityHeader} onPress={onToggle}>
         <View style={styles.activityTitleRow}>
           <Text style={styles.activityIndex}>{index + 1}</Text>
@@ -534,7 +534,7 @@ function ActivityCard({
           </Text>
         </View>
       ) : (
-        <View style={styles.logButtons}>
+        <View style={styles.logButtons} nativeID={index === 0 ? 'tour-cur-results' : undefined}>
           {(['SUCCESS', 'PARTIAL', 'SKIPPED'] as const).map((result) => (
             <TouchableOpacity
               key={result}

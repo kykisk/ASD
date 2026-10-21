@@ -33,7 +33,7 @@ export function RecordsTimeline({ childId }: { childId: string }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5" data-tour="growth-ranges">
           {RANGES.map((r) => (
             <button
               key={r.days}
@@ -50,7 +50,11 @@ export function RecordsTimeline({ childId }: { childId: string }) {
             </button>
           ))}
         </div>
-        <Link to="/session-feedback" className="text-[13px] text-primary-700 underline">
+        <Link
+          to="/session-feedback"
+          data-tour="growth-edit"
+          className="text-[13px] text-primary-700 underline"
+        >
           수업 · 일상 기록 고치기
         </Link>
       </div>
@@ -65,7 +69,7 @@ export function RecordsTimeline({ childId }: { childId: string }) {
           </Link>
         </div>
       ) : (
-        data.map((day) => {
+        data.map((day, i) => {
           const scoreText = day.scores
             ? DAILY_RECORD_DOMAINS.filter((d) => day.scores?.[d.key] !== undefined)
                 .map((d) => `${d.label} ${day.scores?.[d.key]}`)
@@ -74,6 +78,7 @@ export function RecordsTimeline({ childId }: { childId: string }) {
           return (
             <article
               key={day.date}
+              data-tour={i === 0 ? 'growth-day' : undefined}
               className="bg-white rounded-2xl border border-neutral-200 px-5 py-4 flex flex-col gap-2"
             >
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">

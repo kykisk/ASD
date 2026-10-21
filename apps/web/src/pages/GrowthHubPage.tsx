@@ -22,7 +22,11 @@ export function GrowthHubPage() {
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-5">
       <h1 className="text-[26px] font-bold text-neutral-800">성장</h1>
-      <div role="tablist" className="flex gap-1 bg-[#F2F0EC] rounded-xl p-1 self-start">
+      <div
+        role="tablist"
+        data-tour="growth-tabs"
+        className="flex gap-1 bg-[#F2F0EC] rounded-xl p-1 self-start"
+      >
         {TABS.map((t) => (
           <button
             key={t.key}

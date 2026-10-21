@@ -5,6 +5,7 @@ import { useLogout } from '../../hooks/use-auth';
 import { ChildSwitcher } from './ChildSwitcher';
 import { NotificationBell } from './NotificationBell';
 import { AppInitializer } from '../AppInitializer';
+import { HelpButton } from '../../tours/HelpButton';
 
 // 첫 묶음(label 없음)은 매일 쓰는 메인 메뉴로 항상 펼쳐 보이고, 나머지는 "더보기" 아래 접히는 묶음
 const navGroups = [
@@ -398,7 +399,7 @@ export function AppLayout() {
             const isOpen = isMain || (openGroups[group.label] ?? false);
             const hasActive = group.items.some((item) => location.pathname.startsWith(item.to));
             return (
-              <div key={group.label || 'main'}>
+              <div key={group.label || 'main'} data-tour={isMain ? 'nav-main' : undefined}>
                 {groupIndex === 1 && (
                   <div
                     className={`${sidebarOpen ? 'block' : 'hidden lg:block'} sidebar-open-label mt-3 mb-1 mx-3 pt-3 border-t border-neutral-100 text-[11px] font-semibold text-neutral-500`}
@@ -529,6 +530,7 @@ export function AppLayout() {
 
           <div className="flex items-center gap-3">
             <ChildSwitcher />
+            <HelpButton />
             <NotificationBell />
 
             <div ref={userMenuRef} className="relative">

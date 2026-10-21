@@ -246,9 +246,12 @@ function ArticleDetailModal({ item, onClose }: { item: ResearchMatch; onClose: (
 function ArticleCard({
   item,
   onOpen,
+  first = false,
 }: {
   item: ResearchMatch;
   onOpen: (item: ResearchMatch) => void;
+  /** 첫 카드에 따라하기 투어 표시를 붙임 */
+  first?: boolean;
 }) {
   const bookmark = useBookmarkArticle();
   const markRead = useMarkAsRead();
@@ -265,6 +268,7 @@ function ArticleCard({
 
   return (
     <div
+      data-tour={first ? 'research-article' : undefined}
       className={`bg-white rounded-xl border border-[#E8E4DF] p-5 transition-all hover:shadow-sage-sm ${item.isRead ? 'opacity-75' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -314,6 +318,7 @@ function ArticleCard({
             </svg>
           </button>
           <button
+            data-tour={first ? 'research-bookmark' : undefined}
             onClick={() => bookmark.mutate(item.articleId)}
             className={`p-2 rounded-lg transition-colors ${
               item.isBookmarked
@@ -508,6 +513,7 @@ export function ResearchPage() {
         action={
           selectedChildId ? (
             <button
+              data-tour="research-digest"
               onClick={handleGenerateDigest}
               disabled={generateDigest.isPending}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 disabled:opacity-60 transition-colors"
@@ -628,7 +634,10 @@ export function ResearchPage() {
             </button>
           )}
         </div>
-        <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 flex-wrap">
+        <div
+          className="flex gap-1 bg-neutral-100 rounded-xl p-1 flex-wrap"
+          data-tour="research-tabs"
+        >
           {[
             { key: 'feed', label: '추천' },
             { key: 'bookmarks', label: '북마크' },
@@ -657,8 +666,8 @@ export function ResearchPage() {
       {(tab === 'feed' || tab === 'bookmarks') &&
         ((tab === 'feed' ? feed : bookmarks)?.length ? (
           <div className="space-y-3">
-            {(tab === 'feed' ? feed : bookmarks)!.map((item: ResearchMatch) => (
-              <ArticleCard key={item.id} item={item} onOpen={setSelectedArticle} />
+            {(tab === 'feed' ? feed : bookmarks)!.map((item: ResearchMatch, i: number) => (
+              <ArticleCard key={item.id} item={item} onOpen={setSelectedArticle} first={i === 0} />
             ))}
             {tab === 'feed' && feed?.length === feedLimit && (
               <button

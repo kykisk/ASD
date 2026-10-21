@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
 import { colors, fontSize } from '../../constants/theme.js';
+import { HelpHeaderButton } from '../../components/HelpHeaderButton.js';
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   return <Text style={[styles.tabIcon, focused && styles.tabIconActive]}>{label}</Text>;
@@ -12,6 +13,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
         headerTitleStyle: { color: colors.text, fontWeight: '600' },
+        headerRight: () => <HelpHeaderButton />,
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.cardBorder,

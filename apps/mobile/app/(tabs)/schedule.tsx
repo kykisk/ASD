@@ -146,7 +146,7 @@ export default function ScheduleScreen() {
         <ChildSwitcherButton />
       </View>
 
-      <View style={styles.weekStrip}>
+      <View style={styles.weekStrip} nativeID="tour-sch-week">
         {weekDates.map((date, idx) => {
           const isToday = date.toDateString() === new Date().toDateString();
           const isSelected = date.toDateString() === selectedDate.toDateString();
@@ -189,9 +189,11 @@ export default function ScheduleScreen() {
             {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 (
             {DAYS[selectedDate.getDay()]})
           </Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreateModal(true)}>
-            <Text style={styles.addBtnText}>+ 추가</Text>
-          </TouchableOpacity>
+          <View nativeID="tour-sch-add">
+            <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreateModal(true)}>
+              <Text style={styles.addBtnText}>+ 추가</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isLoading ? (

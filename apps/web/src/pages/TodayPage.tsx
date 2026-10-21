@@ -12,7 +12,8 @@ import { useWeeklyInsight } from '../hooks/use-insights';
 import { useDashboard } from '../hooks/use-dashboard';
 import { ActivityDetailPanel } from '../components/today/ActivityDetailPanel';
 import { DailyRecordModal } from '../components/today/DailyRecordModal';
-import { hasSeenTodayTour, startTodayTour } from '../components/today/today-tour';
+import { hasSeenTour, runTour } from '../tours/engine';
+import { tourSteps } from '../tours/definitions';
 import type { ActivityResult } from '../types/curriculum';
 import { DOMAIN_LABELS } from '../types/curriculum';
 
@@ -58,8 +59,8 @@ export function TodayPage() {
 
   // 처음 들어온 사람에게 한 번 따라하기 투어를 보여줌 (활동이 준비된 뒤)
   useEffect(() => {
-    if (isLoading || activities.length === 0 || hasSeenTodayTour()) return;
-    const timer = window.setTimeout(() => startTodayTour({ hasActivities: true }), 600);
+    if (isLoading || activities.length === 0 || hasSeenTour('today')) return;
+    const timer = window.setTimeout(() => runTour('today', tourSteps('today')), 600);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, activities.length]);
@@ -113,19 +114,6 @@ export function TodayPage() {
               오늘 일정 · {schedules.map((s) => `${s.time} ${s.title}`).join(' · ')}
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => startTodayTour({ hasActivities: activities.length > 0 })}
-            className="h-10 px-4 rounded-full border border-neutral-200 bg-white text-sm font-medium text-neutral-700 hover:border-primary-300 hover:text-primary-700 flex items-center gap-1.5"
-          >
-            <span
-              className="w-5 h-5 rounded-full bg-primary-50 text-primary-700 text-xs font-bold flex items-center justify-center"
-              aria-hidden="true"
-            >
-              ?
-            </span>
-            도움말
-          </button>
         </div>
       </div>
 

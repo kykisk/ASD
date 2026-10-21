@@ -46,7 +46,10 @@ export function MonthView({
   }
 
   return (
-    <div className="border border-neutral-200 rounded-lg overflow-hidden bg-white">
+    <div
+      className="border border-neutral-200 rounded-lg overflow-hidden bg-white"
+      data-tour="schedule-calendar"
+    >
       <div className="grid grid-cols-7 border-b border-neutral-200">
         {DAY_NAMES.map((name, i) => (
           <div

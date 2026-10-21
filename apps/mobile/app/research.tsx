@@ -241,20 +241,22 @@ export default function ResearchScreen() {
 
       {/* AI Generate Button */}
       {selectedChildId && (
-        <TouchableOpacity
-          style={[styles.generateBtn, generateDigest.isPending && styles.generateBtnDisabled]}
-          onPress={handleGenerateDigest}
-          disabled={generateDigest.isPending}
-        >
-          {generateDigest.isPending ? (
-            <View style={styles.generateBtnContent}>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.generateBtnText}>AI 분석 중...</Text>
-            </View>
-          ) : (
-            <Text style={styles.generateBtnText}>✨ AI 맞춤 요약</Text>
-          )}
-        </TouchableOpacity>
+        <View nativeID="tour-paper-digest">
+          <TouchableOpacity
+            style={[styles.generateBtn, generateDigest.isPending && styles.generateBtnDisabled]}
+            onPress={handleGenerateDigest}
+            disabled={generateDigest.isPending}
+          >
+            {generateDigest.isPending ? (
+              <View style={styles.generateBtnContent}>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.generateBtnText}>AI 분석 중...</Text>
+              </View>
+            ) : (
+              <Text style={styles.generateBtnText}>✨ AI 맞춤 요약</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Live Digest Result */}
@@ -310,7 +312,7 @@ export default function ResearchScreen() {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabRow}>
+      <View style={styles.tabRow} nativeID="tour-paper-tabs">
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -341,7 +343,7 @@ export default function ResearchScreen() {
             </View>
           )}
 
-          {filteredArticles.map((item) => {
+          {filteredArticles.map((item, i) => {
             const a = item.article;
             const tags = a.tags ?? [];
             const keyFindings = a.keyFindings ?? [];
@@ -361,13 +363,21 @@ export default function ResearchScreen() {
               >
                 {!item.isRead && <View style={styles.unreadDot} />}
 
-                <View style={styles.cardHeader}>
+                <View
+                  style={styles.cardHeader}
+                  nativeID={i === 0 ? 'tour-paper-article' : undefined}
+                >
                   <Text style={styles.articleTitle} numberOfLines={2}>
                     {a.title}
                   </Text>
-                  <TouchableOpacity style={styles.bookmarkBtn} onPress={() => handleBookmark(item)}>
-                    <Text style={styles.bookmarkIcon}>{item.isBookmarked ? '🔖' : '📑'}</Text>
-                  </TouchableOpacity>
+                  <View nativeID={i === 0 ? 'tour-paper-bookmark' : undefined}>
+                    <TouchableOpacity
+                      style={styles.bookmarkBtn}
+                      onPress={() => handleBookmark(item)}
+                    >
+                      <Text style={styles.bookmarkIcon}>{item.isBookmarked ? '🔖' : '📑'}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <Text style={styles.articleMeta}>

@@ -467,6 +467,7 @@ export function SchedulePage() {
             <span>📝</span> 수업 피드백 추가
           </button>
           <button
+            data-tour="schedule-ai"
             onClick={handleToggleAiPanel}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] text-sm font-semibold transition-all ${
               showAiPanel
@@ -486,7 +487,7 @@ export function SchedulePage() {
         onNavigate={handleNavigate}
       />
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5" data-tour="schedule-filters">
         <button
           onClick={resetCategories}
           className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-all ${
@@ -650,6 +651,7 @@ export function SchedulePage() {
       </div>
 
       <button
+        data-tour="schedule-add"
         onClick={handleAddNew}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-lg shadow-primary-300/40 hover:bg-primary-600 hover:scale-105 active:scale-95 transition-all duration-150 flex items-center justify-center z-40"
         aria-label="일정 추가"

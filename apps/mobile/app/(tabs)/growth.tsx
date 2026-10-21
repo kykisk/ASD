@@ -598,7 +598,7 @@ export default function GrowthTab() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={segmentStyles.bar} accessibilityRole="tablist">
+      <View style={segmentStyles.bar} accessibilityRole="tablist" nativeID="tour-growth-tabs">
         {SEGMENTS.map((s) => {
           const on = s.key === active;
           return (

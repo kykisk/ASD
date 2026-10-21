@@ -215,6 +215,7 @@ function ActivityCard({ activity, index, curriculumId, existingLog }: ActivityCa
 
   return (
     <div
+      data-tour={index === 0 ? 'curriculum-activity' : undefined}
       className={`bg-white rounded-xl border border-neutral-200 shadow-sage-sm overflow-hidden transition-all duration-200 ${cardTintClass}`}
     >
       <button
@@ -321,7 +322,10 @@ function ActivityCard({ activity, index, curriculumId, existingLog }: ActivityCa
           </div>
 
           <div className="pl-9 pt-2 border-t border-neutral-100">
-            <div className="flex flex-wrap gap-2">
+            <div
+              className="flex flex-wrap gap-2"
+              data-tour={index === 0 ? 'curriculum-results' : undefined}
+            >
               {resultButtons.map((btn) => {
                 const isActive = selectedResult === btn.result;
                 return (
@@ -581,6 +585,7 @@ export function CurriculumPage() {
           action={
             <div className="flex items-center gap-2">
               <button
+                data-tour="curriculum-regenerate"
                 onClick={() => handleRegenerate(curriculum.id)}
                 disabled={regenerateCurriculum.isPending || deleteCurriculum.isPending}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-neutral-600 bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors min-h-[40px] disabled:opacity-60"
@@ -651,17 +656,19 @@ export function CurriculumPage() {
         )}
 
         {curriculum.weeklyGoal && !regenerateCurriculum.isPending && (
-          <Card className="mb-5 border-primary-100 bg-primary-50/30">
-            <div className="flex items-start gap-3">
-              <span className="text-lg">📌</span>
-              <div>
-                <p className="text-xs font-medium text-primary-600 mb-0.5">이번 주 목표</p>
-                <p className="text-sm text-neutral-700 font-medium leading-relaxed">
-                  {curriculum.weeklyGoal}
-                </p>
+          <div data-tour="curriculum-goal">
+            <Card className="mb-5 border-primary-100 bg-primary-50/30">
+              <div className="flex items-start gap-3">
+                <span className="text-lg">📌</span>
+                <div>
+                  <p className="text-xs font-medium text-primary-600 mb-0.5">이번 주 목표</p>
+                  <p className="text-sm text-neutral-700 font-medium leading-relaxed">
+                    {curriculum.weeklyGoal}
+                  </p>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         )}
 
         <div className="space-y-3">
@@ -727,7 +734,7 @@ export function CurriculumPage() {
       <div className="curriculum-page-layout">
         <div className="curriculum-page-grid">
           <div className="curriculum-page-content">{renderContent()}</div>
-          <div className="curriculum-page-history">
+          <div className="curriculum-page-history" data-tour="curriculum-history">
             <CurriculumHistoryPanel childId={selectedChildId} />
           </div>
         </div>
