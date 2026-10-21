@@ -105,8 +105,8 @@ JSON으로만 응답하세요 (코드블록 없이):
 
     // Assessment용 시스템 질문지 가져오거나 생성
     const questionnaire = await this.getOrCreateSystemQuestionnaire(
-      feedback.childId,
       feedback.familyId,
+      feedback.userId,
     );
 
     // Assessment 생성
@@ -114,7 +114,6 @@ JSON으로만 응답하세요 (코드블록 없이):
       data: {
         childId: feedback.childId,
         familyId: feedback.familyId,
-        userId: feedback.userId,
         questionnaireId: questionnaire.id,
         totalScore:
           validScores.length > 0
@@ -151,7 +150,7 @@ JSON으로만 응답하세요 (코드블록 없이):
     this.logger.debug(`Domain extraction done for feedback ${feedbackId}`);
   }
 
-  private async getOrCreateSystemQuestionnaire(childId: string, familyId: string) {
+  private async getOrCreateSystemQuestionnaire(familyId: string, userId: string) {
     const existing = await this.prisma.questionnaire.findFirst({
       where: {
         familyId,
@@ -170,13 +169,12 @@ JSON으로만 응답하세요 (코드블록 없이):
         type: 'NON_LICENSED_USER_INPUT',
         domains: [...DOMAINS],
         isActive: true,
+        createdBy: userId,
         items: {
           create: DOMAINS.map((domain, idx) => ({
             text: DOMAIN_LABELS[domain],
             domain,
             orderIndex: idx,
-            minScore: 1,
-            maxScore: 5,
           })),
         },
       },

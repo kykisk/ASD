@@ -59,6 +59,7 @@ export class SessionFeedbacksService {
     familyId: string,
     userId: string,
     input: CreateSessionFeedbackInput,
+    options: { extractDomains?: boolean } = {},
   ) {
     if (input.rating < 1 || input.rating > 5) {
       throw new ApiException(400, 'FEEDBACK_001', '평가는 1~5 사이여야 합니다');
@@ -96,7 +97,9 @@ export class SessionFeedbacksService {
       include: { schedule: { select: { id: true, title: true } } },
     });
 
-    this.domainExtraction.extractAsync(feedback.id);
+    if (options.extractDomains !== false) {
+      this.domainExtraction.extractAsync(feedback.id);
+    }
 
     return feedback;
   }

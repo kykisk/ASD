@@ -9,3 +9,4 @@ export * from './lib/assessments/index.js';
 export * from './lib/consent/index.js';
 export * from './lib/ai-config/index.js';
 export * from './lib/curriculum/index.js';
+export * from './lib/daily-records/index.js';

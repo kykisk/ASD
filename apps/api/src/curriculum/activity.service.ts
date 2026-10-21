@@ -19,17 +19,30 @@ export class ActivityService {
 
     await this.verifyFamilyMember(curriculum.familyId, userId);
 
-    const activityLog = await this.prisma.activityLog.create({
-      data: {
-        curriculumId: dto.curriculumId,
-        childId: curriculum.childId,
-        activityIndex: dto.activityIndex,
-        activityTitle: dto.activityTitle,
-        result: dto.result,
-        durationMin: dto.durationMin ?? null,
-        notes: dto.notes ?? null,
-      },
+    // 같은 활동을 다시 기록하면 새로 쌓지 않고 결과·메모를 고침
+    const existing = await this.prisma.activityLog.findFirst({
+      where: { curriculumId: dto.curriculumId, activityIndex: dto.activityIndex },
+      orderBy: { loggedAt: 'desc' },
     });
+    const data = {
+      activityTitle: dto.activityTitle,
+      result: dto.result,
+      durationMin: dto.durationMin ?? null,
+      notes: dto.notes ?? null,
+    };
+    const activityLog = existing
+      ? await this.prisma.activityLog.update({
+          where: { id: existing.id },
+          data: { ...data, loggedAt: new Date() },
+        })
+      : await this.prisma.activityLog.create({
+          data: {
+            ...data,
+            curriculumId: dto.curriculumId,
+            childId: curriculum.childId,
+            activityIndex: dto.activityIndex,
+          },
+        });
 
     // Check if all activities are logged → auto-complete curriculum
     const activities = curriculum.activities as unknown as Array<Record<string, unknown>>;
