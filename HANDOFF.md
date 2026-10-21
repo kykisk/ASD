@@ -35,6 +35,10 @@
 
 - 개편 전 기준점: git 태그 **`v1.0-before-redesign`** (`04d1027`) + DB 백업 `backups/milestones/v1.0-before-redesign.sql.gz` (자동 정리 대상 아님)
 - 개편 작업 브랜치: **`redesign/today`** — '오늘' 홈·오늘 하루 기록, PC 오늘 화면, 메뉴 정리(모바일 탭 5 / PC 메인 5 + 더보기, 성장 3탭), 사용 가이드, 화면별 따라하기 투어(driver.js), 첫 사용 안내(/welcome). 사용자 테스트 후 master 로 merge
+- 관리자 정리 브랜치: **`admin/cleanup`** (redesign/today 위) — 메뉴 재구성(운영 현황 · 사용자·가족 · AI · 자동 작업 / 콘텐츠: 논문·질문지·라이선스 / 기록: 감사 로그),
+  AI 사용량(Redis `auticare:ai-cost:<날짜>:model|feature:*`)·연결 실테스트·하루 호출 한도(회), 자동 작업 실행 기록(BatchJob, 주간 배치도 기록) + 지금 실행,
+  임시 비밀번호 발급(`User.mustChangePassword` → 웹/모바일 로그인 직후 `/change-password` 강제), 테스트 계정 삭제(이메일 재입력, `qa-*@example.com` 은 운영 현황에 표시).
+  모니터링의 가짜 카드·가짜 감사 로그/질문지 목록 제거. 예전 주소(/dashboard, /monitoring 등)는 새 주소로 리다이렉트
 - 원칙: DB 변경은 **추가만** (새 컬럼은 nullable/default) → 코드만 되돌려도 기존 버전이 그대로 동작
 - 되돌리기 (코드):
   ```bash
