@@ -23,6 +23,14 @@
   - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com / Admin123!@#) · 모바일 http://localhost:8081
 - Claude Code: 이 서버의 `~/workspace/ASD` 에서 시작 + Remote Control (CLAUDE.md → AGENTS.md 자동 로드)
 
+## 사용 가이드 (앱 안 매뉴얼)
+
+- 모바일: 더보기 › 사용 가이드 (`apps/mobile/app/guide.tsx`), 오늘 화면 하단 링크
+- PC: 사이드바 하단 "사용 가이드" (`/guide`, `apps/web/src/pages/GuidePage.tsx`), 오늘 화면 하단 링크
+- 스크린샷 갱신 (화면이 바뀌면): 데모 계정(오늘 커리큘럼·기록 있는 테스트 가족) 로
+  `GUIDE_EMAIL=... GUIDE_PASSWORD=... node scripts/guide-screenshots.mjs` → `./scripts/restart-mobile.sh`, `./scripts/rebuild-web.sh && ./scripts/restart-fe.sh`
+  (실제 가족 계정으로 찍지 말 것 — 아이 이름이 이미지에 들어감)
+
 ## 개편 작업 형상관리 (2026-10-21~)
 
 - 개편 전 기준점: git 태그 **`v1.0-before-redesign`** (`04d1027`) + DB 백업 `backups/milestones/v1.0-before-redesign.sql.gz` (자동 정리 대상 아님)

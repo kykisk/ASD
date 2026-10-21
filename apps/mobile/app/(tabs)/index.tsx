@@ -217,9 +217,14 @@ export default function TodayScreen() {
         </View>
       ) : null}
 
-      <TouchableOpacity onPress={() => router.push('/dashboard')} style={styles.linkRow}>
-        <Text style={styles.link}>자세한 대시보드 보기</Text>
-      </TouchableOpacity>
+      <View style={styles.linkRow}>
+        <TouchableOpacity onPress={() => router.push('/guide')}>
+          <Text style={styles.link}>처음이세요? 사용 가이드</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/dashboard')}>
+          <Text style={styles.link}>자세한 대시보드 보기</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -308,6 +313,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 21,
   },
-  linkRow: { alignItems: 'center', paddingVertical: spacing.sm },
+  linkRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   link: { fontSize: fontSize.sm, color: colors.primaryDark, textDecorationLine: 'underline' },
 });

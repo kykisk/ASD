@@ -213,9 +213,14 @@ export function TodayPage() {
             </section>
           )}
 
-          <Link to="/dashboard" className="text-sm text-primary-700 underline text-center py-1">
-            자세한 대시보드 보기
-          </Link>
+          <div className="flex justify-center gap-6 py-1">
+            <Link to="/guide" className="text-sm text-primary-700 underline">
+              처음이세요? 사용 가이드
+            </Link>
+            <Link to="/dashboard" className="text-sm text-primary-700 underline">
+              자세한 대시보드 보기
+            </Link>
+          </div>
         </div>
 
         {curriculum && current ? (

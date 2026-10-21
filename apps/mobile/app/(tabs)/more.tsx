@@ -60,6 +60,11 @@ export default function MoreScreen() {
         </TouchableOpacity>
       )}
 
+      <Text style={styles.sectionLabel}>도움말</Text>
+      <View style={styles.section}>
+        <MenuItem label="사용 가이드" icon="📖" onPress={() => router.push('/guide')} />
+      </View>
+
       <Text style={styles.sectionLabel}>치료 도구</Text>
       <View style={styles.section}>
         <MenuItem label="아이 프로필" icon="👤" onPress={() => router.push('/child-profile')} />

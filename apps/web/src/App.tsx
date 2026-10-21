@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { TodayPage } from './pages/TodayPage';
+import { GuidePage } from './pages/GuidePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { FamilyPage } from './pages/FamilyPage';
 import { ChildrenPage } from './pages/ChildrenPage';
@@ -51,6 +52,7 @@ export default function App() {
       >
         <Route index element={<Navigate to="/today" replace />} />
         <Route path="today" element={<TodayPage />} />
+        <Route path="guide" element={<GuidePage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="family" element={<FamilyPage />} />
