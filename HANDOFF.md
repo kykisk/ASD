@@ -23,6 +23,20 @@
   - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com / Admin123!@#) · 모바일 http://localhost:8081
 - Claude Code: 이 서버의 `~/workspace/ASD` 에서 시작 + Remote Control (CLAUDE.md → AGENTS.md 자동 로드)
 
+## 개편 작업 형상관리 (2026-10-21~)
+
+- 개편 전 기준점: git 태그 **`v1.0-before-redesign`** (`04d1027`) + DB 백업 `backups/milestones/v1.0-before-redesign.sql.gz` (자동 정리 대상 아님)
+- 개편 작업 브랜치: **`redesign/today`** (4 '오늘' 홈 · 5 메뉴 정리 · 6 첫 사용 안내). 확인 후 master 로 merge
+- 원칙: DB 변경은 **추가만** (새 컬럼은 nullable/default) → 코드만 되돌려도 기존 버전이 그대로 동작
+- 되돌리기 (코드):
+  ```bash
+  git checkout master            # 또는: git checkout v1.0-before-redesign
+  pnpm nx run api:build --skip-nx-cache && ./scripts/restart-api.sh
+  ./scripts/rebuild-web.sh && ./scripts/restart-fe.sh && ./scripts/restart-mobile.sh
+  ```
+- 되돌리기 (DB, 필요할 때만 — 이후 입력한 데이터는 사라짐):
+  `gunzip -c backups/milestones/v1.0-before-redesign.sql.gz | podman exec -i auticare-postgres psql -U auticare auticare`
+
 ## 외부 접속 (2026-10-20, 가족 테스트용)
 
 | 주소                       | 대상              |
