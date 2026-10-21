@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
   type DailyRecordDomain,
 } from '../hooks/use-daily-record.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
+import { runTour, takePendingTour } from '../lib/tour.js';
 
 const SCORE_COLORS = [colors.score1, colors.score2, colors.score3, colors.score4, colors.score5];
 
@@ -72,6 +73,32 @@ export default function DailyRecordScreen() {
 
   const alreadyScored = !!today?.scores;
 
+  // 따라하기 투어의 마지막 부분
+  useEffect(() => {
+    if (isLoading || !takePendingTour('record')) return;
+    const timer = setTimeout(
+      () =>
+        runTour([
+          {
+            target: 'tour-scores',
+            title: '아이가 오늘 어땠나요?',
+            body: '5가지 영역을 1(힘들었어요)~5(아주 좋았어요)로 눌러요. 모르는 영역은 비워둬도 돼요.',
+          },
+          {
+            target: 'tour-session',
+            title: '수업 · 힘든 행동',
+            body: '센터 수업이 있었거나 힘든 행동이 있었으면 스위치를 켜고 적어요. 다 적으면 저장하기!',
+          },
+          {
+            title: '내일 아침엔 새 활동이 준비돼요 🌱',
+            body: '오늘 기록을 보고 AI가 쉽게 또는 한 단계 높여 활동을 바꿔요. 다시 보고 싶으면 오늘 화면의 "도움말"을 눌러주세요.',
+          },
+        ]),
+      500,
+    );
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   const handleSave = async () => {
     if (!selectedChildId) return;
     if (sessionOn && !sessionType) {
@@ -120,7 +147,7 @@ export default function DailyRecordScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
+        <View style={styles.card} nativeID="tour-scores">
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>오늘 아이는 어땠나요?</Text>
             {!alreadyScored && <Text style={styles.hint}>1 힘들었어요 · 5 아주 좋았어요</Text>}
@@ -191,7 +218,7 @@ export default function DailyRecordScreen() {
           />
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.card} nativeID="tour-session">
           <View style={styles.toggleRow}>
             <Text style={styles.cardTitle}>오늘 센터 수업이 있었나요?</Text>
             <Switch

@@ -45,7 +45,10 @@ export function ActivityDetailPanel({ curriculumId, activity, index, total, log,
   const memoChanged = !!log && memo.trim() !== (log.notes ?? '');
 
   return (
-    <section className="bg-white rounded-2xl border border-neutral-200 flex flex-col min-h-[520px]">
+    <section
+      data-tour="activity-detail"
+      className="bg-white rounded-2xl border border-neutral-200 flex flex-col min-h-[520px]"
+    >
       <div className="p-6 lg:p-7 flex flex-col gap-4 flex-1">
         <div className="flex items-center justify-between">
           <div className="flex gap-1.5">
@@ -95,7 +98,10 @@ export function ActivityDetailPanel({ curriculumId, activity, index, total, log,
         </div>
       </div>
 
-      <div className="border-t border-neutral-200 px-6 lg:px-7 py-4 flex flex-wrap items-center gap-2.5">
+      <div
+        data-tour="activity-results"
+        className="border-t border-neutral-200 px-6 lg:px-7 py-4 flex flex-wrap items-center gap-2.5"
+      >
         <span className="text-sm font-bold text-neutral-800 mr-1">어땠나요?</span>
         {RESULT_OPTIONS.map((opt) => {
           const active = log?.result === opt.result;

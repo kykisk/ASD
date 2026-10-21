@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useChildStore } from '../../stores/child.store.js';
 import {
   useTodayCurriculum,
@@ -22,6 +22,7 @@ import { useWeeklyInsight } from '../../hooks/use-dashboard.js';
 import { ChildSwitcherButton } from '../../components/ChildSwitcher.js';
 import { colors, spacing, borderRadius, fontSize } from '../../constants/theme.js';
 import type { ActivityLog } from '../../types/api.types.js';
+import { hasSeenTour, runTour, takePendingTour, tourSupported } from '../../lib/tour.js';
 
 const DOMAIN_LABELS: Record<string, string> = {
   DAILY_LIVING: '일상생활',
@@ -65,6 +66,69 @@ export default function TodayScreen() {
   const { data: record, refetch: refetchRecord } = useDailyRecord(selectedChildId);
   const { data: insight } = useWeeklyInsight(selectedChildId);
   const generateMutation = useGenerateCurriculum();
+  const hasActivities = (curriculum?.activities.length ?? 0) > 0;
+
+  const startTour = useCallback(() => {
+    if (!tourSupported) {
+      router.push('/guide');
+      return;
+    }
+    runTour(
+      hasActivities
+        ? [
+            {
+              target: 'tour-activities',
+              title: '오늘 집에서 할 활동',
+              body: 'AI가 아이 정보와 지난 기록을 보고 매일 아침 만들어 둔 활동이에요.',
+            },
+            {
+              target: 'tour-activity-0',
+              title: '활동 하나를 눌러보세요 👆',
+              body: '누르면 하는 방법이 나와요.',
+              next: 'activity',
+            },
+          ]
+        : [
+            {
+              target: 'tour-activities',
+              title: '오늘 집에서 할 활동',
+              body: '"오늘 활동 만들기"를 누르면 30초 정도 뒤에 활동이 만들어져요. 만든 뒤 도움말을 다시 누르면 기록하는 방법까지 알려드려요.',
+            },
+            {
+              target: 'tour-record',
+              title: '저녁엔 오늘 하루 기록',
+              body: '아이 상태, 있었던 일, 센터 수업 내용을 한 번에 적어요.',
+            },
+          ],
+    );
+  }, [hasActivities, router]);
+
+  // 처음 들어온 사람에게 한 번 자동으로 보여줌 (활동이 준비된 뒤)
+  useEffect(() => {
+    if (!tourSupported || !hasActivities || hasSeenTour()) return;
+    const timer = setTimeout(startTour, 800);
+    return () => clearTimeout(timer);
+  }, [hasActivities, startTour]);
+
+  // 활동 화면에서 투어를 마치고 돌아오면 기록 버튼 안내를 이어감
+  useFocusEffect(
+    useCallback(() => {
+      if (!takePendingTour('today-record')) return;
+      const timer = setTimeout(
+        () =>
+          runTour([
+            {
+              target: 'tour-record',
+              title: '저녁엔 오늘 하루 기록을 해요',
+              body: '눌러보세요 👆',
+              next: 'record',
+            },
+          ]),
+        500,
+      );
+      return () => clearTimeout(timer);
+    }, []),
+  );
 
   const onRefresh = useCallback(async () => {
     await Promise.all([refetchCurriculum(), refetchLogs(), refetchRecord()]);
@@ -115,10 +179,21 @@ export default function TodayScreen() {
           <Text style={styles.date}>{todayLabel()}</Text>
           <Text style={styles.greeting}>오늘도 함께해요</Text>
         </View>
-        <ChildSwitcherButton />
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.helpBtn}
+            onPress={startTour}
+            accessibilityRole="button"
+            accessibilityLabel="도움말"
+          >
+            <Text style={styles.helpIcon}>?</Text>
+            <Text style={styles.helpText}>도움말</Text>
+          </TouchableOpacity>
+          <ChildSwitcherButton />
+        </View>
       </View>
 
-      <View style={styles.card}>
+      <View style={styles.card} nativeID="tour-activities">
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>오늘 집에서 할 활동</Text>
           {activities.length > 0 && (
@@ -157,54 +232,57 @@ export default function TodayScreen() {
             {activities.map((activity, i) => {
               const log = logByIndex.get(i);
               return (
-                <TouchableOpacity
-                  key={i}
-                  style={styles.activityRow}
-                  onPress={() =>
-                    router.push({ pathname: '/activity', params: { index: String(i) } })
-                  }
-                  accessibilityRole="button"
-                >
-                  <View
-                    style={[
-                      styles.dot,
-                      log ? { backgroundColor: RESULT_DOT[log.result], borderWidth: 0 } : null,
-                    ]}
+                <View key={i} nativeID={i === 0 ? 'tour-activity-0' : undefined}>
+                  <TouchableOpacity
+                    style={styles.activityRow}
+                    onPress={() =>
+                      router.push({ pathname: '/activity', params: { index: String(i) } })
+                    }
+                    accessibilityRole="button"
                   >
-                    {log?.result === 'SUCCESS' && <Text style={styles.dotCheck}>✓</Text>}
-                  </View>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={[styles.activityTitle, log && styles.activityTitleDone]}>
-                      {activity.title}
-                    </Text>
-                    <Text style={styles.activityMeta}>
-                      {DOMAIN_LABELS[activity.domain.toUpperCase()] ?? activity.domain} ·{' '}
-                      {activity.durationMin}분{log ? ` · ${RESULT_LABELS[log.result]}` : ''}
-                    </Text>
-                  </View>
-                  <Text style={styles.chevron}>›</Text>
-                </TouchableOpacity>
+                    <View
+                      style={[
+                        styles.dot,
+                        log ? { backgroundColor: RESULT_DOT[log.result], borderWidth: 0 } : null,
+                      ]}
+                    >
+                      {log?.result === 'SUCCESS' && <Text style={styles.dotCheck}>✓</Text>}
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={[styles.activityTitle, log && styles.activityTitleDone]}>
+                        {activity.title}
+                      </Text>
+                      <Text style={styles.activityMeta}>
+                        {DOMAIN_LABELS[activity.domain.toUpperCase()] ?? activity.domain} ·{' '}
+                        {activity.durationMin}분{log ? ` · ${RESULT_LABELS[log.result]}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                  </TouchableOpacity>
+                </View>
               );
             })}
           </>
         )}
       </View>
 
-      <TouchableOpacity
-        style={[styles.recordCta, recorded && styles.recordCtaDone]}
-        onPress={() => router.push('/daily-record')}
-        accessibilityRole="button"
-      >
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[styles.recordTitle, recorded && styles.recordTitleDone]}>
-            {recorded ? '오늘 기록 완료' : '오늘 하루 기록하기'}
-          </Text>
-          <Text style={[styles.recordSub, recorded && styles.recordSubDone]}>
-            {recorded ? '더 적을 일이 있으면 눌러주세요' : '1분이면 돼요 · 수업 피드백도 여기서'}
-          </Text>
-        </View>
-        <Text style={[styles.chevron, !recorded && { color: '#FFFFFF' }]}>›</Text>
-      </TouchableOpacity>
+      <View nativeID="tour-record">
+        <TouchableOpacity
+          style={[styles.recordCta, recorded && styles.recordCtaDone]}
+          onPress={() => router.push('/daily-record')}
+          accessibilityRole="button"
+        >
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[styles.recordTitle, recorded && styles.recordTitleDone]}>
+              {recorded ? '오늘 기록 완료' : '오늘 하루 기록하기'}
+            </Text>
+            <Text style={[styles.recordSub, recorded && styles.recordSubDone]}>
+              {recorded ? '더 적을 일이 있으면 눌러주세요' : '1분이면 돼요 · 수업 피드백도 여기서'}
+            </Text>
+          </View>
+          <Text style={[styles.chevron, !recorded && { color: '#FFFFFF' }]}>›</Text>
+        </TouchableOpacity>
+      </View>
 
       {insight?.summary ? (
         <View style={styles.card}>
@@ -234,6 +312,31 @@ const styles = StyleSheet.create({
   content: { padding: spacing.md, gap: 14, paddingBottom: spacing.xl },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   date: { fontSize: 13, color: colors.textSecondary },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  helpBtn: {
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  helpIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primaryLight,
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 18,
+    overflow: 'hidden',
+  },
+  helpText: { fontSize: 13, color: colors.text },
   greeting: { fontSize: 22, fontWeight: '700', color: colors.text },
   card: {
     backgroundColor: colors.card,

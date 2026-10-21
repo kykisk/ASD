@@ -15,6 +15,7 @@ import { useChildStore } from '../stores/child.store.js';
 import { useTodayCurriculum, useActivityLogs, useLogActivity } from '../hooks/use-curricula.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 import type { LogActivityInput } from '../types/api.types.js';
+import { runTour, setPendingTour, takePendingTour } from '../lib/tour.js';
 
 type ActivityResult = LogActivityInput['result'];
 
@@ -54,6 +55,41 @@ export default function ActivityScreen() {
   useEffect(() => {
     setMemo(saved?.notes ?? '');
   }, [saved?.id, saved?.notes]);
+
+  // 오늘 화면의 따라하기 투어에서 넘어왔으면 이어서 안내
+  const ready = !isLoading && !!curriculum;
+  useEffect(() => {
+    if (!ready || !takePendingTour('activity')) return;
+    const timer = setTimeout(
+      () =>
+        runTour(
+          [
+            {
+              target: 'tour-steps',
+              title: '하는 방법',
+              body: '준비물과 단계, "이러면 성공이에요"를 보고 아이와 따라 해보세요.',
+            },
+            {
+              target: 'tour-results',
+              title: '해본 뒤 결과를 눌러요',
+              body: '잘했어요 · 조금 했어요 · 못 했어요 중 하나를 누르면 바로 저장돼요. 한 줄 메모를 남기면 AI가 다음 활동을 만들 때 참고해요.',
+            },
+            {
+              title: '이제 오늘 하루 기록을 볼까요?',
+              body: '확인을 누르면 오늘 화면으로 돌아가요.',
+            },
+          ],
+          {
+            onComplete: () => {
+              setPendingTour('today-record');
+              router.back();
+            },
+          },
+        ),
+      500,
+    );
+    return () => clearTimeout(timer);
+  }, [ready, router]);
 
   if (isLoading) {
     return (
@@ -117,7 +153,7 @@ export default function ActivityScreen() {
           </View>
         )}
 
-        <View style={styles.card}>
+        <View style={styles.card} nativeID="tour-steps">
           <Text style={styles.cardLabel}>이렇게 해요</Text>
           {activity.steps.map((step, i) => (
             <View key={i} style={styles.step}>
@@ -135,7 +171,7 @@ export default function ActivityScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={styles.footer} nativeID="tour-results">
         <Text style={styles.footerTitle}>어땠나요?</Text>
         <View style={styles.results}>
           {RESULT_OPTIONS.map((opt) => {

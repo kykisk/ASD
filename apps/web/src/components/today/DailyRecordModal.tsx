@@ -143,7 +143,7 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto px-7 py-5 flex flex-col gap-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-2.5">
+            <div data-tour="record-scores" className="flex flex-col gap-2.5">
               <div className="flex justify-between items-baseline">
                 <h3 className="text-[15px] font-bold text-neutral-800">오늘 아이는 어땠나요?</h3>
                 {!alreadyScored && (
@@ -215,84 +215,88 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
             </label>
           </div>
 
-          <div className="border border-neutral-200 rounded-2xl px-[18px] py-4 flex flex-col gap-3">
-            <div className="flex justify-between items-center">
-              <h3 className="text-[15px] font-bold text-neutral-800">오늘 센터 수업이 있었나요?</h3>
-              <Toggle checked={sessionOn} onChange={setSessionOn} label="오늘 센터 수업 여부" />
-            </div>
-            {sessionOn && (
-              <>
-                <div className="flex flex-wrap gap-1.5">
-                  {DAILY_SESSION_TYPES.map((t) => (
-                    <Chip
-                      key={t}
-                      label={sessionTypeLabel(t)}
-                      active={sessionType === t}
-                      onClick={() => setSessionType(t)}
+          <div data-tour="record-extra" className="flex flex-col gap-4">
+            <div className="border border-neutral-200 rounded-2xl px-[18px] py-4 flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-[15px] font-bold text-neutral-800">
+                  오늘 센터 수업이 있었나요?
+                </h3>
+                <Toggle checked={sessionOn} onChange={setSessionOn} label="오늘 센터 수업 여부" />
+              </div>
+              {sessionOn && (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DAILY_SESSION_TYPES.map((t) => (
+                      <Chip
+                        key={t}
+                        label={sessionTypeLabel(t)}
+                        active={sessionType === t}
+                        onClick={() => setSessionType(t)}
+                      />
+                    ))}
+                  </div>
+                  <label className="flex flex-col gap-1.5 text-[13px] text-neutral-600">
+                    선생님이 해주신 말씀
+                    <input
+                      type="text"
+                      value={therapistFeedback}
+                      onChange={(e) => setTherapistFeedback(e.target.value)}
+                      maxLength={1000}
+                      placeholder="예: 요구하기 2번 성공, 집에서 '더' 연습"
+                      className="h-10 rounded-xl border border-neutral-200 bg-[#FDFBF7] px-3 text-sm text-neutral-800 placeholder:text-neutral-500"
                     />
-                  ))}
-                </div>
-                <label className="flex flex-col gap-1.5 text-[13px] text-neutral-600">
-                  선생님이 해주신 말씀
+                  </label>
+                </>
+              )}
+            </div>
+
+            <div className="border border-neutral-200 rounded-2xl px-[18px] py-4 flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-[15px] font-bold text-neutral-800">힘든 행동이 있었나요?</h3>
+                <Toggle checked={behaviorOn} onChange={setBehaviorOn} label="힘든 행동 여부" />
+              </div>
+              {behaviorOn && (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {BEHAVIOR_TAGS.map((tag) => (
+                      <Chip
+                        key={tag}
+                        label={tag}
+                        active={behaviorTags.includes(tag)}
+                        onClick={() =>
+                          setBehaviorTags((prev) =>
+                            prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 text-[13px] text-neutral-600">
+                    얼마나 힘들었나요? (1 조금 · 5 매우)
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Chip
+                        key={n}
+                        label={String(n)}
+                        active={severity === n}
+                        onClick={() => setSeverity(n)}
+                      />
+                    ))}
+                  </div>
+                  <label className="sr-only" htmlFor="behavior-content">
+                    어떤 일이 있었나요
+                  </label>
                   <input
+                    id="behavior-content"
                     type="text"
-                    value={therapistFeedback}
-                    onChange={(e) => setTherapistFeedback(e.target.value)}
+                    value={behaviorContent}
+                    onChange={(e) => setBehaviorContent(e.target.value)}
                     maxLength={1000}
-                    placeholder="예: 요구하기 2번 성공, 집에서 '더' 연습"
+                    placeholder="예: 마트에서 20분 울었어요. 안아주니 진정했어요"
                     className="h-10 rounded-xl border border-neutral-200 bg-[#FDFBF7] px-3 text-sm text-neutral-800 placeholder:text-neutral-500"
                   />
-                </label>
-              </>
-            )}
-          </div>
-
-          <div className="border border-neutral-200 rounded-2xl px-[18px] py-4 flex flex-col gap-3">
-            <div className="flex justify-between items-center">
-              <h3 className="text-[15px] font-bold text-neutral-800">힘든 행동이 있었나요?</h3>
-              <Toggle checked={behaviorOn} onChange={setBehaviorOn} label="힘든 행동 여부" />
+                </>
+              )}
             </div>
-            {behaviorOn && (
-              <>
-                <div className="flex flex-wrap gap-1.5">
-                  {BEHAVIOR_TAGS.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      active={behaviorTags.includes(tag)}
-                      onClick={() =>
-                        setBehaviorTags((prev) =>
-                          prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-                        )
-                      }
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 text-[13px] text-neutral-600">
-                  얼마나 힘들었나요? (1 조금 · 5 매우)
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Chip
-                      key={n}
-                      label={String(n)}
-                      active={severity === n}
-                      onClick={() => setSeverity(n)}
-                    />
-                  ))}
-                </div>
-                <label className="sr-only" htmlFor="behavior-content">
-                  어떤 일이 있었나요
-                </label>
-                <input
-                  id="behavior-content"
-                  type="text"
-                  value={behaviorContent}
-                  onChange={(e) => setBehaviorContent(e.target.value)}
-                  maxLength={1000}
-                  placeholder="예: 마트에서 20분 울었어요. 안아주니 진정했어요"
-                  className="h-10 rounded-xl border border-neutral-200 bg-[#FDFBF7] px-3 text-sm text-neutral-800 placeholder:text-neutral-500"
-                />
-              </>
-            )}
           </div>
         </div>
 

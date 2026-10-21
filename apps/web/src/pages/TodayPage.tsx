@@ -12,6 +12,7 @@ import { useWeeklyInsight } from '../hooks/use-insights';
 import { useDashboard } from '../hooks/use-dashboard';
 import { ActivityDetailPanel } from '../components/today/ActivityDetailPanel';
 import { DailyRecordModal } from '../components/today/DailyRecordModal';
+import { hasSeenTodayTour, startTodayTour } from '../components/today/today-tour';
 import type { ActivityResult } from '../types/curriculum';
 import { DOMAIN_LABELS } from '../types/curriculum';
 
@@ -54,6 +55,14 @@ export function TodayPage() {
     // 커리큘럼이 바뀔 때만 다시 고름
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [curriculum?.id, logs === undefined]);
+
+  // 처음 들어온 사람에게 한 번 따라하기 투어를 보여줌 (활동이 준비된 뒤)
+  useEffect(() => {
+    if (isLoading || activities.length === 0 || hasSeenTodayTour()) return;
+    const timer = window.setTimeout(() => startTodayTour({ hasActivities: true }), 600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, activities.length]);
 
   async function handleGenerate() {
     if (!selectedChildId) return;
@@ -98,16 +107,34 @@ export function TodayPage() {
           <p className="text-sm text-neutral-500">{dateLabel}</p>
           <h1 className="text-[26px] font-bold text-neutral-800">오늘도 함께해요</h1>
         </div>
-        {schedules.length > 0 && (
-          <p className="text-sm text-neutral-600">
-            오늘 일정 · {schedules.map((s) => `${s.time} ${s.title}`).join(' · ')}
-          </p>
-        )}
+        <div className="flex items-center gap-4">
+          {schedules.length > 0 && (
+            <p className="text-sm text-neutral-600">
+              오늘 일정 · {schedules.map((s) => `${s.time} ${s.title}`).join(' · ')}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => startTodayTour({ hasActivities: activities.length > 0 })}
+            className="h-10 px-4 rounded-full border border-neutral-200 bg-white text-sm font-medium text-neutral-700 hover:border-primary-300 hover:text-primary-700 flex items-center gap-1.5"
+          >
+            <span
+              className="w-5 h-5 rounded-full bg-primary-50 text-primary-700 text-xs font-bold flex items-center justify-center"
+              aria-hidden="true"
+            >
+              ?
+            </span>
+            도움말
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[440px_minmax(0,1fr)] gap-5 items-start">
         <div className="flex flex-col gap-3.5">
-          <section className="bg-white rounded-2xl border border-neutral-200 p-[18px] flex flex-col gap-1">
+          <section
+            data-tour="today-activities"
+            className="bg-white rounded-2xl border border-neutral-200 p-[18px] flex flex-col gap-1"
+          >
             <div className="flex justify-between items-baseline pb-2">
               <h2 className="text-[17px] font-bold text-neutral-800">오늘 집에서 할 활동</h2>
               {activities.length > 0 && (
@@ -147,6 +174,7 @@ export function TodayPage() {
                     <button
                       key={i}
                       type="button"
+                      data-tour="activity-item"
                       onClick={() => setSelected(i)}
                       aria-current={active}
                       className={`flex items-center gap-3 p-2.5 rounded-xl text-left transition-colors ${
@@ -183,6 +211,7 @@ export function TodayPage() {
 
           <button
             type="button"
+            data-tour="record-button"
             onClick={() => setRecordOpen(true)}
             className={`rounded-2xl px-[18px] py-4 text-left flex flex-col gap-0.5 ${
               recorded

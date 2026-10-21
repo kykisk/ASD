@@ -1,0 +1,39 @@
+/* 따라하기 투어 말풍선: 앱 색상·글꼴에 맞춤 */
+.driver-popover.auticare-tour {
+  border-radius: 16px;
+  padding: 18px 20px;
+  max-width: 320px;
+  color: #2c3e50;
+  font-family: inherit;
+}
+
+.driver-popover.auticare-tour .driver-popover-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.driver-popover.auticare-tour .driver-popover-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #2c3e50;
+}
+
+.driver-popover.auticare-tour .driver-popover-progress-text {
+  color: #6b7b8d;
+}
+
+.driver-popover.auticare-tour .driver-popover-navigation-btns button {
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  text-shadow: none;
+  border: 1px solid #e8e4df;
+  background: #ffffff;
+  color: #2c3e50;
+}
+
+.driver-popover.auticare-tour .driver-popover-next-btn {
+  background: #3d6b54 !important;
+  border-color: #3d6b54 !important;
+  color: #ffffff !important;
+}

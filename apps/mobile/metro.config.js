@@ -37,6 +37,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     const originDir = path.dirname(context.originModulePath);
     const tsPath = path.resolve(originDir, tsName);
     const tsxPath = path.resolve(originDir, tsxName);
+    // 플랫폼별 파일(foo.web.ts 등)이 있으면 우선 사용
+    if (platform) {
+      for (const ext of ['.ts', '.tsx']) {
+        const platformName = `${moduleName.slice(0, -3)}.${platform}${ext}`;
+        if (fs.existsSync(path.resolve(originDir, platformName))) {
+          return context.resolveRequest(context, platformName, platform);
+        }
+      }
+    }
 
     if (fs.existsSync(tsPath)) {
       return context.resolveRequest(context, tsName, platform);
