@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaService } from '@auticare/prisma-client';
 import { FeedbackDigestService } from './feedback-digest.service.js';
+import { recordBatchJob } from '../common/batch/record-batch-job.js';
 import * as cron from 'node-cron';
 
 @Injectable()
@@ -14,13 +15,17 @@ export class FeedbackDigestBatchService implements OnModuleInit, OnModuleDestroy
   ) {}
 
   onModuleInit() {
-    this.task = cron.schedule('0 21 * * 0', () => {
-      this.runWeeklyBatch().catch((err) => {
-        this.logger.error(
-          `FeedbackDigest batch error: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      });
-    });
+    this.task = cron.schedule(
+      '0 21 * * 0',
+      () => {
+        this.runWeeklyBatch().catch((err) => {
+          this.logger.error(
+            `FeedbackDigest batch error: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        });
+      },
+      { timezone: 'Asia/Seoul' },
+    );
     this.logger.log('FeedbackDigest weekly batch scheduled (Sun 21:00)');
   }
 
@@ -29,6 +34,10 @@ export class FeedbackDigestBatchService implements OnModuleInit, OnModuleDestroy
   }
 
   async runWeeklyBatch(): Promise<void> {
+    await recordBatchJob(this.prisma, 'FEEDBACK_DIGEST', () => this.generateAll());
+  }
+
+  private async generateAll() {
     this.logger.log('FeedbackDigest weekly batch started');
 
     const children = await this.prisma.child.findMany({
@@ -50,5 +59,7 @@ export class FeedbackDigestBatchService implements OnModuleInit, OnModuleDestroy
     this.logger.log(
       `FeedbackDigest batch done — generated: ${generated}, skipped: ${skipped}, errors: ${errors}`,
     );
+    // 기록이 3건 미만이라 건너뛴 아이도 정상 처리로 봄
+    return { total: children.length, processed: generated + skipped, failed: errors };
   }
 }

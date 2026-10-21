@@ -30,6 +30,8 @@ model User {
   twoFactorSecret  String?
   phone            String?
   lastLoginAt      DateTime?
+  /// 관리자가 임시 비밀번호를 발급하면 true → 로그인 후 새 비밀번호로 바꿔야 함
+  mustChangePassword Boolean @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

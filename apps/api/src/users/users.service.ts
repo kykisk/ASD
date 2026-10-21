@@ -10,6 +10,7 @@ const USER_SELECT = {
   role: true,
   phone: true,
   lastLoginAt: true,
+  mustChangePassword: true,
   createdAt: true,
 } as const;
 
@@ -22,8 +23,7 @@ export class UsersService {
       where: { id: userId },
       select: USER_SELECT,
     });
-    if (!user)
-      throw new ApiException(404, 'USER_404', '사용자를 찾을 수 없습니다');
+    if (!user) throw new ApiException(404, 'USER_404', '사용자를 찾을 수 없습니다');
     return user;
   }
 

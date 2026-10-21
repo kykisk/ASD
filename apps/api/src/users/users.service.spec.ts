@@ -16,10 +16,7 @@ describe('UsersService', () => {
     vi.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UsersService,
-        { provide: 'PrismaService', useValue: mockPrismaService },
-      ],
+      providers: [UsersService, { provide: 'PrismaService', useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
@@ -52,6 +49,7 @@ describe('UsersService', () => {
           role: true,
           phone: true,
           lastLoginAt: true,
+          mustChangePassword: true,
           createdAt: true,
         },
       });
@@ -60,9 +58,7 @@ describe('UsersService', () => {
     it('should throw USER_404 for non-existent user', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getProfile('non-existent')).rejects.toThrow(
-        ApiException,
-      );
+      await expect(service.getProfile('non-existent')).rejects.toThrow(ApiException);
       await expect(service.getProfile('non-existent')).rejects.toMatchObject({
         statusCode: 404,
         code: 'USER_404',
@@ -100,6 +96,7 @@ describe('UsersService', () => {
           role: true,
           phone: true,
           lastLoginAt: true,
+          mustChangePassword: true,
           createdAt: true,
         },
       });

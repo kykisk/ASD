@@ -94,6 +94,7 @@ describe('AuthService - OAuth', () => {
         name: '김구글',
         role: 'FAMILY_ADMIN',
         familyId: null,
+        mustChangePassword: false,
       });
       expect(mockPrismaService.oAuthAccount.create).not.toHaveBeenCalled();
     });

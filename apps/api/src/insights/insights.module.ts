@@ -10,6 +10,6 @@ import { InsightsBatchService } from './insights-batch.service.js';
   imports: [AiModule, AssessmentsModule, NotificationsModule],
   controllers: [InsightsController],
   providers: [InsightsService, InsightsBatchService],
-  exports: [InsightsService],
+  exports: [InsightsService, InsightsBatchService],
 })
 export class InsightsModule {}

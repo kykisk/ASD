@@ -88,7 +88,12 @@ export class InsightsService {
     return results;
   }
 
-  async generateWeeklyBatch(): Promise<void> {
+  async generateWeeklyBatch(): Promise<{
+    total: number;
+    processed: number;
+    failed: number;
+    errors: string[];
+  }> {
     const activeMembers = await this.prisma.familyMember.findMany({
       where: { user: { isActive: true } },
       select: { userId: true, familyId: true },
@@ -102,21 +107,30 @@ export class InsightsService {
     });
 
     const weekKey = this.getCurrentWeekKey();
+    let processed = 0;
+    const errors: string[] = [];
 
     for (const child of children) {
       try {
         const cacheKey = `insight:${child.id}:${weekKey}`;
         const existing = await this.cacheService.get<InsightRecord>(cacheKey);
-        if (existing) continue;
+        if (existing) {
+          processed++;
+          continue;
+        }
 
         const insight = await this.generateInsight(child.id, weekKey);
         await this.cacheService.set(cacheKey, insight, 86400 * 7); // 7 days for batch
+        processed++;
         this.logger.log(`Generated weekly insight for child ${child.id}`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`${child.id}: ${msg}`);
         this.logger.warn(`Failed insight generation for child ${child.id}: ${msg}`);
       }
     }
+
+    return { total: children.length, processed, failed: errors.length, errors };
   }
 
   private async generateInsight(childId: string, weekKey: string): Promise<InsightRecord> {

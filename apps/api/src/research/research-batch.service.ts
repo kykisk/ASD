@@ -10,11 +10,15 @@ export class ResearchBatchService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly researchService: ResearchService) {}
 
   onModuleInit() {
-    this.task = cron.schedule('0 8 * * 1', () => {
-      this.runWeeklyBatch().catch((err) => {
-        this.logger.error('Weekly research collection failed:', err);
-      });
-    });
+    this.task = cron.schedule(
+      '0 8 * * 1',
+      () => {
+        this.runWeeklyBatch().catch((err) => {
+          this.logger.error('Weekly research collection failed:', err);
+        });
+      },
+      { timezone: 'Asia/Seoul' },
+    );
   }
 
   onModuleDestroy() {

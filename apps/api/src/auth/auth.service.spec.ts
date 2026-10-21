@@ -87,6 +87,7 @@ describe('AuthService', () => {
         name: '홍길동',
         role: 'FAMILY_ADMIN',
         familyId: null,
+        mustChangePassword: false,
       });
 
       const createCall = mockPrismaService.user.create.mock.calls[0][0];

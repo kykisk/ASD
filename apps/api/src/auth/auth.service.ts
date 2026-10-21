@@ -243,7 +243,10 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: false },
+    });
     await this.logoutAll(userId, accessToken);
   }
 
@@ -329,6 +332,7 @@ export class AuthService {
     email: string;
     name: string;
     role: string;
+    mustChangePassword?: boolean;
   }): AuthUser {
     return {
       id: user.id,
@@ -336,6 +340,7 @@ export class AuthService {
       name: user.name,
       role: user.role as AuthUser['role'],
       familyId: null,
+      mustChangePassword: user.mustChangePassword ?? false,
     };
   }
 }

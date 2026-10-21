@@ -6,6 +6,8 @@ export const authUserSchema = z.object({
   name: z.string(),
   role: z.enum(['SYSTEM_ADMIN', 'FAMILY_ADMIN', 'FAMILY_MEMBER', 'THERAPIST']),
   familyId: z.string().nullable(),
+  /** 임시 비밀번호로 로그인했으면 true — 앱이 비밀번호 변경 화면으로 보냄 */
+  mustChangePassword: z.boolean().optional(),
 });
 
 export const authResponseSchema = z.object({

@@ -131,4 +131,104 @@ export class AdminService {
       },
     });
   }
+
+  /** 감사 로그: 최신순, 리소스·작업 필터 */
+  async listAuditLogs(params: {
+    resource?: string;
+    action?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const limit = Math.min(params.limit ?? 50, 200);
+    const page = Math.max(params.page ?? 1, 1);
+    const where: Record<string, unknown> = {};
+    if (params.resource) where['resource'] = params.resource;
+    if (params.action) where['action'] = params.action;
+    const [rows, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { user: { select: { email: true, name: true } } },
+      }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        createdAt: r.createdAt,
+        action: r.action,
+        resource: r.resource,
+        resourceId: r.resourceId,
+        userEmail: r.user?.email ?? null,
+        userName: r.user?.name ?? null,
+        ipAddress: r.ipAddress,
+      })),
+      meta: { page, limit, total },
+    };
+  }
+
+  /** 질문지: 모든 가족의 질문지 (시스템이 만든 '일일 발달 체크', 'AI 발달 추출' 포함) */
+  async listQuestionnaires() {
+    const rows = await this.prisma.questionnaire.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        family: { select: { name: true } },
+        _count: { select: { items: true, assessments: true } },
+      },
+    });
+    return rows.map((q) => ({
+      id: q.id,
+      name: q.name,
+      type: q.type,
+      licensedTool: q.licensedTool,
+      familyName: q.family.name,
+      isActive: q.isActive,
+      itemCount: q._count.items,
+      assessmentCount: q._count.assessments,
+      createdAt: q.createdAt,
+    }));
+  }
+
+  async getQuestionnaireItems(id: string) {
+    return this.prisma.questionnaireItem.findMany({
+      where: { questionnaireId: id },
+      orderBy: { orderIndex: 'asc' },
+      select: { id: true, domain: true, text: true, orderIndex: true },
+    });
+  }
+
+  async setQuestionnaireActive(id: string, isActive: boolean) {
+    return this.prisma.questionnaire.update({
+      where: { id },
+      data: { isActive },
+      select: { id: true, isActive: true },
+    });
+  }
+
+  /** 논문: 요약 상태와 몇 가족에게 추천됐는지 */
+  async listResearchArticles(params: { missingSummaryOnly?: boolean; limit?: number }) {
+    const rows = await this.prisma.researchArticle.findMany({
+      where: params.missingSummaryOnly ? { koreanSummary: null } : undefined,
+      orderBy: { fetchedAt: 'desc' },
+      take: Math.min(params.limit ?? 100, 300),
+      include: { _count: { select: { userMatches: true } } },
+    });
+    const missing = await this.prisma.researchArticle.count({ where: { koreanSummary: null } });
+    return {
+      missingSummaries: missing,
+      data: rows.map((a) => ({
+        id: a.id,
+        pubmedId: a.pubmedId,
+        title: a.title,
+        journal: a.journal,
+        publishedAt: a.publishedAt,
+        fetchedAt: a.fetchedAt,
+        hasSummary: !!a.koreanSummary,
+        koreanSummary: a.koreanSummary,
+        matchedFamilies: a._count.userMatches,
+      })),
+    };
+  }
 }
