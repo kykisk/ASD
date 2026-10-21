@@ -330,7 +330,7 @@ ${recentLines.join('\n')}
   }
 
   private getTrendIcon(direction: string): string {
-    switch (direction) {
+    switch (direction.toLowerCase()) {
       case 'up':
         return '↑';
       case 'down':

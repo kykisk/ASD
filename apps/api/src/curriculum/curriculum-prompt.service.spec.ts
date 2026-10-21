@@ -53,6 +53,24 @@ describe('CurriculumPromptService', () => {
       expect(userContent).toContain('↓');
     });
 
+    it('should show trend arrows for the UP/DOWN values TrendService emits', () => {
+      const messages = service.buildCurriculumPrompt({
+        ...baseParams,
+        domainScores: [
+          {
+            domain: 'COMMUNICATION',
+            label: '의사소통',
+            currentScore: 3.5,
+            trend: { direction: 'UP' },
+          },
+          { domain: 'SOCIAL', label: '사회성', currentScore: 2.8, trend: { direction: 'DOWN' } },
+        ],
+      });
+      const content = messages[1].content;
+      expect(content).toMatch(/의사소통.*↑/);
+      expect(content).toMatch(/사회성.*↓/);
+    });
+
     it('should include JSON format instructions', () => {
       const messages = service.buildCurriculumPrompt(baseParams);
       const userContent = messages[1].content;

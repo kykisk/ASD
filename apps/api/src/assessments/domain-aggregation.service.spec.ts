@@ -97,14 +97,46 @@ describe('DomainAggregationService', () => {
       ]);
 
       const assessments = [
-        { id: 'a-1', createdAt: new Date('2024-01-08'), scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }] },
-        { id: 'a-2', createdAt: new Date('2024-01-07'), scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }] },
-        { id: 'a-3', createdAt: new Date('2024-01-06'), scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }] },
-        { id: 'a-4', createdAt: new Date('2024-01-05'), scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }] },
-        { id: 'a-5', createdAt: new Date('2024-01-04'), scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }] },
-        { id: 'a-6', createdAt: new Date('2024-01-03'), scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }] },
-        { id: 'a-7', createdAt: new Date('2024-01-02'), scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }] },
-        { id: 'a-8', createdAt: new Date('2024-01-01'), scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }] },
+        {
+          id: 'a-1',
+          createdAt: new Date('2024-01-08'),
+          scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }],
+        },
+        {
+          id: 'a-2',
+          createdAt: new Date('2024-01-07'),
+          scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }],
+        },
+        {
+          id: 'a-3',
+          createdAt: new Date('2024-01-06'),
+          scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }],
+        },
+        {
+          id: 'a-4',
+          createdAt: new Date('2024-01-05'),
+          scores: [{ domain: 'SOCIAL', score: 5, itemId: 'item-1' }],
+        },
+        {
+          id: 'a-5',
+          createdAt: new Date('2024-01-04'),
+          scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }],
+        },
+        {
+          id: 'a-6',
+          createdAt: new Date('2024-01-03'),
+          scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }],
+        },
+        {
+          id: 'a-7',
+          createdAt: new Date('2024-01-02'),
+          scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }],
+        },
+        {
+          id: 'a-8',
+          createdAt: new Date('2024-01-01'),
+          scores: [{ domain: 'SOCIAL', score: 2, itemId: 'item-1' }],
+        },
       ];
 
       const result = service.aggregate(assessments, itemWeights, 4);
@@ -156,6 +188,31 @@ describe('DomainAggregationService', () => {
 
       const commDomain = result.domains.find((d) => d.domain === 'COMMUNICATION');
       expect(commDomain!.currentScore).toBe(3);
+    });
+
+    it('should use the latest assessment that has the domain, not 0 when the newest lacks it', () => {
+      const assessments = [
+        {
+          id: 'a-ai',
+          createdAt: new Date('2026-10-21T05:00:00Z'),
+          scores: [{ domain: 'COMMUNICATION', score: 4, itemId: 'x1' }],
+        },
+        {
+          id: 'a-parent',
+          createdAt: new Date('2026-10-21T04:00:00Z'),
+          scores: [
+            { domain: 'COMMUNICATION', score: 3, itemId: 'y1' },
+            { domain: 'MOTOR', score: 4, itemId: 'y2' },
+          ],
+        },
+      ];
+
+      const result = service.aggregate(assessments, new Map());
+
+      const motor = result.domains.find((d) => d.domain === 'MOTOR');
+      const comm = result.domains.find((d) => d.domain === 'COMMUNICATION');
+      expect(motor?.currentScore).toBe(4);
+      expect(comm?.currentScore).toBe(4);
     });
 
     it('should calculate percentage correctly', () => {

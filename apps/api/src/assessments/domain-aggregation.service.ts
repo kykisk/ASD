@@ -63,14 +63,24 @@ export class DomainAggregationService {
     const allDomains = this.extractDomains(assessments);
 
     const domains: DomainScore[] = allDomains.map((domain) => {
-      const currentScore = this.calculateWeightedAverage(latestAssessment.scores, domain, itemWeights);
+      // 기록마다 들어있는 영역이 다르므로(부모 체크·AI 추출 등) 그 영역이 있는 가장 최근 기록을 씀.
+      // 최신 기록 하나만 보면 거기에 없는 영역이 0점이 됨
+      const latestWithDomain =
+        assessments.find((a) => a.scores.some((s) => s.domain === domain)) ?? latestAssessment;
+      const currentScore = this.calculateWeightedAverage(
+        latestWithDomain.scores,
+        domain,
+        itemWeights,
+      );
       const trend = this.trendService.calculateTrendFromAssessments(
-        assessments.map((a) => ({ scores: a.scores.map((s) => ({ score: s.score, domain: s.domain })) })),
+        assessments.map((a) => ({
+          scores: a.scores.map((s) => ({ score: s.score, domain: s.domain })),
+        })),
         periodSize,
         domain,
       );
 
-      const itemCount = latestAssessment.scores.filter((s) => s.domain === domain).length;
+      const itemCount = latestWithDomain.scores.filter((s) => s.domain === domain).length;
 
       return {
         domain,
