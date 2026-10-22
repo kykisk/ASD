@@ -58,3 +58,7 @@ vite.config.*.timestamp*
 vitest.config.*.timestamp*
 test-output
 apps/mobile/dist/
+
+# 비밀값을 잠깐 넘겨줄 때 쓰는 파일 (커밋 금지)
+scripts/adminpw
+scripts/clfTK
