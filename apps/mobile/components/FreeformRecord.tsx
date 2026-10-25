@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   type FreeformQuestion,
 } from '../hooks/use-daily-record.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
+import { clearDraft, loadDraft, saveDraft } from '../lib/record-draft.js';
 
 export const SESSION_TYPES = [
   { key: 'SPEECH', label: '언어치료' },
@@ -121,6 +122,19 @@ export function FreeformRecord({ childId, unavailableReason, onDone }: Props) {
 
   const [step, setStep] = useState<Step>('write');
   const [text, setText] = useState('');
+  // 화면을 나가도 적던 글이 남도록 (저장되면 지움)
+  const draftLoaded = useRef(false);
+  useEffect(() => {
+    loadDraft<string>('freeform', childId).then((saved) => {
+      if (saved) setText((current) => current || saved);
+      draftLoaded.current = true;
+    });
+  }, [childId]);
+  useEffect(() => {
+    if (!draftLoaded.current) return;
+    if (text) saveDraft('freeform', childId, text);
+    else clearDraft('freeform', childId);
+  }, [childId, text]);
   const [error, setError] = useState<string | null>(null);
   const [failedReason, setFailedReason] = useState('');
   const [entryId, setEntryId] = useState('');
@@ -144,6 +158,8 @@ export function FreeformRecord({ childId, unavailableReason, onDone }: Props) {
     try {
       const result = await analyze.mutateAsync({ childId, text: text.trim() });
       if (result.status === 'FAILED') {
+        // 원문이 일상 메모로 저장됨
+        clearDraft('freeform', childId);
         setFailedReason(result.reason);
         setStep('failed');
         return;
@@ -191,6 +207,7 @@ export function FreeformRecord({ childId, unavailableReason, onDone }: Props) {
             : [],
         },
       });
+      clearDraft('freeform', childId);
       onDone();
     } catch (err) {
       setError(apiErrorMessage(err, '저장하지 못했어요. 다시 시도해주세요.'));
@@ -264,7 +281,9 @@ export function FreeformRecord({ childId, unavailableReason, onDone }: Props) {
               <Text style={styles.primaryText}>✨ AI로 정리하기</Text>
             )}
           </TouchableOpacity>
-          <Text style={styles.footHint}>정리가 안 되어도 적은 내용은 그대로 저장돼요</Text>
+          <Text style={styles.footHint}>
+            화면을 나가도 적던 글은 남아 있어요. 정리가 안 되어도 적은 내용은 저장돼요
+          </Text>
         </View>
       </View>
     );

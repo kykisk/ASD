@@ -24,6 +24,7 @@ import {
 } from '../hooks/use-daily-record.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 import { runTour, takePendingTour } from '../lib/tour.js';
+import { clearDraft, loadDraft, saveDraft } from '../lib/record-draft.js';
 import {
   FreeformRecord,
   SESSION_TYPES,
@@ -36,6 +37,18 @@ const SCORE_COLORS = [colors.score1, colors.score2, colors.score3, colors.score4
 /** 마지막으로 쓴 입력 방식 (쭉 적기 · 자세히 입력) */
 const MODE_KEY = 'auticare.recordMode';
 type Mode = 'freeform' | 'detailed';
+
+interface DetailedDraft {
+  scores: Partial<Record<DailyRecordDomain, number>>;
+  note: string;
+  sessionOn: boolean;
+  sessionType: string | null;
+  therapistFeedback: string;
+  behaviorOn: boolean;
+  severity: number;
+  behaviorTags: string[];
+  behaviorContent: string;
+}
 
 function notify(title: string, message: string) {
   if (Platform.OS === 'web') window.alert(message);
@@ -84,6 +97,51 @@ export default function DailyRecordScreen() {
   const [behaviorContent, setBehaviorContent] = useState('');
 
   const alreadyScored = !!today?.scores;
+
+  // 화면을 나가도 적던 내용이 남도록 (저장하면 지움)
+  const draftLoaded = useRef(false);
+  useEffect(() => {
+    if (!selectedChildId) return;
+    loadDraft<DetailedDraft>('detailed', selectedChildId).then((d) => {
+      if (d) {
+        setScores(d.scores ?? {});
+        setNote(d.note ?? '');
+        setSessionOn(d.sessionOn ?? false);
+        setSessionType(d.sessionType ?? null);
+        setTherapistFeedback(d.therapistFeedback ?? '');
+        setBehaviorOn(d.behaviorOn ?? false);
+        setSeverity(d.severity ?? 3);
+        setBehaviorTags(d.behaviorTags ?? []);
+        setBehaviorContent(d.behaviorContent ?? '');
+      }
+      draftLoaded.current = true;
+    });
+  }, [selectedChildId]);
+  useEffect(() => {
+    if (!selectedChildId || !draftLoaded.current) return;
+    saveDraft('detailed', selectedChildId, {
+      scores,
+      note,
+      sessionOn,
+      sessionType,
+      therapistFeedback,
+      behaviorOn,
+      severity,
+      behaviorTags,
+      behaviorContent,
+    } satisfies DetailedDraft);
+  }, [
+    selectedChildId,
+    scores,
+    note,
+    sessionOn,
+    sessionType,
+    therapistFeedback,
+    behaviorOn,
+    severity,
+    behaviorTags,
+    behaviorContent,
+  ]);
 
   // 따라하기 투어의 마지막 부분
   useEffect(() => {
@@ -148,6 +206,7 @@ export default function DailyRecordScreen() {
 
     try {
       await createMutation.mutateAsync({ childId: selectedChildId, input });
+      clearDraft('detailed', selectedChildId);
       finish();
     } catch (err: unknown) {
       notify('저장하지 못했어요', err instanceof Error ? err.message : '다시 시도해주세요');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DAILY_RECORD_DOMAINS,
   useAnalyzeFreeform,
@@ -8,6 +8,7 @@ import {
   type FreeformQuestion,
 } from '../../hooks/use-daily-record';
 import { DAILY_SESSION_TYPES, sessionTypeLabel } from '../../utils/session-type';
+import { clearDraft, loadDraft, saveDraft } from '../../utils/record-draft';
 
 const SCORE_COLORS = ['#E88B8B', '#F0A86E', '#F5D76E', '#A8D8A8', '#7BC67E'];
 /** 힘든 정도는 클수록 힘듦 → 색을 거꾸로 */
@@ -90,7 +91,12 @@ export function FreeformPanel({ childId, unavailableReason, onClose }: Props) {
   const analyze = useAnalyzeFreeform();
   const confirm = useConfirmFreeform();
 
-  const [text, setText] = useState('');
+  // 창이 닫혀도 적던 글이 남도록 (저장되면 지움)
+  const [text, setText] = useState(() => loadDraft<string>('freeform', childId) ?? '');
+  useEffect(() => {
+    if (text) saveDraft('freeform', childId, text);
+    else clearDraft('freeform', childId);
+  }, [childId, text]);
   const [error, setError] = useState<string | null>(null);
   const [failedReason, setFailedReason] = useState<string | null>(null);
   const [entryId, setEntryId] = useState<string | null>(null);
@@ -108,6 +114,8 @@ export function FreeformPanel({ childId, unavailableReason, onClose }: Props) {
     try {
       const result = await analyze.mutateAsync({ childId, text: text.trim() });
       if (result.status === 'FAILED') {
+        // 원문이 일상 메모로 저장됨
+        clearDraft('freeform', childId);
         setFailedReason(result.reason);
         return;
       }
@@ -151,6 +159,7 @@ export function FreeformPanel({ childId, unavailableReason, onClose }: Props) {
             .filter((a) => a.value !== ''),
         },
       });
+      clearDraft('freeform', childId);
       onClose();
     } catch (err) {
       setError(apiErrorMessage(err, '저장하지 못했어요. 다시 시도해주세요.'));
@@ -199,7 +208,7 @@ export function FreeformPanel({ childId, unavailableReason, onClose }: Props) {
                 : '✨ AI로 정리하기'}
           </button>
           <p className="text-xs text-neutral-500">
-            정리가 안 되어도 적은 내용은 그대로 저장돼요. 원문은 기록에 보관돼요.
+            창을 닫아도 적던 글은 남아 있어요. 정리가 안 되어도 적은 내용은 그대로 저장돼요.
           </p>
         </div>
 

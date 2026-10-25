@@ -9,10 +9,23 @@ import {
 } from '../../hooks/use-daily-record';
 import { DAILY_SESSION_TYPES, sessionTypeLabel } from '../../utils/session-type';
 import { FreeformPanel } from './FreeformPanel';
+import { clearDraft, loadDraft, saveDraft } from '../../utils/record-draft';
 
 /** 마지막으로 쓴 입력 방식 (쭉 적기 · 자세히 입력) */
 const MODE_KEY = 'auticare.recordMode';
 type Mode = 'freeform' | 'detailed';
+
+interface DetailedDraft {
+  scores: Partial<Record<DailyRecordDomain, number>>;
+  note: string;
+  sessionOn: boolean;
+  sessionType: string | null;
+  therapistFeedback: string;
+  behaviorOn: boolean;
+  severity: number;
+  behaviorTags: string[];
+  behaviorContent: string;
+}
 
 function savedMode(): Mode | null {
   try {
@@ -95,15 +108,44 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
       // 저장 못 해도 이번 창에서는 바뀜
     }
   }
-  const [scores, setScores] = useState<Partial<Record<DailyRecordDomain, number>>>({});
-  const [note, setNote] = useState('');
-  const [sessionOn, setSessionOn] = useState(false);
-  const [sessionType, setSessionType] = useState<string | null>(null);
-  const [therapistFeedback, setTherapistFeedback] = useState('');
-  const [behaviorOn, setBehaviorOn] = useState(false);
-  const [severity, setSeverity] = useState(3);
-  const [behaviorTags, setBehaviorTags] = useState<string[]>([]);
-  const [behaviorContent, setBehaviorContent] = useState('');
+  // 창이 닫혀도 적던 내용이 남도록 (저장하면 지움)
+  const [draft] = useState(() => loadDraft<DetailedDraft>('detailed', childId));
+  const [scores, setScores] = useState<Partial<Record<DailyRecordDomain, number>>>(
+    draft?.scores ?? {},
+  );
+  const [note, setNote] = useState(draft?.note ?? '');
+  const [sessionOn, setSessionOn] = useState(draft?.sessionOn ?? false);
+  const [sessionType, setSessionType] = useState<string | null>(draft?.sessionType ?? null);
+  const [therapistFeedback, setTherapistFeedback] = useState(draft?.therapistFeedback ?? '');
+  const [behaviorOn, setBehaviorOn] = useState(draft?.behaviorOn ?? false);
+  const [severity, setSeverity] = useState(draft?.severity ?? 3);
+  const [behaviorTags, setBehaviorTags] = useState<string[]>(draft?.behaviorTags ?? []);
+  const [behaviorContent, setBehaviorContent] = useState(draft?.behaviorContent ?? '');
+
+  useEffect(() => {
+    saveDraft('detailed', childId, {
+      scores,
+      note,
+      sessionOn,
+      sessionType,
+      therapistFeedback,
+      behaviorOn,
+      severity,
+      behaviorTags,
+      behaviorContent,
+    } satisfies DetailedDraft);
+  }, [
+    childId,
+    scores,
+    note,
+    sessionOn,
+    sessionType,
+    therapistFeedback,
+    behaviorOn,
+    severity,
+    behaviorTags,
+    behaviorContent,
+  ]);
   const alreadyScored = !!today?.scores;
 
   useEffect(() => {
@@ -133,6 +175,7 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
     }
     try {
       await createRecord.mutateAsync({ childId, input });
+      clearDraft('detailed', childId);
       onClose();
     } catch {
       alert('저장하지 못했어요. 다시 시도해주세요.');
@@ -142,10 +185,7 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
   const dateLabel = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-[rgba(44,62,80,0.45)] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 bg-[rgba(44,62,80,0.45)] flex items-center justify-center p-4">
       <div
         role="dialog"
         aria-modal="true"
