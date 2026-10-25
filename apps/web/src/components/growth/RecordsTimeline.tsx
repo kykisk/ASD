@@ -26,6 +26,35 @@ function dayLabel(date: string) {
 }
 
 /** 성장 › 기록 모아보기: 날짜별로 점수·메모·수업·힘든 행동·활동 완료를 한 카드에 */
+/** 쭉 적기로 쓴 원문: 'AI 정리' 표시 + 눌러서 펼쳐 보기 */
+function RawTexts({ entries }: { entries: Array<{ id: string; rawText: string }> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="self-start flex items-center gap-2 text-[13px] font-semibold text-primary-700"
+      >
+        <span className="text-[11px] font-normal px-2 py-0.5 rounded-md bg-primary-50 text-primary-700">
+          AI 정리
+        </span>
+        {open ? '원문 닫기' : '내가 쓴 원문 보기'}
+      </button>
+      {open &&
+        entries.map((e) => (
+          <p
+            key={e.id}
+            className="text-[13px] leading-relaxed text-neutral-600 bg-[#F4F1EC] rounded-xl px-3 py-2 whitespace-pre-wrap"
+          >
+            {e.rawText}
+          </p>
+        ))}
+    </div>
+  );
+}
+
 export function RecordsTimeline({ childId }: { childId: string }) {
   const [days, setDays] = useState(7);
   const { data, isLoading } = useDailyTimeline(childId, days);
@@ -104,6 +133,7 @@ export function RecordsTimeline({ childId }: { childId: string }) {
                   </div>
                 );
               })}
+              {(day.freeform ?? []).length > 0 && <RawTexts entries={day.freeform} />}
               {!scoreText && !day.note && day.feedbacks.length === 0 && (
                 <p className="text-xs text-neutral-500">오늘 하루 기록은 없어요</p>
               )}

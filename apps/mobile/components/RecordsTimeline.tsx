@@ -47,6 +47,30 @@ function tagFor(
 }
 
 /** 성장 › 기록 모아보기: 날짜별로 점수·메모·수업·힘든 행동·활동 완료를 한 카드에 */
+/** 쭉 적기로 쓴 원문: 'AI 정리' 표시 + 눌러서 펼쳐 보기 */
+function RawTexts({ entries }: { entries: Array<{ id: string; rawText: string }> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ gap: 6 }}>
+      <TouchableOpacity
+        style={styles.rawToggle}
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+      >
+        <Text style={styles.aiBadge}>AI 정리</Text>
+        <Text style={styles.rawLink}>{open ? '원문 닫기' : '내가 쓴 원문 보기'}</Text>
+      </TouchableOpacity>
+      {open &&
+        entries.map((e) => (
+          <Text key={e.id} style={styles.raw}>
+            {e.rawText}
+          </Text>
+        ))}
+    </View>
+  );
+}
+
 export function RecordsTimeline({ childId }: { childId: string }) {
   const router = useRouter();
   const [days, setDays] = useState(7);
@@ -114,6 +138,7 @@ export function RecordsTimeline({ childId }: { childId: string }) {
                   </View>
                 );
               })}
+              {(day.freeform ?? []).length > 0 && <RawTexts entries={day.freeform} />}
               {!scoreText && !day.note && day.feedbacks.length === 0 ? (
                 <Text style={styles.muted}>오늘 하루 기록은 없어요</Text>
               ) : null}
@@ -169,4 +194,24 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: 8, paddingVertical: spacing.xl },
   emptyText: { fontSize: fontSize.sm, color: colors.textSecondary },
   link: { fontSize: fontSize.sm, fontWeight: '700', color: colors.primaryDark },
+  rawToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  aiBadge: {
+    fontSize: 11,
+    color: colors.primaryDark,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 7,
+    overflow: 'hidden',
+  },
+  rawLink: { fontSize: 13, color: colors.primaryDark, fontWeight: '600' },
+  raw: {
+    fontSize: 13,
+    color: '#4A5A6A',
+    backgroundColor: '#F4F1EC',
+    borderRadius: borderRadius.md,
+    padding: 10,
+    lineHeight: 20,
+    overflow: 'hidden',
+  },
 });

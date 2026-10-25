@@ -34,6 +34,12 @@ export class AdminController {
     return this.costTracker.getUsageSummary(Math.min(parseInt(days ?? '7') || 7, 30));
   }
 
+  /** 오늘 하루 기록 · 쭉 적기 품질 (건수와 비율만) */
+  @Get('ai/daily-record-quality')
+  async dailyRecordQuality(@Query('days') days?: string) {
+    return this.adminService.dailyRecordQuality(Math.min(parseInt(days ?? '7') || 7, 90));
+  }
+
   @Get('jobs')
   async listJobs() {
     return this.jobs.list();

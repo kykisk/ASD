@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -17,42 +18,28 @@ import {
   DAILY_RECORD_DOMAINS,
   useCreateDailyRecord,
   useDailyRecord,
+  useFreeformAvailability,
   type CreateDailyRecordInput,
   type DailyRecordDomain,
 } from '../hooks/use-daily-record.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 import { runTour, takePendingTour } from '../lib/tour.js';
+import {
+  FreeformRecord,
+  SESSION_TYPES,
+  BEHAVIOR_TAGS,
+  Chip,
+} from '../components/FreeformRecord.js';
 
 const SCORE_COLORS = [colors.score1, colors.score2, colors.score3, colors.score4, colors.score5];
 
-const SESSION_TYPES = [
-  { key: 'SPEECH', label: '언어치료' },
-  { key: 'SPECIAL_PE', label: '특수체육' },
-  { key: 'SENSORY', label: '감각통합' },
-  { key: 'ABA', label: 'ABA' },
-  { key: 'OCCUPATIONAL', label: '작업치료' },
-  { key: 'PLAY', label: '놀이치료' },
-  { key: 'OTHER', label: '기타' },
-];
-
-const BEHAVIOR_TAGS = ['멜트다운', '공격', '자해', '탈주', '상동행동', '발작', '기타'];
+/** 마지막으로 쓴 입력 방식 (쭉 적기 · 자세히 입력) */
+const MODE_KEY = 'auticare.recordMode';
+type Mode = 'freeform' | 'detailed';
 
 function notify(title: string, message: string) {
   if (Platform.OS === 'web') window.alert(message);
   else Alert.alert(title, message);
-}
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      style={[styles.chip, active && styles.chipActive]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-    >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
 }
 
 export default function DailyRecordScreen() {
@@ -60,6 +47,31 @@ export default function DailyRecordScreen() {
   const selectedChildId = useChildStore((s) => s.selectedChildId);
   const { data: today, isLoading } = useDailyRecord(selectedChildId);
   const createMutation = useCreateDailyRecord();
+  const availability = useFreeformAvailability(selectedChildId);
+  // 따라하기 투어는 자세히 입력 화면을 안내하므로 그때는 자세히 입력으로 열기
+  const [tourPending] = useState(() => takePendingTour('record'));
+  const tourStarted = useRef(false);
+  const [mode, setMode] = useState<Mode | null>(tourPending ? 'detailed' : null);
+
+  // 기본은 쭉 적기. 마지막으로 쓴 방식을 기억하고, AI 를 못 쓰는 날은 자세히 입력
+  useEffect(() => {
+    // 아이 선택 전이거나 아직 확인 중이면 기다림 (isPending: 아직 결과 없음)
+    if (mode !== null || availability.isPending) return;
+    AsyncStorage.getItem(MODE_KEY)
+      .catch(() => null)
+      .then((saved) => {
+        const available = availability.data?.available ?? false;
+        setMode(!available ? 'detailed' : saved === 'detailed' ? 'detailed' : 'freeform');
+      });
+  }, [mode, availability.isPending, availability.data?.available]);
+
+  // 오늘 화면에서 열었으면 돌아가고, 주소로 바로 들어왔으면 오늘 화면으로
+  const finish = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    AsyncStorage.setItem(MODE_KEY, next).catch(() => undefined);
+  };
 
   const [scores, setScores] = useState<Partial<Record<DailyRecordDomain, number>>>({});
   const [note, setNote] = useState('');
@@ -75,10 +87,16 @@ export default function DailyRecordScreen() {
 
   // 따라하기 투어의 마지막 부분
   useEffect(() => {
-    if (isLoading || !takePendingTour('record')) return;
+    if (isLoading || mode !== 'detailed' || !tourPending || tourStarted.current) return;
+    tourStarted.current = true;
     const timer = setTimeout(
       () =>
         runTour([
+          {
+            target: 'tour-record-mode',
+            title: '두 가지 방법으로 적어요',
+            body: '쭉 적기: 하루를 편하게 적으면 AI가 정리해서 저장 전에 보여줘요. 자세히 입력: 지금 화면처럼 직접 골라요. 마지막에 쓴 방법을 기억해요.',
+          },
           {
             target: 'tour-scores',
             title: '아이가 오늘 어땠나요?',
@@ -97,7 +115,7 @@ export default function DailyRecordScreen() {
       500,
     );
     return () => clearTimeout(timer);
-  }, [isLoading]);
+  }, [isLoading, mode, tourPending]);
 
   const handleSave = async () => {
     if (!selectedChildId) return;
@@ -130,13 +148,13 @@ export default function DailyRecordScreen() {
 
     try {
       await createMutation.mutateAsync({ childId: selectedChildId, input });
-      router.back();
+      finish();
     } catch (err: unknown) {
       notify('저장하지 못했어요', err instanceof Error ? err.message : '다시 시도해주세요');
     }
   };
 
-  if (isLoading) {
+  if (isLoading || mode === null) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.primary} />
@@ -144,8 +162,45 @@ export default function DailyRecordScreen() {
     );
   }
 
+  const tabs = (
+    <View style={styles.tabs} accessibilityRole="tablist" nativeID="tour-record-mode">
+      {(
+        [
+          ['freeform', '쭉 적기'],
+          ['detailed', '자세히 입력'],
+        ] as const
+      ).map(([key, label]) => (
+        <TouchableOpacity
+          key={key}
+          style={[styles.tab, mode === key && styles.tabActive]}
+          onPress={() => switchMode(key)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: mode === key }}
+        >
+          <Text style={[styles.tabText, mode === key && styles.tabTextActive]}>{label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  if (mode === 'freeform' && selectedChildId) {
+    return (
+      <View style={styles.root}>
+        {tabs}
+        <FreeformRecord
+          childId={selectedChildId}
+          unavailableReason={
+            availability.data && !availability.data.available ? availability.data.reason : undefined
+          }
+          onDone={finish}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
+      {tabs}
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.card} nativeID="tour-scores">
           <View style={styles.cardHeader}>
@@ -323,6 +378,19 @@ export default function DailyRecordScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  tabs: {
+    flexDirection: 'row',
+    margin: spacing.md,
+    marginBottom: 0,
+    padding: 4,
+    gap: 4,
+    borderRadius: 12,
+    backgroundColor: '#EFECE7',
+  },
+  tab: { flex: 1, height: 40, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  tabActive: { backgroundColor: colors.card },
+  tabText: { fontSize: 14, color: '#4A5A6A' },
+  tabTextActive: { fontWeight: '700', color: colors.primaryDark },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -388,19 +456,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    minHeight: 36,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primaryLight },
-  chipText: { fontSize: 13, color: colors.text },
-  chipTextActive: { fontWeight: '700', color: colors.primaryDark },
   footer: {
     padding: spacing.md,
     backgroundColor: colors.card,

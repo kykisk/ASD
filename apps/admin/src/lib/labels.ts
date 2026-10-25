@@ -4,9 +4,14 @@ export const AI_FEATURES: Record<
   { name: string; where: string; tier: 'QUALITY' | 'FAST' }
 > = {
   CURRICULUM: { name: '커리큘럼 만들기', where: '매일 04:00 · 오늘 활동 만들기', tier: 'QUALITY' },
+  DAILY_RECORD_PARSE: {
+    name: '오늘 기록 정리',
+    where: '오늘 하루 기록 › 쭉 적기',
+    tier: 'QUALITY',
+  },
   FEEDBACK_DOMAIN_EXTRACTION: {
     name: '기록에서 점수 뽑기',
-    where: '오늘 하루 기록 · 수업 피드백 저장할 때',
+    where: '자세히 입력 · 수업 피드백 저장할 때',
     tier: 'FAST',
   },
   INSIGHT: { name: '이번 주 요약', where: '오늘 화면 · 성장 › AI 주간 요약', tier: 'QUALITY' },

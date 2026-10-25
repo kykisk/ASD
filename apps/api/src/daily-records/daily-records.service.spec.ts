@@ -11,6 +11,7 @@ const prisma = {
   assessment: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
   sessionFeedback: { findMany: vi.fn() },
   curriculum: { findMany: vi.fn() },
+  dailyRecordEntry: { create: vi.fn(), findMany: vi.fn() },
 };
 const sessionFeedbacks = { create: vi.fn() };
 const insights = { invalidateWeekly: vi.fn() };
@@ -36,6 +37,7 @@ describe('DailyRecordsService', () => {
     prisma.questionnaire.findFirst.mockResolvedValue(questionnaire);
     prisma.assessment.findFirst.mockResolvedValue(null);
     prisma.sessionFeedback.findMany.mockResolvedValue([]);
+    prisma.dailyRecordEntry.findMany.mockResolvedValue([]);
     service = new DailyRecordsService(
       prisma as unknown as PrismaService,
       sessionFeedbacks as unknown as SessionFeedbacksService,

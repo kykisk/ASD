@@ -247,6 +247,7 @@ model Child {
   medications      Medication[]
   medicationLogs   MedicationLog[]
   medicationReactions MedicationReaction[]
+  dailyRecordEntries DailyRecordEntry[]
 
   @@index([familyId])
 }
@@ -961,4 +962,37 @@ model MedicationReaction {
 
   @@index([medicationId, observedAt])
   @@index([childId, observedAt])
+}
+
+/// 오늘 하루 기록 한 번의 입력 (쭉 적기 = FREEFORM, 자세히 입력 = DETAILED).
+/// 실제 기록은 Assessment · SessionFeedback 에 저장되고, 이 표는 원문 · AI 정리 초안 · 품질 통계용.
+model DailyRecordEntry {
+  id            String    @id @default(cuid())
+  childId       String
+  familyId      String
+  userId        String
+  /// YYYY-MM-DD (KST)
+  date          String
+  /// FREEFORM | DETAILED
+  mode          String
+  /// DRAFT(정리됨, 확인 전) | SAVED | FAILED(AI 실패, 원문을 일상 메모로 저장) | RECOVERED(다시 분석 완료)
+  status        String
+  rawText       String?   @db.Text
+  draft         Json?
+  questions     Json?
+  questionCount Int       @default(0)
+  answeredCount Int       @default(0)
+  /// 부모가 AI 정리 결과를 고쳤는지
+  edited        Boolean   @default(false)
+  error         String?
+  /// FAILED: 원문을 저장한 일상 메모(SessionFeedback) id
+  feedbackId    String?
+  savedAt       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, date])
+  @@index([status, createdAt])
 }

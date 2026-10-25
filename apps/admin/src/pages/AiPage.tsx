@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { App, Card, Col, Progress, Row, Select, Spin, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useAiUsage } from '../hooks/use-admin-ops';
+import { useAiUsage, useDailyRecordQuality } from '../hooks/use-admin-ops';
 import { useAiConfigs, type AiConfigItem } from '../hooks/use-ai-config';
 import {
   useAiFeatureConfig,
@@ -104,6 +104,84 @@ function UsageChart({ days }: { days: Array<{ date: string; byModel: Record<stri
         })}
       </div>
     </div>
+  );
+}
+
+function QualityRow({
+  label,
+  value,
+  hint,
+  warn,
+}: {
+  label: string;
+  value: number | null;
+  hint: string;
+  warn?: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+        <span>{label}</span>
+        <b>{value === null ? '-' : `${value}%`}</b>
+      </div>
+      <Progress
+        percent={value ?? 0}
+        showInfo={false}
+        size="small"
+        strokeColor={warn ? '#F59E0B' : '#14B8A6'}
+        style={{ margin: 0 }}
+      />
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        {hint}
+      </Text>
+    </div>
+  );
+}
+
+/** 오늘 하루 기록 · 쭉 적기 품질. 원문은 보이지 않고 건수와 비율만 */
+function DailyRecordQualityCard() {
+  const { data } = useDailyRecordQuality(7);
+  if (!data) return null;
+  return (
+    <Card
+      size="small"
+      title="오늘 기록 정리 품질"
+      extra={<Text type="secondary">최근 {data.days}일</Text>}
+      style={{ height: '100%' }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <QualityRow
+          label="쭉 적기로 기록한 비율"
+          value={data.freeformShare}
+          hint={`쭉 적기 ${data.freeformRecords}건 · 자세히 입력 ${data.detailedRecords}건`}
+        />
+        <QualityRow
+          label="부모가 AI 정리를 고친 비율"
+          value={data.editedRate}
+          warn={(data.editedRate ?? 0) >= 30}
+          hint="30% 넘으면 AI 지시문을 손볼 때"
+        />
+        <QualityRow
+          label="추가 질문에 답한 비율"
+          value={data.answerRate}
+          hint="낮으면 질문이 귀찮다는 신호"
+        />
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          정리 후 저장 안 함 {data.abandoned}건 · AI 실패(원문만 저장) {data.failed}건
+        </Text>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#475569',
+            background: '#F8FAFC',
+            borderRadius: 8,
+            padding: '8px 10px',
+          }}
+        >
+          부모가 쓴 원문은 관리자도 볼 수 없어요. 여기엔 건수와 비율만 보여요.
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -238,12 +316,12 @@ function UsageTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Row gutter={[14, 14]}>
-        <Col xs={24} lg={16}>
+        <Col xs={24} xl={12}>
           <Card size="small" title="최근 7일 호출 수 (모델별)">
             <UsageChart days={usage.days} />
           </Card>
         </Col>
-        <Col xs={24} lg={8}>
+        <Col xs={24} md={12} xl={6}>
           <Card size="small" title="이번 달" style={{ height: '100%' }}>
             <Text type="secondary" style={{ fontSize: 13 }}>
               추정 크레딧 사용 (토큰 × 공시 단가)
@@ -267,6 +345,9 @@ function UsageTab() {
               한도는 연결 설정의 기본 연결에서 바꿔요
             </Text>
           </Card>
+        </Col>
+        <Col xs={24} md={12} xl={6}>
+          <DailyRecordQualityCard />
         </Col>
       </Row>
 

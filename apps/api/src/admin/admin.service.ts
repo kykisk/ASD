@@ -231,4 +231,35 @@ export class AdminService {
       })),
     };
   }
+
+  /**
+   * 오늘 하루 기록 · 쭉 적기 품질 (최근 days 일). 원문은 돌려주지 않고 건수와 비율만
+   */
+  async dailyRecordQuality(days = 7) {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const entries = await this.prisma.dailyRecordEntry.findMany({
+      where: { createdAt: { gte: since } },
+      select: { mode: true, status: true, edited: true, questionCount: true, answeredCount: true },
+    });
+    const freeform = entries.filter((e) => e.mode === 'FREEFORM');
+    const saved = freeform.filter((e) => e.status === 'SAVED');
+    const questions = saved.reduce((n, e) => n + e.questionCount, 0);
+    const answered = saved.reduce((n, e) => n + e.answeredCount, 0);
+    const ratio = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : null);
+    const recorded = entries.filter((e) => e.status !== 'DRAFT');
+    return {
+      days,
+      freeformRecords: freeform.filter((e) => e.status !== 'DRAFT').length,
+      detailedRecords: entries.filter((e) => e.mode === 'DETAILED').length,
+      /** 쭉 적기로 남긴 비율 (확인 전에 그만둔 것은 빼고) */
+      freeformShare: ratio(recorded.filter((e) => e.mode === 'FREEFORM').length, recorded.length),
+      /** 부모가 AI 정리를 고친 비율 */
+      editedRate: ratio(saved.filter((e) => e.edited).length, saved.length),
+      /** 추가 질문에 답한 비율 */
+      answerRate: ratio(answered, questions),
+      /** AI 정리 후 확인하지 않고 나간 수 */
+      abandoned: freeform.filter((e) => e.status === 'DRAFT').length,
+      failed: freeform.filter((e) => e.status === 'FAILED' || e.status === 'RECOVERED').length,
+    };
+  }
 }

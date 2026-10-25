@@ -6,6 +6,7 @@ import { ResearchBatchService } from '../research/research-batch.service.js';
 import { ResearchService } from '../research/research.service.js';
 import { InsightsBatchService } from '../insights/insights-batch.service.js';
 import { FeedbackDigestBatchService } from '../session-feedbacks/feedback-digest-batch.service.js';
+import { DailyRecordRetryBatchService } from '../daily-records/daily-record-retry-batch.service.js';
 
 interface JobDefinition {
   type: string;
@@ -18,6 +19,13 @@ interface JobDefinition {
 }
 
 const JOBS: JobDefinition[] = [
+  {
+    type: 'DAILY_RECORD_RETRY',
+    name: '정리 안 된 기록 다시 분석',
+    description: 'AI 정리에 실패해 원문만 저장된 오늘 하루 기록에서 영역 점수를 다시 뽑아요',
+    schedule: '매일 03:30',
+    at: { minute: 30, hour: 3, weekday: null },
+  },
   {
     type: 'CURRICULUM_GENERATION',
     name: '오늘 커리큘럼 만들기',
@@ -90,6 +98,7 @@ export class AdminJobsService {
     private readonly researchService: ResearchService,
     private readonly insightsBatch: InsightsBatchService,
     private readonly digestBatch: FeedbackDigestBatchService,
+    private readonly recordRetry: DailyRecordRetryBatchService,
   ) {}
 
   async list() {
@@ -122,6 +131,7 @@ export class AdminJobsService {
   /** 지금 실행: 오래 걸리는 작업이라 바로 돌려주고 결과는 실행 기록에서 확인 */
   async run(type: string): Promise<{ started: true }> {
     const runners: Record<string, () => Promise<unknown>> = {
+      DAILY_RECORD_RETRY: () => this.recordRetry.run(),
       CURRICULUM_GENERATION: () => this.curriculumBatch.runNightlyGeneration(),
       RESEARCH_COLLECTION: () => this.researchBatch.runWeeklyBatch(),
       WEEKLY_INSIGHT: () => this.insightsBatch.runWeeklyBatch(),

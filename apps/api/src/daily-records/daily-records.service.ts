@@ -22,6 +22,19 @@ const KST_DATE_FORMAT = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 });
 
+export function kstToday(): string {
+  return KST_DATE_FORMAT.format(new Date());
+}
+
+type DailyRecordDomain = (typeof DAILY_RECORD_DOMAINS)[number];
+
+export interface PersistRecord {
+  scores: Partial<Record<DailyRecordDomain, number | undefined>>;
+  note?: string;
+  sessions: Array<{ sessionType: string; therapistFeedback?: string }>;
+  behaviors: Array<{ severity?: number | null; tags: string[]; content: string }>;
+}
+
 export interface DailyRecordSummary {
   date: string;
   scores: Record<string, number> | null;
@@ -44,6 +57,8 @@ export interface DailyTimelineDay {
   }>;
   /** 그날 커리큘럼 활동 중 기록한 수 */
   activities: { done: number; total: number } | null;
+  /** 쭉 적기로 남긴 원문 (AI 정리 결과는 위 점수 · 피드백에 들어 있음) */
+  freeform: Array<{ id: string; rawText: string; status: string }>;
 }
 
 const MAX_TIMELINE_DAYS = 92;
@@ -68,29 +83,76 @@ export class DailyRecordsService {
     input: CreateDailyRecordInput,
   ): Promise<DailyRecordSummary> {
     const familyId = await this.verifyAccess(childId, userId);
-    const date = input.date ?? KST_DATE_FORMAT.format(new Date());
+    const date = input.date ?? kstToday();
+
+    await this.persist(childId, familyId, userId, date, {
+      scores: input.scores,
+      note: input.note,
+      sessions: input.session ? [input.session] : [],
+      behaviors: input.behavior ? [input.behavior] : [],
+    });
+    // 쭉 적기와 비교하는 통계용 (원문 없음)
+    await this.prisma.dailyRecordEntry.create({
+      data: {
+        childId,
+        familyId,
+        userId,
+        date,
+        mode: 'DETAILED',
+        status: 'SAVED',
+        savedAt: new Date(),
+      },
+    });
+
+    return this.findByDate(childId, userId, date);
+  }
+
+  /**
+   * 기록 저장 (자세히 입력 · 쭉 적기 공통).
+   * mergeScores: 같은 날 이미 체크한 영역 점수는 남기고 새 점수로 덮어써 하루 기록을 하나로 합침
+   */
+  async persist(
+    childId: string,
+    familyId: string,
+    userId: string,
+    date: string,
+    record: PersistRecord,
+    options: { mergeScores?: boolean } = {},
+  ): Promise<void> {
     const sessionDate = `${date}T00:00:00.000Z`;
 
+    const scores: Partial<Record<DailyRecordDomain, number>> = {};
+    if (options.mergeScores) {
+      const previous = await this.latestDailyAssessment(childId, date);
+      for (const s of previous?.scores ?? []) {
+        if ((DAILY_RECORD_DOMAINS as readonly string[]).includes(s.domain)) {
+          scores[s.domain as DailyRecordDomain] = s.score;
+        }
+      }
+    }
+    const newlyScored = DAILY_RECORD_DOMAINS.filter((d) => record.scores[d] !== undefined);
+    for (const d of newlyScored) scores[d] = record.scores[d] as number;
+
     const scored = DAILY_RECORD_DOMAINS.flatMap((domain) => {
-      const score = input.scores[domain];
+      const score = scores[domain];
       return score === undefined ? [] : [{ domain, score }];
     });
     const avg =
       scored.length > 0 ? scored.reduce((sum, s) => sum + s.score, 0) / scored.length : null;
     const rating = avg === null ? 3 : Math.round(avg);
 
-    if (scored.length > 0) {
+    if (newlyScored.length > 0) {
       const questionnaire = await this.getOrCreateQuestionnaire(familyId, userId);
       const itemIds = new Map(questionnaire.items.map((item) => [item.domain, item.id]));
       // 지난 날짜 기록이면 그날 정오(KST)로 남겨 추이 계산이 그 날짜에 잡히도록 함
-      const isToday = date === KST_DATE_FORMAT.format(new Date());
+      const isToday = date === kstToday();
       await this.prisma.assessment.create({
         data: {
           childId,
           familyId,
           questionnaireId: questionnaire.id,
           frequency: 'DAILY',
-          notes: input.note || null,
+          notes: record.note || null,
           totalScore: Math.round((avg as number) * 10) / 10,
           completedAt: new Date(),
           ...(isToday ? {} : { createdAt: new Date(`${date}T03:00:00.000Z`) }),
@@ -105,7 +167,7 @@ export class DailyRecordsService {
       });
     }
 
-    if (input.note) {
+    if (record.note) {
       // 부모가 직접 점수를 매긴 날은 같은 메모에서 AI 점수를 또 뽑지 않음 (이중 반영 방지)
       await this.sessionFeedbacks.create(
         childId,
@@ -115,55 +177,56 @@ export class DailyRecordsService {
           sessionDate,
           sessionType: 'DAILY',
           rating,
-          content: input.note,
+          content: record.note,
           feedbackType: 'DAILY_LOG',
         },
         { extractDomains: scored.length === 0 },
       );
     }
 
-    if (input.session) {
+    for (const session of record.sessions) {
       await this.sessionFeedbacks.create(childId, familyId, userId, {
         sessionDate,
-        sessionType: input.session.sessionType,
+        sessionType: session.sessionType,
         rating,
-        content: input.session.therapistFeedback || '수업 참여',
+        content: session.therapistFeedback || '수업 참여',
         feedbackType: 'SESSION',
       });
     }
 
-    if (input.behavior) {
+    for (const behavior of record.behaviors) {
       await this.sessionFeedbacks.create(childId, familyId, userId, {
         sessionDate,
         sessionType: 'BEHAVIOR',
-        rating: Math.max(1, 6 - input.behavior.severity),
-        content: input.behavior.content,
+        rating: behavior.severity ? Math.max(1, 6 - behavior.severity) : 3,
+        content: behavior.content,
         feedbackType: 'BEHAVIORAL_ISSUE',
-        severity: input.behavior.severity,
-        behaviorTags: input.behavior.tags,
+        severity: behavior.severity ?? undefined,
+        behaviorTags: behavior.tags,
       });
     }
 
     await this.insights.invalidateWeekly(childId);
-
-    return this.findByDate(childId, userId, date);
   }
 
-  async findByDate(childId: string, userId: string, date?: string): Promise<DailyRecordSummary> {
-    await this.verifyAccess(childId, userId);
-    const day = date ?? KST_DATE_FORMAT.format(new Date());
-
-    const kstStart = new Date(`${day}T00:00:00.000+09:00`);
-    const kstEnd = new Date(kstStart.getTime() + 24 * 60 * 60 * 1000);
-    const assessment = await this.prisma.assessment.findFirst({
+  /** 그날(KST) 마지막 '오늘 하루 기록' 점수 */
+  async latestDailyAssessment(childId: string, date: string) {
+    const kstStart = new Date(`${date}T00:00:00.000+09:00`);
+    return this.prisma.assessment.findFirst({
       where: {
         childId,
         questionnaire: { name: DAILY_QUESTIONNAIRE_NAME },
-        createdAt: { gte: kstStart, lt: kstEnd },
+        createdAt: { gte: kstStart, lt: new Date(kstStart.getTime() + DAY_MS) },
       },
       orderBy: { createdAt: 'desc' },
       include: { scores: true },
     });
+  }
+
+  async findByDate(childId: string, userId: string, date?: string): Promise<DailyRecordSummary> {
+    await this.verifyAccess(childId, userId);
+    const day = date ?? kstToday();
+    const assessment = await this.latestDailyAssessment(childId, day);
 
     const feedbacks = await this.prisma.sessionFeedback.findMany({
       where: {
@@ -208,7 +271,7 @@ export class DailyRecordsService {
     startMs = Math.max(startMs, endMs - (MAX_TIMELINE_DAYS - 1) * DAY_MS);
     const start = new Date(startMs).toISOString().slice(0, 10);
 
-    const [assessments, feedbacks, curricula] = await Promise.all([
+    const [assessments, feedbacks, curricula, entries] = await Promise.all([
       this.prisma.assessment.findMany({
         where: {
           childId,
@@ -255,13 +318,23 @@ export class DailyRecordsService {
           activityLogs: { select: { activityIndex: true } },
         },
       }),
+      this.prisma.dailyRecordEntry.findMany({
+        where: {
+          childId,
+          mode: 'FREEFORM',
+          status: { in: ['SAVED', 'FAILED', 'RECOVERED'] },
+          date: { gte: start, lte: end },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, date: true, rawText: true, status: true, feedbackId: true },
+      }),
     ]);
 
     const days = new Map<string, DailyTimelineDay>();
     const day = (date: string): DailyTimelineDay => {
       let d = days.get(date);
       if (!d) {
-        d = { date, scores: null, note: null, feedbacks: [], activities: null };
+        d = { date, scores: null, note: null, feedbacks: [], activities: null, freeform: [] };
         days.set(date, d);
       }
       return d;
@@ -284,6 +357,13 @@ export class DailyRecordsService {
       day(c.date.toISOString().slice(0, 10)).activities = { done, total };
     }
 
+    for (const e of entries) {
+      // AI 정리에 실패한 원문은 일상 메모(피드백)로 이미 보이므로 빼고
+      if (e.rawText && !e.feedbackId) {
+        day(e.date).freeform.push({ id: e.id, rawText: e.rawText, status: e.status });
+      }
+    }
+
     // 오늘 하루 기록의 메모는 일상 기록(DAILY_LOG)으로도 저장되므로 한 번만 보여줌
     for (const d of days.values()) {
       if (
@@ -297,7 +377,8 @@ export class DailyRecordsService {
     return [...days.values()].sort((a, b) => b.date.localeCompare(a.date));
   }
 
-  private async verifyAccess(childId: string, userId: string): Promise<string> {
+  /** 아이에 접근할 수 있는 가족 구성원인지 확인하고 familyId 반환 */
+  async verifyAccess(childId: string, userId: string): Promise<string> {
     const child = await this.prisma.child.findUnique({ where: { id: childId } });
     if (!child) throw new ApiException(404, 'CHILD_404', '아이를 찾을 수 없습니다');
 

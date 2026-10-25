@@ -7,7 +7,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const TEST_ACCOUNT_PATTERN = /^qa-.*@example\.com$/;
 
 export interface OverviewTodo {
-  kind: 'RESEARCH_SUMMARY' | 'AI_FAILURES' | 'JOB_FAILED' | 'TEST_ACCOUNTS' | 'INACTIVE_FAMILY';
+  kind:
+    | 'RESEARCH_SUMMARY'
+    | 'AI_FAILURES'
+    | 'JOB_FAILED'
+    | 'TEST_ACCOUNTS'
+    | 'INACTIVE_FAMILY'
+    | 'RECORD_UNPARSED';
   title: string;
   detail: string;
   /** 관리자 화면에서 이동할 곳 */
@@ -26,34 +32,47 @@ export class AdminOverviewService {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * DAY_MS);
 
-    const [lastCurriculumJob, failedJobs, usage, aiLimit, missingSummaries, users, families] =
-      await Promise.all([
-        this.prisma.batchJob.findFirst({
-          where: { type: 'CURRICULUM_GENERATION' },
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.batchJob.findMany({
-          where: {
-            createdAt: { gte: weekAgo },
-            OR: [{ status: 'FAILED' }, { failedItems: { gt: 0 } }],
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        }),
-        this.costTracker.getUsageSummary(1),
-        this.prisma.aiConfig.findFirst({
-          where: { isActive: true, isDefault: true },
-          select: { dailyBudgetLimit: true },
-        }),
-        this.prisma.researchArticle.count({ where: { koreanSummary: null } }),
-        this.prisma.user.findMany({
-          where: { role: { not: 'SYSTEM_ADMIN' } },
-          select: { id: true, email: true, createdAt: true },
-        }),
-        this.prisma.family.findMany({
-          select: { id: true, name: true, children: { select: { id: true } } },
-        }),
-      ]);
+    const [
+      lastCurriculumJob,
+      failedJobs,
+      usage,
+      aiLimit,
+      missingSummaries,
+      users,
+      families,
+      unparsedRecords,
+    ] = await Promise.all([
+      this.prisma.batchJob.findFirst({
+        where: { type: 'CURRICULUM_GENERATION' },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.batchJob.findMany({
+        where: {
+          createdAt: { gte: weekAgo },
+          OR: [{ status: 'FAILED' }, { failedItems: { gt: 0 } }],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+      this.costTracker.getUsageSummary(1),
+      this.prisma.aiConfig.findFirst({
+        where: { isActive: true, isDefault: true },
+        select: { dailyBudgetLimit: true },
+      }),
+      this.prisma.researchArticle.count({ where: { koreanSummary: null } }),
+      this.prisma.user.findMany({
+        where: { role: { not: 'SYSTEM_ADMIN' } },
+        select: { id: true, email: true, createdAt: true },
+      }),
+      this.prisma.family.findMany({
+        select: { id: true, name: true, children: { select: { id: true } } },
+      }),
+      this.prisma.dailyRecordEntry.findMany({
+        where: { status: 'FAILED' },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true, error: true },
+      }),
+    ]);
 
     const failures24h = usage.recentFailures.filter(
       (f) => now.getTime() - new Date(f.at).getTime() < DAY_MS,
@@ -67,6 +86,15 @@ export class AdminOverviewService {
         kind: 'RESEARCH_SUMMARY',
         title: `논문 ${missingSummaries}편에 한국어 요약이 없어요`,
         detail: '요약 재처리를 실행하면 다시 요약해요',
+        link: '/jobs',
+      });
+    }
+    if (unparsedRecords.length > 0) {
+      const latest = unparsedRecords[0];
+      todos.push({
+        kind: 'RECORD_UNPARSED',
+        title: `AI 정리가 안 된 기록 ${unparsedRecords.length}건 (원문만 저장됨)`,
+        detail: `최근 ${latest.createdAt.toISOString().slice(0, 16).replace('T', ' ')} UTC · ${latest.error ?? ''}`,
         link: '/jobs',
       });
     }

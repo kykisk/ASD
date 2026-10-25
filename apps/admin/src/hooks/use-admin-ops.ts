@@ -59,6 +59,25 @@ export function useAiUsage(days = 7) {
   });
 }
 
+export interface DailyRecordQuality {
+  days: number;
+  freeformRecords: number;
+  detailedRecords: number;
+  freeformShare: number | null;
+  editedRate: number | null;
+  answerRate: number | null;
+  abandoned: number;
+  failed: number;
+}
+
+export function useDailyRecordQuality(days = 7) {
+  return useQuery({
+    queryKey: ['admin-daily-record-quality', days],
+    queryFn: () => get<DailyRecordQuality>('/admin/ai/daily-record-quality', { days }),
+    refetchInterval: 60_000,
+  });
+}
+
 // ─── 자동 작업 ─────────────────────────────────────────
 
 export interface JobInfo {

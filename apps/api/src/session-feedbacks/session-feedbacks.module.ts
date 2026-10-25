@@ -17,6 +17,11 @@ import { FamilyResolverService } from '../common/services/family-resolver.servic
     FeedbackDomainExtractionService,
     FamilyResolverService,
   ],
-  exports: [SessionFeedbacksService, FeedbackDigestService, FeedbackDigestBatchService],
+  exports: [
+    SessionFeedbacksService,
+    FeedbackDigestService,
+    FeedbackDigestBatchService,
+    FeedbackDomainExtractionService,
+  ],
 })
 export class SessionFeedbacksModule {}

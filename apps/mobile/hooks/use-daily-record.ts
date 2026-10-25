@@ -70,6 +70,8 @@ export interface DailyTimelineDay {
     behaviorTags: string[];
   }>;
   activities: { done: number; total: number } | null;
+  /** 쭉 적기로 남긴 원문 */
+  freeform: Array<{ id: string; rawText: string; status: string }>;
 }
 
 /** 기록 모아보기: 최근 days 일 날짜별 묶음 (최신순) */
@@ -84,5 +86,99 @@ export function useDailyTimeline(childId: string | null, days: number) {
       return data.data as DailyTimelineDay[];
     },
     enabled: !!childId,
+  });
+}
+
+// ─── 쭉 적기 (AI 정리) ───────────────────────────────────
+
+export interface FreeformDraft {
+  scores: Partial<Record<DailyRecordDomain, { score: number; reason: string }>>;
+  note: string | null;
+  sessions: Array<{ sessionType: string; therapistFeedback: string | null }>;
+  behaviors: Array<{ tags: string[]; content: string; severity: number | null }>;
+}
+
+export interface FreeformQuestion {
+  kind: 'BEHAVIOR_SEVERITY' | 'SESSION_HOMEWORK' | 'SCORE' | 'NOTE';
+  index?: number;
+  domain?: DailyRecordDomain;
+  question: string;
+  answer: 'scale' | 'text';
+}
+
+export type AnalyzeResult =
+  | { entryId: string; status: 'DRAFT'; draft: FreeformDraft; questions: FreeformQuestion[] }
+  | { entryId: string; status: 'FAILED'; reason: string; record: DailyRecordSummary };
+
+export interface ConfirmFreeformInput {
+  scores: Partial<Record<DailyRecordDomain, number>>;
+  note?: string;
+  sessions: Array<{ sessionType: string; therapistFeedback?: string }>;
+  behaviors: Array<{ tags: string[]; content: string; severity: number | null }>;
+  answers: Array<{ index: number; value: number | string }>;
+}
+
+/** 쭉 적기를 지금 쓸 수 있는지 (AI 꺼짐 · 한도 초과면 자세히 입력으로) */
+export function useFreeformAvailability(childId: string | null) {
+  return useQuery<{ available: boolean; reason?: string }>({
+    queryKey: ['freeform-availability', childId],
+    queryFn: async () => {
+      const { data } = await api.get(`/children/${childId}/daily-records/freeform/availability`);
+      return data.data;
+    },
+    enabled: !!childId,
+    staleTime: 60_000,
+  });
+}
+
+function invalidateRecord(queryClient: ReturnType<typeof useQueryClient>, childId: string) {
+  queryClient.invalidateQueries({ queryKey: ['daily-record', childId] });
+  queryClient.invalidateQueries({ queryKey: ['insight', 'weekly', childId] });
+  queryClient.invalidateQueries({ queryKey: ['daily-timeline', childId] });
+  queryClient.invalidateQueries({ queryKey: ['dashboard', childId] });
+  queryClient.invalidateQueries({ queryKey: ['assessments', childId] });
+  queryClient.invalidateQueries({ queryKey: ['growth', childId] });
+  queryClient.invalidateQueries({ queryKey: ['session-feedbacks', childId] });
+}
+
+export function useAnalyzeFreeform() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ childId, text }: { childId: string; text: string }) => {
+      const { data } = await api.post(`/children/${childId}/daily-records/freeform/analyze`, {
+        text,
+      });
+      return data.data as AnalyzeResult;
+    },
+    // AI 가 실패하면 원문이 일상 메모로 이미 저장됨
+    onSuccess: (result, { childId }) => {
+      if (result.status === 'FAILED') invalidateRecord(queryClient, childId);
+      queryClient.invalidateQueries({ queryKey: ['freeform-availability', childId] });
+    },
+  });
+}
+
+export function useConfirmFreeform() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      childId,
+      entryId,
+      input,
+    }: {
+      childId: string;
+      entryId: string;
+      input: ConfirmFreeformInput;
+    }) => {
+      const { data } = await api.post(
+        `/children/${childId}/daily-records/freeform/${entryId}/confirm`,
+        input,
+      );
+      return data.data as DailyRecordSummary;
+    },
+    onSuccess: (summary, { childId }) => {
+      queryClient.setQueryData(['daily-record', childId], summary);
+      invalidateRecord(queryClient, childId);
+    },
   });
 }

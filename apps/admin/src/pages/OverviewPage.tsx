@@ -11,6 +11,7 @@ const TODO_ACTION: Record<string, string> = {
   JOB_FAILED: '자동 작업 보기',
   TEST_ACCOUNTS: '정리하기',
   INACTIVE_FAMILY: '보기',
+  RECORD_UNPARSED: '다시 분석',
 };
 
 const TODO_DOT: Record<string, string> = {
@@ -19,6 +20,7 @@ const TODO_DOT: Record<string, string> = {
   JOB_FAILED: '#EF4444',
   TEST_ACCOUNTS: '#94A3B8',
   INACTIVE_FAMILY: '#94A3B8',
+  RECORD_UNPARSED: '#F59E0B',
 };
 
 function StatCard({

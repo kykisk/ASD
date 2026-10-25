@@ -41,6 +41,11 @@ export class FeedbackDomainExtractionService {
     });
   }
 
+  /** 기다렸다가 결과까지 확인 (자동 작업 '다시 분석'용). 실패하면 예외 */
+  async extractNow(feedbackId: string): Promise<void> {
+    await this.extractAndSave(feedbackId);
+  }
+
   private async extractAndSave(feedbackId: string): Promise<void> {
     const feedback = await this.prisma.sessionFeedback.findUnique({
       where: { id: feedbackId },

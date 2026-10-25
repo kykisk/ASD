@@ -39,6 +39,10 @@
   AI 사용량(Redis `auticare:ai-cost:<날짜>:model|feature:*`)·연결 실테스트·하루 호출 한도(회), 자동 작업 실행 기록(BatchJob, 주간 배치도 기록) + 지금 실행,
   임시 비밀번호 발급(`User.mustChangePassword` → 웹/모바일 로그인 직후 `/change-password` 강제), 테스트 계정 삭제(이메일 재입력, `qa-*@example.com` 은 운영 현황에 표시).
   모니터링의 가짜 카드·가짜 감사 로그/질문지 목록 제거. 예전 주소(/dashboard, /monitoring 등)는 새 주소로 리다이렉트
+- AI 기록 브랜치: **`feature/ai-record`** (admin/cleanup 위) — 오늘 하루 기록 "쭉 적기"(기본 탭, 마지막 탭 기억, AI 못 쓰면 자세히 입력).
+  자유 글 → AI(`DAILY_RECORD_PARSE`, Quality) 정리 초안 + 질문 최대 3개 → 부모 확인 후 저장, 같은 날 점수는 합침.
+  AI 실패 시 원문을 일상 메모로 저장 → 매일 03:30 `DAILY_RECORD_RETRY` 가 영역 점수만 다시 추출. 표 `DailyRecordEntry`(원문 · 초안 · 품질 통계).
+  관리자: AI 화면 "오늘 기록 정리 품질"(비율만, 원문 열람 없음), 운영 현황 "AI 정리가 안 된 기록", 자동 작업에 다시 분석
 - 원칙: DB 변경은 **추가만** (새 컬럼은 nullable/default) → 코드만 되돌려도 기존 버전이 그대로 동작
 - 되돌리기 (코드):
   ```bash

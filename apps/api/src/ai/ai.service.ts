@@ -14,6 +14,13 @@ import type { DecryptedAiConfig } from '@auticare/dto';
 
 const MAX_STRUCTURED_RETRIES = 3;
 
+/** 가족 AI 사용 범위(티어)별 하루 호출 수 */
+const FAMILY_DAILY_LIMITS: Record<string, number> = {
+  BASIC: 5,
+  STANDARD: 20,
+  UNLIMITED: Infinity,
+};
+
 @Injectable()
 export class AIService {
   private readonly logger = new Logger(AIService.name);
@@ -244,6 +251,40 @@ export class AIService {
     return configs.filter((c) => c.isActive).map((c) => c.provider);
   }
 
+  /**
+   * 지금 이 가족이 AI 를 쓸 수 있는지 (가족 사용 범위 · 활성 연결 · 하루 호출 한도).
+   * 화면에서 기본 입력 방식을 고를 때 씀. 사용 횟수는 세지 않음
+   */
+  async availability(familyId: string): Promise<{ available: boolean; reason?: string }> {
+    const family = await this.prisma.family.findUnique({
+      where: { id: familyId },
+      select: { aiTier: true },
+    });
+    if (family?.aiTier === 'DISABLED') {
+      return { available: false, reason: 'AI 기능이 꺼져 있어요' };
+    }
+    const familyLimit = family ? FAMILY_DAILY_LIMITS[family.aiTier] : Infinity;
+    if (familyLimit !== Infinity) {
+      const used = parseInt(
+        (await this.redis.get(`auticare:ai-family:${familyId}:${kstDate()}`)) || '0',
+      );
+      if (used >= familyLimit) {
+        return { available: false, reason: '오늘 쓸 수 있는 AI 횟수를 다 썼어요' };
+      }
+    }
+
+    const active = (await this.aiConfigService.findAll()).filter((c) => c.isActive);
+    if (active.length === 0) {
+      return { available: false, reason: 'AI 연결이 아직 준비되지 않았어요' };
+    }
+    for (const config of active) {
+      if (await this.costTracker.checkBudgetLimit(config.provider, config.dailyBudgetLimit)) {
+        return { available: true };
+      }
+    }
+    return { available: false, reason: '오늘 쓸 수 있는 AI 횟수를 다 썼어요' };
+  }
+
   private async checkAiAccess(familyId: string): Promise<void> {
     const family = await this.prisma.family.findUnique({
       where: { id: familyId },
@@ -255,8 +296,7 @@ export class AIService {
       throw new ApiException(403, 'AI_001', 'AI 기능이 비활성화되어 있습니다');
     }
 
-    const limits: Record<string, number> = { BASIC: 5, STANDARD: 20, UNLIMITED: Infinity };
-    const dailyLimit = limits[family.aiTier];
+    const dailyLimit = FAMILY_DAILY_LIMITS[family.aiTier];
     if (dailyLimit === Infinity) return;
 
     const key = `auticare:ai-family:${familyId}:${kstDate()}`;
