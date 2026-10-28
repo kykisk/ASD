@@ -362,5 +362,41 @@ describe('SessionFeedbacksService', () => {
       expect(result).toContain('[가정연습]');
       expect(result).toContain('읽기 연습');
     });
+
+    it('passes the teacher words saved from the daily record and parent notes', async () => {
+      prisma.sessionFeedback.findMany.mockResolvedValue([
+        {
+          ...baseFeedback,
+          feedbackType: 'SESSION',
+          sessionType: 'SPEECH',
+          rating: 4,
+          content: "'물 주세요' 처음 혼자 요청 / 집에서: 가리키면 말로 하게 기다려주기",
+          progress: null,
+          challenges: null,
+          homeWork: null,
+        },
+        {
+          ...baseFeedback,
+          id: 'fb-2',
+          feedbackType: 'DAILY_LOG',
+          sessionType: 'DAILY',
+          content: '블록 놀이 30분 집중',
+        },
+        {
+          ...baseFeedback,
+          id: 'fb-3',
+          feedbackType: 'BEHAVIORAL_ISSUE',
+          sessionType: 'BEHAVIOR',
+          content: '마트에서 울음',
+        },
+      ]);
+
+      const result = await service.buildPromptSummary('child-1');
+
+      expect(result).toContain("언어치료 (1회, 4/5): 선생님=\"'물 주세요' 처음 혼자 요청");
+      expect(result).toContain('[부모 일상 메모] 블록 놀이 30분 집중');
+      expect(result).not.toContain('마트에서 울음');
+      expect(result).not.toContain('BEHAVIOR (');
+    });
   });
 });

@@ -3,6 +3,18 @@ import { PrismaService } from '@auticare/prisma-client';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { FeedbackDomainExtractionService } from './feedback-domain-extraction.service.js';
 
+/** 수업 종류 코드 → 한글 (프롬프트용). 예전 기록은 한글이 그대로 저장돼 있음 */
+const SESSION_TYPE_LABELS: Record<string, string> = {
+  ABA: 'ABA',
+  SPEECH: '언어치료',
+  SENSORY: '감각통합',
+  OCCUPATIONAL: '작업치료',
+  BEHAVIORAL: '행동치료',
+  SPECIAL_PE: '특수체육',
+  PLAY: '놀이치료',
+  OTHER: '기타 수업',
+};
+
 export interface CreateSessionFeedbackInput {
   sessionDate: string;
   sessionType: string;
@@ -255,25 +267,45 @@ export class SessionFeedbacksService {
 
     if (feedbacks.length === 0) return null;
 
+    // 일상 메모 · 힘든 행동은 커리큘럼 프롬프트에 따로 들어가므로 수업만 집계
+    const sessions = feedbacks.filter(
+      (f) => f.feedbackType !== 'DAILY_LOG' && f.feedbackType !== 'BEHAVIORAL_ISSUE',
+    );
+    const dailyNotes = feedbacks
+      .filter((f) => f.feedbackType === 'DAILY_LOG' && f.content)
+      .slice(0, 2)
+      .map((f) => f.content.slice(0, 100));
+
     // sessionType별 집계
     const grouped: Record<
       string,
       {
         count: number;
         totalRating: number;
+        teacher: string[];
         progress: string[];
         challenges: string[];
         homeWork: string[];
       }
     > = {};
 
-    for (const f of feedbacks) {
-      const key = f.sessionType;
+    for (const f of sessions) {
+      const key = SESSION_TYPE_LABELS[f.sessionType] ?? f.sessionType;
       if (!grouped[key]) {
-        grouped[key] = { count: 0, totalRating: 0, progress: [], challenges: [], homeWork: [] };
+        grouped[key] = {
+          count: 0,
+          totalRating: 0,
+          teacher: [],
+          progress: [],
+          challenges: [],
+          homeWork: [],
+        };
       }
       grouped[key].count++;
       grouped[key].totalRating += f.rating;
+      // 오늘 하루 기록의 '선생님이 해주신 말씀'은 content 에 저장됨
+      if (f.content && f.content !== '수업 참여')
+        grouped[key].teacher.push(f.content.slice(0, 120));
       if (f.progress) grouped[key].progress.push(f.progress.slice(0, 80));
       if (f.challenges) grouped[key].challenges.push(f.challenges.slice(0, 80));
       if (f.homeWork) grouped[key].homeWork.push(f.homeWork.slice(0, 60));
@@ -282,6 +314,9 @@ export class SessionFeedbacksService {
     const lines: string[] = [];
     for (const [type, data] of Object.entries(grouped)) {
       const avg = Math.round((data.totalRating / data.count) * 10) / 10;
+      const teacherStr = data.teacher.length
+        ? `선생님="${data.teacher.slice(0, 3).join('; ')}"`
+        : '';
       const progressStr = data.progress.length
         ? `진전="${data.progress.slice(0, 2).join('; ')}"`
         : '';
@@ -289,7 +324,7 @@ export class SessionFeedbacksService {
         ? `과제="${data.challenges.slice(0, 2).join('; ')}"`
         : '';
       lines.push(
-        `- ${type} (${data.count}회, ${avg}/5): ${[progressStr, challengeStr].filter(Boolean).join(', ')}`,
+        `- ${type} (${data.count}회, ${avg}/5): ${[teacherStr, progressStr, challengeStr].filter(Boolean).join(', ')}`,
       );
     }
 
@@ -299,7 +334,11 @@ export class SessionFeedbacksService {
     if (allHomeWork.length) {
       lines.push(`[가정연습] ${allHomeWork.join(', ')}`);
     }
+    if (dailyNotes.length) {
+      lines.push(`[부모 일상 메모] ${dailyNotes.join(' / ')}`);
+    }
 
+    if (lines.length === 0) return null;
     return lines.join('\n');
   }
 }
