@@ -11,6 +11,13 @@ export const DAILY_RECORD_DOMAINS = [
 
 const score = z.number().int().min(1).max(5);
 
+/** 힘든 행동: 바로 전 상황 · 부모 반응 · 진정까지 (모두 선택) */
+const abcFields = {
+  antecedent: z.string().trim().max(40).nullable().optional(),
+  parentResponse: z.string().trim().max(40).nullable().optional(),
+  settled: z.enum(['QUICK', 'SOME', 'LONG']).nullable().optional(),
+};
+
 export const createDailyRecordSchema = z
   .object({
     /** YYYY-MM-DD (KST). 없으면 오늘 */
@@ -36,6 +43,7 @@ export const createDailyRecordSchema = z
         severity: score,
         tags: z.array(z.string().max(20)).max(10).default([]),
         content: z.string().trim().min(1).max(1000),
+        ...abcFields,
       })
       .optional(),
   })
@@ -121,6 +129,7 @@ export const confirmFreeformSchema = z.object({
         severity: score.nullable().optional(),
         tags: z.array(z.string().max(20)).max(10).default([]),
         content: z.string().trim().min(1).max(1000),
+        ...abcFields,
       }),
     )
     .max(3)

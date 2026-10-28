@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import { PrismaService } from '@auticare/prisma-client';
 import {
+  ANTECEDENT_OPTIONS,
+  RESPONSE_OPTIONS,
   BEHAVIOR_TAG_OPTIONS,
   DAILY_RECORD_DOMAINS,
   DAILY_SESSION_TYPE_KEYS,
@@ -57,6 +59,9 @@ const parsedSchema = z.object({
         tags: z.array(z.string()).optional().default([]),
         content: cappedString(1000),
         severity: nullableScore,
+        antecedent: z.string().nullable().optional(),
+        parentResponse: z.string().nullable().optional(),
+        settled: z.string().nullable().optional(),
       }),
     )
     .optional()
@@ -78,7 +83,15 @@ export interface FreeformDraft {
   scores: Partial<Record<Domain, { score: number; reason: string }>>;
   note: string | null;
   sessions: Array<{ sessionType: string; therapistFeedback: string | null }>;
-  behaviors: Array<{ tags: string[]; content: string; severity: number | null }>;
+  behaviors: Array<{
+    tags: string[];
+    content: string;
+    severity: number | null;
+    /** 글에 있을 때만: 바로 전 상황 · 부모 반응 · 진정까지 */
+    antecedent: string | null;
+    parentResponse: string | null;
+    settled: 'QUICK' | 'SOME' | 'LONG' | null;
+  }>;
 }
 
 export type QuestionKind = 'BEHAVIOR_SEVERITY' | 'SESSION_HOMEWORK' | 'SCORE' | 'NOTE';
@@ -321,6 +334,7 @@ ${alreadyScored.length ? `오늘 이미 기록된 영역 점수: ${alreadyScored
 ${DOMAIN_GUIDE}
 2. sessions: 센터 · 치료 수업 이야기가 있으면. sessionType 은 ${SESSION_GUIDE} 중 하나. therapistFeedback 은 선생님 말씀이나 수업 내용 요약(100자 이내), 없으면 null.
 3. behaviors: 울음 · 떼쓰기 · 공격 · 자해 · 뛰쳐나감 같은 힘든 행동이 있으면. tags 는 ${BEHAVIOR_TAG_OPTIONS.join(', ')} 중에서, content 는 무슨 일이었는지(100자 이내), severity 는 글에서 정도를 알 수 있을 때만 1~5(1 금방 진정, 5 아주 힘들었음), 모르면 null.
+   글에 나와 있을 때만 채우고 아니면 null: antecedent(바로 전 상황) 는 ${ANTECEDENT_OPTIONS.join(' / ')} 중 하나, parentResponse(부모 반응) 는 ${RESPONSE_OPTIONS.join(' / ')} 중 하나, settled(진정까지) 는 QUICK(금방) / SOME(조금 걸림) / LONG(오래 걸림).
 4. note: scores 의 근거 · sessions · behaviors 에 이미 쓴 내용은 빼고, 남은 일상 이야기만 짧게(200자 이내). 남은 게 없으면 null.
 5. questions: 꼭 필요한 것만 최대 ${MAX_QUESTIONS}개. 아래 종류만 쓰세요.
    - BEHAVIOR_SEVERITY (index = behaviors 의 번호): 힘든 행동의 severity 가 null 일 때
@@ -330,6 +344,11 @@ ${DOMAIN_GUIDE}
 
 JSON 형식:
 {"scores":{"COMMUNICATION":{"score":4,"reason":"..."}},"note":null,"sessions":[{"sessionType":"SPEECH","therapistFeedback":"..."}],"behaviors":[{"tags":["멜트다운"],"content":"...","severity":null}],"questions":[{"kind":"BEHAVIOR_SEVERITY","index":0,"question":"..."}]}`;
+}
+
+/** 정해진 보기 중 하나일 때만 (AI 가 다른 말을 쓰면 비움) */
+function pick<T extends string>(value: string | null | undefined, options: readonly T[]): T | null {
+  return value && (options as readonly string[]).includes(value) ? (value as T) : null;
 }
 
 function normalizeDraft(parsed: z.infer<typeof parsedSchema>): FreeformDraft {
@@ -354,6 +373,9 @@ function normalizeDraft(parsed: z.infer<typeof parsedSchema>): FreeformDraft {
         tags: [...new Set(b.tags.filter((t) => tagOptions.includes(t)))],
         content: b.content.trim(),
         severity: b.severity,
+        antecedent: pick(b.antecedent, ANTECEDENT_OPTIONS),
+        parentResponse: pick(b.parentResponse, RESPONSE_OPTIONS),
+        settled: pick(b.settled, ['QUICK', 'SOME', 'LONG'] as const),
       })),
   };
 }
@@ -410,13 +432,27 @@ function sameRecord(draft: FreeformDraft, record: PersistRecord): boolean {
     scores: Record<string, number | undefined>;
     note?: string | null;
     sessions: Array<{ sessionType: string; therapistFeedback?: string | null }>;
-    behaviors: Array<{ tags: string[]; content: string; severity?: number | null }>;
+    behaviors: Array<{
+      tags: string[];
+      content: string;
+      severity?: number | null;
+      antecedent?: string | null;
+      parentResponse?: string | null;
+      settled?: string | null;
+    }>;
   }) =>
     JSON.stringify({
       scores: DAILY_RECORD_DOMAINS.map((d) => r.scores[d] ?? null),
       note: r.note || null,
       sessions: r.sessions.map((s) => [s.sessionType, s.therapistFeedback || null]),
-      behaviors: r.behaviors.map((b) => [[...b.tags].sort(), b.content, b.severity ?? null]),
+      behaviors: r.behaviors.map((b) => [
+        [...b.tags].sort(),
+        b.content,
+        b.severity ?? null,
+        b.antecedent ?? null,
+        b.parentResponse ?? null,
+        b.settled ?? null,
+      ]),
     });
   const draftScores = Object.fromEntries(
     Object.entries(draft.scores).map(([k, v]) => [k, v?.score]),

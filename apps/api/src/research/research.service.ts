@@ -412,6 +412,65 @@ ${articlesContext}
     }
   }
 
+  /**
+   * 고민별 관련 논문: PubMed 에서 관련도순으로 찾아 저장하고, 한국어 요약이 없으면 만들어 돌려줌.
+   * 실패해도 빈 배열 (관점 정리를 막지 않음)
+   */
+  async collectForQuery(query: string, max = 3) {
+    try {
+      const { ids } = await this.pubmedService.searchArticles(query, max, {
+        years: 15,
+        sort: 'relevance',
+      });
+      if (ids.length === 0) return [];
+      const details = await this.pubmedService.fetchArticleDetails(ids);
+      // 한국어 요약은 동시에 (순서대로 하면 논문마다 몇 초씩 더 걸림)
+      const out = await Promise.all(
+        details.map(async (article) => {
+          let row = await this.prisma.researchArticle.findUnique({
+            where: { pubmedId: article.pubmedId },
+          });
+          if (!row) {
+            row = await this.prisma.researchArticle.create({
+              data: {
+                pubmedId: article.pubmedId,
+                title: article.title,
+                authors: article.authors,
+                abstract: article.abstract,
+                publishedAt: new Date(article.publishedAt),
+                journal: article.journal,
+                tags: this.extractTags(article.title, article.abstract),
+              },
+            });
+          }
+          if (!row.koreanSummary && row.abstract) {
+            const summary = await this.summarizeArticle(row.title, row.abstract, 'system');
+            if (summary) {
+              row = await this.prisma.researchArticle.update({
+                where: { id: row.id },
+                data: { koreanSummary: summary.koreanSummary, keyFindings: summary.keyFindings },
+              });
+            }
+          }
+          return {
+            id: row.id,
+            pubmedId: row.pubmedId,
+            title: row.title,
+            journal: row.journal,
+            year: row.publishedAt.getFullYear(),
+            koreanSummary: row.koreanSummary,
+          };
+        }),
+      );
+      return out;
+    } catch (err) {
+      this.logger.warn(
+        `collectForQuery failed (${query}): ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return [];
+    }
+  }
+
   async runWeeklyCollection(childId?: string, familyId?: string) {
     const batchJob = await this.prisma.batchJob.create({
       data: {

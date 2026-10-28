@@ -4,6 +4,11 @@ export const AI_FEATURES: Record<
   { name: string; where: string; tier: 'QUALITY' | 'FAST' }
 > = {
   CURRICULUM: { name: '커리큘럼 만들기', where: '매일 04:00 · 오늘 활동 만들기', tier: 'QUALITY' },
+  CONCERN_PERSPECTIVES: {
+    name: '여러 관점 정리',
+    where: '맞는 방법 찾기 › 고민',
+    tier: 'QUALITY',
+  },
   DAILY_RECORD_PARSE: {
     name: '오늘 기록 정리',
     where: '오늘 하루 기록 › 쭉 적기',

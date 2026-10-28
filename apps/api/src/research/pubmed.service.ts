@@ -16,12 +16,20 @@ interface ArticleDetail {
 export class PubmedService {
   private readonly logger = new Logger(PubmedService.name);
 
-  async searchArticles(query: string, maxResults = 10): Promise<{ ids: string[] }> {
+  /**
+   * 기본: 최근 2년 최신순 (주간 수집). 고민별 관련 논문은 years 를 넓히고 관련도순으로 찾음
+   */
+  async searchArticles(
+    query: string,
+    maxResults = 10,
+    options: { years?: number; sort?: 'date' | 'relevance' } = {},
+  ): Promise<{ ids: string[] }> {
     const currentYear = new Date().getFullYear();
-    const minDate = `${currentYear - 2}/01/01`;
+    const minDate = `${currentYear - (options.years ?? 2)}/01/01`;
     const maxDate = `${currentYear}/12/31`;
+    const sort = options.sort === 'relevance' ? 'relevance' : 'date';
 
-    const url = `${BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=${maxResults}&retmode=json&sort=date&datetype=pdat&mindate=${minDate}&maxdate=${maxDate}`;
+    const url = `${BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=${maxResults}&retmode=json&sort=${sort}&datetype=pdat&mindate=${minDate}&maxdate=${maxDate}`;
 
     const response = await axios.get(url, { timeout: 15000 });
     const idList = response.data?.esearchresult?.idlist ?? [];

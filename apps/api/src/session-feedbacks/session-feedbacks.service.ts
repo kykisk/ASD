@@ -31,6 +31,12 @@ export interface CreateSessionFeedbackInput {
   feedbackType?: string;
   severity?: number | null;
   behaviorTags?: string[];
+  /** 힘든 행동: 바로 전 상황 · 부모 반응 · 진정까지 */
+  antecedent?: string | null;
+  parentResponse?: string | null;
+  settled?: string | null;
+  concernId?: string | null;
+  isTeacherOpinion?: boolean;
 }
 
 export interface UpdateSessionFeedbackInput {
@@ -105,6 +111,11 @@ export class SessionFeedbacksService {
         feedbackType: input.feedbackType ?? 'SESSION',
         severity: input.severity ?? null,
         behaviorTags: input.behaviorTags ?? [],
+        antecedent: input.antecedent ?? null,
+        parentResponse: input.parentResponse ?? null,
+        settled: input.settled ?? null,
+        concernId: input.concernId ?? null,
+        isTeacherOpinion: input.isTeacherOpinion ?? false,
       },
       include: { schedule: { select: { id: true, title: true } } },
     });

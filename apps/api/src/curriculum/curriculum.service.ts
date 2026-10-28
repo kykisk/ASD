@@ -189,6 +189,33 @@ export class CurriculumService {
 
       const recentActivityResults = await this.getRecentActivityResults(childId);
 
+      // 맞는 방법 찾기: 선생님 의견(최근 90일) · 시도 중인 방법
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const [teacherOpinionRows, activeTrialRows] = await Promise.all([
+        this.prisma.sessionFeedback.findMany({
+          where: { childId, isTeacherOpinion: true, createdAt: { gte: ninetyDaysAgo } },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: { sessionType: true, content: true, concernId: true },
+        }),
+        this.prisma.strategyTrial.findMany({
+          where: { childId, status: 'ACTIVE' },
+          include: { concern: { select: { title: true } } },
+        }),
+      ]);
+      const concernTitles = new Map(
+        (
+          await this.prisma.concern.findMany({
+            where: {
+              id: {
+                in: teacherOpinionRows.map((t) => t.concernId).filter((v): v is string => !!v),
+              },
+            },
+            select: { id: true, title: true },
+          })
+        ).map((c) => [c.id, c.title]),
+      );
+
       const messages = this.promptService.buildCurriculumPrompt({
         childAgeMonths: ageMonths,
         domainScores: aggregated.domains.map((d) => ({
@@ -242,6 +269,16 @@ export class CurriculumService {
         sessionFeedbackSummary: sessionFeedbackSummary ?? undefined,
         behaviorIssueSummary: behaviorIssueSummary ?? undefined,
         recentActivityResults: recentActivityResults.length > 0 ? recentActivityResults : undefined,
+        teacherOpinions: teacherOpinionRows.map((t) => ({
+          sessionType: t.sessionType,
+          content: t.content,
+          concernTitle: t.concernId ? concernTitles.get(t.concernId) : undefined,
+        })),
+        activeTrials: activeTrialRows.map((t) => ({
+          concernTitle: t.concern.title,
+          title: t.title,
+          how: t.how,
+        })),
         userInput: userInput ?? undefined,
       });
 
@@ -253,6 +290,12 @@ export class CurriculumService {
         'CURRICULUM',
       );
 
+      // 시도 중인 방법을 연습하는 활동은 그 고민으로 이어지게
+      const trialConcernId = activeTrialRows[0]?.concernId;
+      const activities = result.activities.map(({ forTrial, ...a }) =>
+        forTrial && trialConcernId ? { ...a, concernId: trialConcernId } : a,
+      );
+
       const curriculum = await this.prisma.curriculum.create({
         data: {
           childId,
@@ -260,7 +303,7 @@ export class CurriculumService {
           date: dateStart,
           status: 'GENERATED',
           weeklyGoal: result.weeklyGoal,
-          activities: result.activities as unknown as Record<string, unknown>[],
+          activities: activities as unknown as Record<string, unknown>[],
           notes: result.notes ?? null,
           rawAiOutput: result as unknown as Record<string, unknown>,
           generatedAt: new Date(),

@@ -37,6 +37,7 @@ import { LicensesModule } from '../licenses/licenses.module.js';
 import { ClinicalReportsModule } from '../clinical-reports/clinical-reports.module.js';
 import { SessionFeedbacksModule } from '../session-feedbacks/session-feedbacks.module.js';
 import { DailyRecordsModule } from '../daily-records/daily-records.module.js';
+import { ConcernsModule } from '../concerns/concerns.module.js';
 import { MedicationsModule } from '../medications/medications.module.js';
 import { CacheModule } from '../common/cache/cache.module.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
@@ -82,6 +83,7 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
     ClinicalReportsModule,
     SessionFeedbacksModule,
     DailyRecordsModule,
+    ConcernsModule,
     MedicationsModule,
   ],
   controllers: [AppController],

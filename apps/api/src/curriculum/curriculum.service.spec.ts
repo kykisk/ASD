@@ -64,6 +64,12 @@ const mockPrismaService = {
     findMany: vi.fn().mockResolvedValue([]),
     count: vi.fn().mockResolvedValue(0),
   },
+  strategyTrial: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  concern: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
 };
 
 const mockAiService = {

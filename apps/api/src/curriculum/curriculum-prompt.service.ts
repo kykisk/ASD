@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { AIMessage } from '@auticare/ai-provider';
+import { ACTIVITY_METHODS } from '../ai/schemas/curriculum.schema.js';
 
 export interface LicensedScoreSnapshot {
   tool: string;
@@ -65,6 +66,10 @@ export interface CurriculumPromptParams {
   licensedScores?: LicensedScoreSnapshot[];
   clinicalReports?: ClinicalReportSnapshot[];
   sessionFeedbackSummary?: string;
+  /** '선생님께 보여드리기'에서 받은 선생님 의견 (최근 것부터) */
+  teacherOpinions?: Array<{ sessionType: string; content: string; concernTitle?: string }>;
+  /** 2주 시도 중인 방법 */
+  activeTrials?: Array<{ concernTitle: string; title: string; how: string }>;
   userInput?: {
     extraActivities?: string;
     dailyGoal?: string;
@@ -94,6 +99,10 @@ const ACTIVITY_DOMAIN_LABELS: Record<string, string> = {
 
 const MAX_ACTIVITY_RESULT_LINES = 12;
 
+const METHOD_GUIDE = Object.entries(ACTIVITY_METHODS)
+  .map(([key, m]) => `${key}(${m.label})`)
+  .join(', ');
+
 @Injectable()
 export class CurriculumPromptService {
   buildCurriculumPrompt(params: CurriculumPromptParams): AIMessage[] {
@@ -108,7 +117,27 @@ export class CurriculumPromptService {
 - 매우 구체적인 단계별 지침을 제공하세요
 - 한국어로 작성하세요
 - 각 텍스트 필드는 지정된 최대 글자 수를 반드시 지키세요 (초과 금지). 특히 notes는 500자 이내로 간결하게 작성하세요
-- JSON 형식으로만 응답하세요 (다른 텍스트 없이)`,
+- JSON 형식으로만 응답하세요 (다른 텍스트 없이)
+
+근거 기반 원칙 (자폐 아동 근거 기반 중재 중 가정에서 쓸 수 있는 방법):
+- 아이가 관심 보이는 것에서 시작하고(아이 주도), 매일 하는 일상(식사 · 목욕 · 놀이) 속에 끼워 넣으세요
+- 한 번에 하나씩, 작은 단계로 나누고 성공하면 바로 구체적으로 칭찬하세요
+- 먼저 시범을 보이고, 필요한 만큼만 도와준 뒤 도움을 점점 줄이세요
+- 말로 요구하기 전에 기다려 주고(5초), 그림 · 순서표 같은 시각 자료를 활용하세요
+- 각 활동의 methods 에는 실제로 쓴 방법만 아래 키에서 1~3개 고르세요:
+  ${METHOD_GUIDE}
+
+안전 규칙 (반드시 지키세요):
+- 작은 물건 · 딱딱하거나 둥근 음식 등 질식 위험이 있는 재료는 쓰지 마세요
+- 벌주기, 억지로 시키기, 몸을 붙잡아 막기를 제안하지 마세요 (다치는 걸 막는 잠깐의 안전 조치만 예외)
+- 감각이 예민한 아이에게 큰 소리 · 강한 빛 · 원치 않는 접촉을 쓰지 마세요
+- 아이가 힘들어하면 멈추고 쉬도록 안내하세요
+- 위험할 수 있는 활동(높은 곳 · 물 · 뜨거운 것)이면 caution 에 주의할 점을 쓰세요
+- 자해 · 공격 같은 다치는 행동이 기록돼 있으면 notes 에 전문가와 상의하도록 권하세요
+
+활동마다 rationale 에 "왜 이 활동인지"를 위에서 받은 기록을 근거로 한 문장(80자 이내)으로 쓰세요.
+예: "힘든 행동 기록 3번(손으로 탁탁 치기) · 언어치료 선생님 '눈 맞추면 칭찬'"
+점수 변화는 '하락' · '정체' 같은 말 대신 "조금 더 신경 쓸 때", "천천히 자라는 중"처럼 부모가 부담 없이 읽을 말로 쓰세요.`,
     };
 
     const ageText = this.formatAge(params.childAgeMonths);
@@ -223,6 +252,21 @@ ${domainText}`;
       userContent += `\n\n${this.formatActivityResults(params.recentActivityResults)}`;
     }
 
+    if (params.teacherOpinions && params.teacherOpinions.length > 0) {
+      userContent += `\n\n센터 선생님 의견 (부모가 받아 적은 것, 가장 먼저 따르세요):\n`;
+      for (const t of params.teacherOpinions) {
+        userContent += `- [${t.sessionType}${t.concernTitle ? ` · 고민: ${t.concernTitle}` : ''}] ${t.content.slice(0, 200)}\n`;
+      }
+    }
+
+    if (params.activeTrials && params.activeTrials.length > 0) {
+      userContent += `\n\n지금 2주 동안 시도 중인 방법 (부모가 골랐어요):\n`;
+      for (const t of params.activeTrials) {
+        userContent += `- 고민 "${t.concernTitle}" → ${t.title}: ${t.how.slice(0, 200)}\n`;
+      }
+      userContent += `오늘 활동 중 하나는 이 방법을 집에서 연습하는 활동으로 만들고 그 활동에 "forTrial": true 를 넣으세요.\n`;
+    }
+
     if (params.userInput) {
       const ui = params.userInput;
       const hasGoals = ui.dailyGoal || ui.weeklyGoal || ui.monthlyGoal;
@@ -253,7 +297,11 @@ ${domainText}`;
       "materials": ["필요한 재료 (선택사항)"],
       "steps": ["1단계", "2단계", "3단계"],
       "successCriteria": "성공 기준 (최대 300자)",
-      "difficultyLevel": "EASY|MEDIUM|HARD"
+      "difficultyLevel": "EASY|MEDIUM|HARD",
+      "rationale": "왜 이 활동인지, 근거 기록 한 문장 (최대 80자)",
+      "methods": ["IMITATE", "WAIT"],
+      "caution": "주의할 점 (없으면 null, 최대 100자)",
+      "forTrial": false
     }
   ],
   "notes": "부모를 위한 추가 참고사항 (선택사항, 최대 500자)"

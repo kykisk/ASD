@@ -32,7 +32,14 @@ export interface PersistRecord {
   scores: Partial<Record<DailyRecordDomain, number | undefined>>;
   note?: string;
   sessions: Array<{ sessionType: string; therapistFeedback?: string }>;
-  behaviors: Array<{ severity?: number | null; tags: string[]; content: string }>;
+  behaviors: Array<{
+    severity?: number | null;
+    tags: string[];
+    content: string;
+    antecedent?: string | null;
+    parentResponse?: string | null;
+    settled?: string | null;
+  }>;
 }
 
 export interface DailyRecordSummary {
@@ -203,6 +210,9 @@ export class DailyRecordsService {
         feedbackType: 'BEHAVIORAL_ISSUE',
         severity: behavior.severity ?? undefined,
         behaviorTags: behavior.tags,
+        antecedent: behavior.antecedent,
+        parentResponse: behavior.parentResponse,
+        settled: behavior.settled,
       });
     }
 
