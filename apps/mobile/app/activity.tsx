@@ -16,6 +16,7 @@ import { useTodayCurriculum, useActivityLogs, useLogActivity } from '../hooks/us
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 import type { LogActivityInput } from '../types/api.types.js';
 import { runTour, setPendingTour, takePendingTour } from '../lib/tour.js';
+import { APPROACH_LABELS, METHOD_LABELS } from '../constants/find-way.js';
 
 type ActivityResult = LogActivityInput['result'];
 
@@ -169,6 +170,60 @@ export default function ActivityScreen() {
           <Text style={styles.cardLabel}>이러면 성공이에요</Text>
           <Text style={styles.body}>{activity.successCriteria}</Text>
         </View>
+
+        {(activity.rationale || (activity.methods?.length ?? 0) > 0) && (
+          <View style={styles.whyCard}>
+            <Text style={styles.whyTitle}>왜 이 활동이에요?</Text>
+            {activity.rationale ? (
+              <View style={{ gap: 2 }}>
+                <Text style={styles.whyLabel}>이 기록을 보고 만들었어요</Text>
+                <Text style={styles.body}>{activity.rationale}</Text>
+              </View>
+            ) : null}
+            {(activity.methods?.length ?? 0) > 0 && (
+              <View style={{ gap: 6 }}>
+                <Text style={styles.whyLabel}>쓰인 방법</Text>
+                <View style={styles.methodRow}>
+                  {activity.methods?.map((m) => (
+                    <Text key={m} style={styles.method}>
+                      {METHOD_LABELS[m]?.label ?? m}
+                    </Text>
+                  ))}
+                </View>
+                <Text style={styles.whyHint}>
+                  {[
+                    ...new Set(
+                      (activity.methods ?? [])
+                        .map((m) => METHOD_LABELS[m]?.approach)
+                        .filter((a): a is string => !!a && a !== 'COMMON'),
+                    ),
+                  ]
+                    .map((a) => APPROACH_LABELS[a])
+                    .join(' · ') || '여러 관점에서 공통으로 쓰는 방법'}{' '}
+                  에서 쓰는 방법이에요
+                </Text>
+              </View>
+            )}
+            {activity.caution ? <Text style={styles.caution}>{activity.caution}</Text> : null}
+            <TouchableOpacity
+              onPress={() =>
+                activity.concernId
+                  ? router.push(`/concern?id=${activity.concernId}` as never)
+                  : router.push('/concerns' as never)
+              }
+              accessibilityRole="link"
+            >
+              <Text style={styles.link}>
+                {activity.concernId
+                  ? '지금 시도 중인 방법 보기 ›'
+                  : '고민되는 행동의 다른 관점 보기 ›'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <Text style={styles.disclaimer}>
+          AI가 기록을 보고 제안하는 활동이에요. 치료 계획은 담당 선생님과 상의하세요.
+        </Text>
       </ScrollView>
 
       <View style={styles.footer} nativeID="tour-results">
@@ -275,6 +330,37 @@ const styles = StyleSheet.create({
   },
   stepNumText: { fontSize: fontSize.xs, fontWeight: '700', color: colors.primaryDark },
   stepText: { flex: 1 },
+  whyCard: {
+    backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: 14,
+    gap: 10,
+  },
+  whyTitle: { fontSize: 15, fontWeight: '700', color: colors.primaryDark },
+  whyLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+  whyHint: { fontSize: 12, color: '#4A5A6A', lineHeight: 18 },
+  methodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  method: {
+    fontSize: 12,
+    color: '#1E4E8C',
+    backgroundColor: '#E7F0FB',
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
+  caution: {
+    fontSize: 12,
+    color: '#8A4B14',
+    backgroundColor: '#FDF0E6',
+    borderRadius: 10,
+    padding: 8,
+    lineHeight: 18,
+    overflow: 'hidden',
+  },
+  disclaimer: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   footer: {
     backgroundColor: colors.card,
     borderTopWidth: 1,

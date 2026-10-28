@@ -634,7 +634,7 @@ ${p.opinions.length ? `\n이 고민에 대해 선생님이 직접 주신 의견:
 정리할 것
 1. keywords: 기록 내용에서 이 행동만 골라낼 한국어 단어 2~4개 (예: 탁탁, 두드리). 장소 · 몸 부위 · 흔한 말(바닥, 손, 울음, 행동)은 다른 기록까지 잡히니 쓰지 마세요
 2. summary: 이 행동을 한 문장으로 쉽게 설명 (100자 이내)
-3. centerView: 위 센터 피드백 · 선생님 의견 중 이 행동에 대한 말이 있으면 {source: "수업 종류 · 날짜", text: 그 말 요약, approach: 아래 관점 중 어디에 가까운지}. 없으면 null
+3. centerView: 위 센터 피드백 · 선생님 의견 중 이 행동에 대한 말이 있으면 {source: "수업 종류 · 날짜", text: 선생님이 한 말만 요약 (집 기록과의 비교나 AI 의견은 넣지 말고 patternInsight 에), approach: 아래 관점 중 어디에 가까운지}. 없으면 null
 4. patternInsight: 기록이 3건 이상이면 언제 많이 나오고 어떤 반응에 금방 멈췄는지 보고 '가능성'으로 한두 문장 (단정하지 말 것). 아니면 null
 5. perspectives: 아래 4가지 관점을 각각 (이 행동에 맞게 구체적으로)
    BEHAVIORAL(행동주의 · ABA), DEVELOPMENTAL(발달 · 놀이 중심 · ESDM · Floortime 등), SENSORY(감각통합 · 작업치료), NEURODIVERSITY(신경다양성 관점)

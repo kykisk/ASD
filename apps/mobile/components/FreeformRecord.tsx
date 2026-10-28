@@ -18,6 +18,7 @@ import {
 } from '../hooks/use-daily-record.js';
 import { colors, spacing, borderRadius, fontSize } from '../constants/theme.js';
 import { clearDraft, loadDraft, saveDraft } from '../lib/record-draft.js';
+import { BehaviorContextPicker } from './BehaviorContextPicker.js';
 
 export const SESSION_TYPES = [
   { key: 'SPEECH', label: '언어치료' },
@@ -400,6 +401,12 @@ export function FreeformRecord({ childId, unavailableReason, onDone }: Props) {
                 }
                 multiline
                 maxLength={1000}
+              />
+              <BehaviorContextPicker
+                value={b}
+                onChange={(next) =>
+                  setBehaviors((prev) => prev.map((x, j) => (j === i ? { ...x, ...next } : x)))
+                }
               />
               {b.severity !== null && (
                 <>

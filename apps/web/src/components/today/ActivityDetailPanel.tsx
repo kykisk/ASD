@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLogActivity } from '../../hooks/use-curriculum';
 import type { ActivityLog, ActivityResult, CurriculumActivity } from '../../types/curriculum';
 import { DOMAIN_LABELS, DIFFICULTY_LABELS } from '../../types/curriculum';
+import { Link } from 'react-router-dom';
+import { APPROACH_LABELS, METHOD_LABELS } from '../../utils/find-way';
 
 const RESULT_OPTIONS: Array<{ result: ActivityResult; label: string }> = [
   { result: 'SUCCESS', label: '잘했어요' },
@@ -17,6 +19,54 @@ interface Props {
   log?: ActivityLog;
   /** 결과를 저장한 뒤 다음 활동으로 넘어가기 */
   onSaved: () => void;
+}
+
+/** 왜 이 활동? 근거 기록 · 쓰인 방법(관점) · 주의할 점 */
+function WhyThisActivity({ activity }: { activity: CurriculumActivity }) {
+  const approaches = [
+    ...new Set(
+      (activity.methods ?? [])
+        .map((m) => METHOD_LABELS[m]?.approach)
+        .filter((a): a is string => !!a && a !== 'COMMON'),
+    ),
+  ].map((a) => APPROACH_LABELS[a]);
+  return (
+    <div className="border-2 border-primary-500 rounded-xl px-3.5 py-3 flex flex-col gap-2.5">
+      <h3 className="text-sm font-bold text-primary-700">왜 이 활동이에요?</h3>
+      {activity.rationale && (
+        <div>
+          <p className="text-xs font-bold text-neutral-500">이 기록을 보고 만들었어요</p>
+          <p className="text-sm text-neutral-800 leading-relaxed">{activity.rationale}</p>
+        </div>
+      )}
+      {(activity.methods?.length ?? 0) > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-bold text-neutral-500">쓰인 방법</p>
+          <div className="flex flex-wrap gap-1.5">
+            {activity.methods?.map((m) => (
+              <span key={m} className="text-xs px-2 py-0.5 rounded-lg bg-[#E7F0FB] text-[#1E4E8C]">
+                {METHOD_LABELS[m]?.label ?? m}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs text-neutral-600">
+            {approaches.join(' · ') || '여러 관점에서 공통으로 쓰는 방법'}에서 쓰는 방법이에요
+          </p>
+        </div>
+      )}
+      {activity.caution && (
+        <p className="text-xs text-[#8A4B14] bg-[#FDF0E6] rounded-lg px-2.5 py-2 leading-relaxed">
+          {activity.caution}
+        </p>
+      )}
+      <Link
+        to={activity.concernId ? `/concerns/${activity.concernId}` : '/concerns'}
+        className="text-[13px] font-bold text-primary-700"
+      >
+        {activity.concernId ? '지금 시도 중인 방법 보기 ›' : '고민되는 행동의 다른 관점 보기 ›'}
+      </Link>
+    </div>
+  );
 }
 
 export function ActivityDetailPanel({ curriculumId, activity, index, total, log, onSaved }: Props) {
@@ -94,6 +144,12 @@ export function ActivityDetailPanel({ curriculumId, activity, index, total, log,
               <h3 className="text-[13px] font-bold text-primary-700 mb-1">이러면 성공이에요</h3>
               <p className="text-sm text-neutral-800 leading-relaxed">{activity.successCriteria}</p>
             </div>
+            {(activity.rationale || (activity.methods?.length ?? 0) > 0) && (
+              <WhyThisActivity activity={activity} />
+            )}
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              AI가 기록을 보고 제안하는 활동이에요. 치료 계획은 담당 선생님과 상의하세요.
+            </p>
           </div>
         </div>
       </div>

@@ -148,6 +148,18 @@ export default function RootLayout() {
           />
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen
+            name="concerns"
+            options={{ headerShown: true, title: '맞는 방법 찾기', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="concern"
+            options={{ headerShown: true, title: '고민', presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="concern-share"
+            options={{ headerShown: true, title: '선생님께 보여드리기', presentation: 'card' }}
+          />
+          <Stack.Screen
             name="change-password"
             options={{ headerShown: true, title: '비밀번호 바꾸기', presentation: 'card' }}
           />

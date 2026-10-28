@@ -19,6 +19,7 @@ import {
   useCreateDailyRecord,
   useDailyRecord,
   useFreeformAvailability,
+  type BehaviorContext,
   type CreateDailyRecordInput,
   type DailyRecordDomain,
 } from '../hooks/use-daily-record.js';
@@ -31,6 +32,7 @@ import {
   BEHAVIOR_TAGS,
   Chip,
 } from '../components/FreeformRecord.js';
+import { BehaviorContextPicker } from '../components/BehaviorContextPicker.js';
 
 const SCORE_COLORS = [colors.score1, colors.score2, colors.score3, colors.score4, colors.score5];
 
@@ -95,6 +97,7 @@ export default function DailyRecordScreen() {
   const [severity, setSeverity] = useState(3);
   const [behaviorTags, setBehaviorTags] = useState<string[]>([]);
   const [behaviorContent, setBehaviorContent] = useState('');
+  const [behaviorContext, setBehaviorContext] = useState<BehaviorContext>({});
 
   const alreadyScored = !!today?.scores;
 
@@ -194,7 +197,7 @@ export default function DailyRecordScreen() {
           ? { sessionType, therapistFeedback: therapistFeedback.trim() || undefined }
           : undefined,
       behavior: behaviorOn
-        ? { severity, tags: behaviorTags, content: behaviorContent.trim() }
+        ? { severity, tags: behaviorTags, content: behaviorContent.trim(), ...behaviorContext }
         : undefined,
     };
     const hasContent =
@@ -412,6 +415,7 @@ export default function DailyRecordScreen() {
                 placeholderTextColor={colors.textSecondary}
                 maxLength={1000}
               />
+              <BehaviorContextPicker value={behaviorContext} onChange={setBehaviorContext} />
             </>
           )}
         </View>

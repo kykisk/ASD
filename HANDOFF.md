@@ -43,6 +43,9 @@
   자유 글 → AI(`DAILY_RECORD_PARSE`, Quality) 정리 초안 + 질문 최대 3개 → 부모 확인 후 저장, 같은 날 점수는 합침.
   AI 실패 시 원문을 일상 메모로 저장 → 매일 03:30 `DAILY_RECORD_RETRY` 가 영역 점수만 다시 추출. 표 `DailyRecordEntry`(원문 · 초안 · 품질 통계).
   관리자: AI 화면 "오늘 기록 정리 품질"(비율만, 원문 열람 없음), 운영 현황 "AI 정리가 안 된 기록", 자동 작업에 다시 분석
+- 맞는 방법 찾기 브랜치: **`feature/find-what-works`** (feature/ai-record 위) — 고민(Concern) 하나에 4가지 관점(AI `CONCERN_PERSPECTIVES`, Quality) + 센터 선생님 의견 + 관련 PubMed 논문(행동 이름으로 제목 검색),
+  힘든 행동 '언제 · 왜'(SessionFeedback.antecedent / parentResponse / settled) 패턴, 2주 시도(StrategyTrial, 전 2주 vs 시도 중 주당 횟수), 선생님 의견(isTeacherOpinion, 커리큘럼 AI 가 가장 먼저 따름).
+  커리큘럼 AI: 근거 기반 원칙 · 안전 규칙 · 활동마다 rationale / methods / caution, 시도 중인 방법 연습 활동(concernId). 기록 연결은 태그 · 키워드로 읽을 때 매칭
 - 원칙: DB 변경은 **추가만** (새 컬럼은 nullable/default) → 코드만 되돌려도 기존 버전이 그대로 동작
 - 되돌리기 (코드):
   ```bash

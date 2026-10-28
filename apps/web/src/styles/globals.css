@@ -37,3 +37,21 @@
     min-height: 44px;
   }
 }
+
+/* 선생님께 보여드리기: 인쇄할 때 요약 카드만 */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+  }
+}

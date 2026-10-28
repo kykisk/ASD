@@ -9,6 +9,7 @@ import {
 } from '../../hooks/use-daily-record';
 import { DAILY_SESSION_TYPES, sessionTypeLabel } from '../../utils/session-type';
 import { clearDraft, loadDraft, saveDraft } from '../../utils/record-draft';
+import { BehaviorContextPicker } from './BehaviorContextPicker';
 
 const SCORE_COLORS = ['#E88B8B', '#F0A86E', '#F5D76E', '#A8D8A8', '#7BC67E'];
 /** 힘든 정도는 클수록 힘듦 → 색을 거꾸로 */
@@ -329,6 +330,7 @@ export function FreeformPanel({ childId, unavailableReason, onClose }: Props) {
                     maxLength={1000}
                     className="h-10 rounded-xl border border-neutral-200 bg-[#FDFBF7] px-3 text-sm text-neutral-800"
                   />
+                  <BehaviorContextPicker value={b} onChange={(next) => updateBehavior(i, next)} />
                   {b.severity !== null && (
                     <div className="flex items-center gap-2 text-[13px] text-neutral-600">
                       얼마나 힘들었나요?

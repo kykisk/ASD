@@ -62,6 +62,7 @@ export default function MoreScreen() {
 
       <View style={styles.section}>
         <MenuItem label="일정 달력" icon="📅" onPress={() => router.push('/schedule')} />
+        <MenuItem label="맞는 방법 찾기" icon="🧩" onPress={() => router.push('../concerns')} />
       </View>
 
       <Text style={styles.sectionLabel}>우리 아이 · 가족</Text>

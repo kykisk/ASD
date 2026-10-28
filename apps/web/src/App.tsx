@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
+import { ConcernsPage } from './pages/ConcernsPage';
+import { ConcernDetailPage } from './pages/ConcernDetailPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -92,6 +94,8 @@ export default function App() {
         <Route path="clinical" element={<ClinicalPage />} />
         <Route path="session-feedback" element={<SessionFeedbackPage />} />
         <Route path="medication" element={<MedicationPage />} />
+        <Route path="concerns" element={<ConcernsPage />} />
+        <Route path="concerns/:id" element={<ConcernDetailPage />} />
       </Route>
       <Route path="/design-preview" element={<DesignPreviewIndex />} />
       <Route path="/design-preview/login" element={<DesignPreviewLogin />} />

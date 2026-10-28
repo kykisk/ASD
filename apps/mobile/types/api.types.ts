@@ -82,6 +82,13 @@ export interface CurriculumActivity {
   steps: string[];
   successCriteria: string;
   difficultyLevel: 'EASY' | 'MEDIUM' | 'HARD';
+  /** 왜 이 활동? (어떤 기록을 보고 만들었는지) */
+  rationale?: string;
+  /** 쓰인 방법 키 (constants/find-way METHOD_LABELS) */
+  methods?: string[];
+  caution?: string | null;
+  /** 2주 시도 중인 방법을 연습하는 활동이면 그 고민 */
+  concernId?: string;
 }
 
 export interface Curriculum {

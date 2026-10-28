@@ -3,12 +3,14 @@ import {
   DAILY_RECORD_DOMAINS,
   useCreateDailyRecord,
   useFreeformAvailability,
+  type BehaviorContext,
   type CreateDailyRecordInput,
   type DailyRecordDomain,
   type DailyRecordSummary,
 } from '../../hooks/use-daily-record';
 import { DAILY_SESSION_TYPES, sessionTypeLabel } from '../../utils/session-type';
 import { FreeformPanel } from './FreeformPanel';
+import { BehaviorContextPicker } from './BehaviorContextPicker';
 import { clearDraft, loadDraft, saveDraft } from '../../utils/record-draft';
 
 /** 마지막으로 쓴 입력 방식 (쭉 적기 · 자세히 입력) */
@@ -121,6 +123,7 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
   const [severity, setSeverity] = useState(draft?.severity ?? 3);
   const [behaviorTags, setBehaviorTags] = useState<string[]>(draft?.behaviorTags ?? []);
   const [behaviorContent, setBehaviorContent] = useState(draft?.behaviorContent ?? '');
+  const [behaviorContext, setBehaviorContext] = useState<BehaviorContext>({});
 
   useEffect(() => {
     saveDraft('detailed', childId, {
@@ -167,7 +170,7 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
           ? { sessionType, therapistFeedback: therapistFeedback.trim() || undefined }
           : undefined,
       behavior: behaviorOn
-        ? { severity, tags: behaviorTags, content: behaviorContent.trim() }
+        ? { severity, tags: behaviorTags, content: behaviorContent.trim(), ...behaviorContext }
         : undefined,
     };
     if (Object.keys(scores).length === 0 && !input.note && !input.session && !input.behavior) {
@@ -426,6 +429,10 @@ export function DailyRecordModal({ childId, today, onClose }: Props) {
                         maxLength={1000}
                         placeholder="예: 마트에서 20분 울었어요. 안아주니 진정했어요"
                         className="h-10 rounded-xl border border-neutral-200 bg-[#FDFBF7] px-3 text-sm text-neutral-800 placeholder:text-neutral-500"
+                      />
+                      <BehaviorContextPicker
+                        value={behaviorContext}
+                        onChange={setBehaviorContext}
                       />
                     </>
                   )}

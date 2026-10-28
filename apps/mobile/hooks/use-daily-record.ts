@@ -23,7 +23,14 @@ export interface CreateDailyRecordInput {
   scores: Partial<Record<DailyRecordDomain, number>>;
   note?: string;
   session?: { sessionType: string; therapistFeedback?: string };
-  behavior?: { severity: number; tags: string[]; content: string };
+  behavior?: { severity: number; tags: string[]; content: string } & BehaviorContext;
+}
+
+/** 힘든 행동: 바로 전 상황 · 부모 반응 · 진정까지 (모두 선택) */
+export interface BehaviorContext {
+  antecedent?: string | null;
+  parentResponse?: string | null;
+  settled?: 'QUICK' | 'SOME' | 'LONG' | null;
 }
 
 export function useDailyRecord(childId: string | null) {
@@ -95,7 +102,7 @@ export interface FreeformDraft {
   scores: Partial<Record<DailyRecordDomain, { score: number; reason: string }>>;
   note: string | null;
   sessions: Array<{ sessionType: string; therapistFeedback: string | null }>;
-  behaviors: Array<{ tags: string[]; content: string; severity: number | null }>;
+  behaviors: Array<{ tags: string[]; content: string; severity: number | null } & BehaviorContext>;
 }
 
 export interface FreeformQuestion {
@@ -114,7 +121,7 @@ export interface ConfirmFreeformInput {
   scores: Partial<Record<DailyRecordDomain, number>>;
   note?: string;
   sessions: Array<{ sessionType: string; therapistFeedback?: string }>;
-  behaviors: Array<{ tags: string[]; content: string; severity: number | null }>;
+  behaviors: Array<{ tags: string[]; content: string; severity: number | null } & BehaviorContext>;
   answers: Array<{ index: number; value: number | string }>;
 }
 
