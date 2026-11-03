@@ -2,7 +2,12 @@ import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { App, Card, Col, Progress, Row, Select, Spin, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useAiUsage, useDailyRecordQuality } from '../hooks/use-admin-ops';
+import {
+  useAiUsage,
+  useDailyRecordQuality,
+  useFamilyUsage,
+  type FamilyUsageRow,
+} from '../hooks/use-admin-ops';
 import { useAiConfigs, type AiConfigItem } from '../hooks/use-ai-config';
 import {
   useAiFeatureConfig,
@@ -185,6 +190,105 @@ function DailyRecordQualityCard() {
   );
 }
 
+const TIER_LABELS: Record<string, string> = {
+  DISABLED: '꺼짐',
+  BASIC: '기본 (하루 5회)',
+  STANDARD: '표준 (하루 20회)',
+  UNLIMITED: '무제한',
+};
+/** 원화 환산은 대략만 (환율 고정 가정) */
+const KRW_PER_USD = 1400;
+const usd = (n: number) => `$${n < 1 ? n.toFixed(3) : n.toFixed(2)}`;
+const krw = (n: number) => `약 ${Math.round((n * KRW_PER_USD) / 10) * 10}원`;
+
+/** 가족별 AI 사용량 · 추정 비용: 요금 · 무료 범위를 정할 근거 */
+function FamilyUsageCard() {
+  const { data } = useFamilyUsage(30);
+  if (!data) return null;
+  const columns: ColumnsType<FamilyUsageRow> = [
+    { title: '가족', dataIndex: 'name', ellipsis: true },
+    {
+      title: 'AI 사용 범위',
+      dataIndex: 'aiTier',
+      width: 140,
+      render: (t: string) => TIER_LABELS[t] ?? t,
+    },
+    { title: '아이', dataIndex: 'childCount', width: 60, align: 'right' },
+    { title: '호출', dataIndex: 'calls', width: 70, align: 'right' },
+    {
+      title: '쓴 날',
+      key: 'days',
+      width: 90,
+      align: 'right',
+      render: (_, r) => `${r.activeDays} / ${r.periodDays}일`,
+    },
+    {
+      title: '기간 비용',
+      dataIndex: 'estimatedCostUsd',
+      width: 100,
+      align: 'right',
+      render: (n: number) => usd(n),
+    },
+    {
+      title: '한 달 예상',
+      dataIndex: 'projectedMonthlyUsd',
+      width: 150,
+      align: 'right',
+      render: (n: number, r) =>
+        r.calls ? (
+          <span>
+            <b>{usd(n)}</b> <Text type="secondary">{krw(n)}</Text>
+          </span>
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
+    },
+  ];
+  const { summary } = data;
+  return (
+    <Card
+      size="small"
+      title={`가족별 사용량 · 최근 ${data.days}일`}
+      styles={{ body: { padding: 0 } }}
+    >
+      <div
+        style={{ padding: '12px 16px', display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}
+      >
+        <span>
+          AI를 쓴 가족 <b>{summary.activeFamilies}곳</b>
+        </span>
+        <span>
+          가족당 한 달 평균{' '}
+          <b>
+            {summary.avgMonthlyPerActiveFamilyUsd === null
+              ? '-'
+              : `${usd(summary.avgMonthlyPerActiveFamilyUsd)} (${krw(summary.avgMonthlyPerActiveFamilyUsd)})`}
+          </b>
+        </span>
+        <span>
+          기간 합계 <b>{usd(summary.totalCostUsd)}</b>
+          {summary.deletedFamiliesCostUsd > 0 && (
+            <Text type="secondary"> · 지운 가족 {usd(summary.deletedFamiliesCostUsd)}</Text>
+          )}
+        </span>
+      </div>
+      <Table
+        rowKey="familyId"
+        columns={columns}
+        dataSource={data.families}
+        pagination={{ pageSize: 20, hideOnSinglePage: true }}
+        size="small"
+        scroll={{ x: 800 }}
+      />
+      <div style={{ padding: '8px 16px 12px', fontSize: 12, color: '#64748B' }}>
+        공시 단가로 계산한 추정치예요 (1달러 {KRW_PER_USD.toLocaleString()}원 가정). 실제 청구는
+        Anthropic 콘솔에서 확인하세요. 가족 구분은 2026-11-03부터 쌓이고, 논문 수집 · 요약처럼 모든
+        가족이 함께 쓰는 비용은 빠져 있어요.
+      </div>
+    </Card>
+  );
+}
+
 interface FeatureRow {
   feature: string;
   configId: string | null;
@@ -361,6 +465,8 @@ function UsageTab() {
           scroll={{ x: 900 }}
         />
       </Card>
+
+      <FamilyUsageCard />
 
       <Card size="small" title="최근 실패">
         {usage.recentFailures.length === 0 ? (

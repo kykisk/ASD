@@ -192,6 +192,7 @@ export class InsightsService {
       undefined,
       undefined,
       'INSIGHT',
+      { childId },
     );
 
     return {

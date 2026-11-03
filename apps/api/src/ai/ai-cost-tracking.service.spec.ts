@@ -1,4 +1,5 @@
 import { AICostTrackingService } from './ai-cost-tracking.service';
+import { requestContext } from '../common/context/request-context.js';
 
 const mockPipeline = {
   hincrby: vi.fn().mockReturnThis(),
@@ -190,6 +191,66 @@ describe('AICostTrackingService', () => {
 
       // Sonnet 5.5: 입력 100만 × $2 + 출력 10만 × $10/100만 = $3
       expect(summary.month.estimatedCostUsd).toBe(3);
+    });
+  });
+
+  describe('usage by family', () => {
+    const call = {
+      provider: 'CLAUDE_DIRECT',
+      model: 'claude-sonnet-5-5',
+      inputTokens: 1000,
+      outputTokens: 500,
+      latencyMs: 1000,
+      operation: 'generate',
+    };
+
+    it('records cost per family given explicitly', async () => {
+      await service.trackCall({ ...call, familyId: 'fam-1' });
+      // Sonnet 5.5: 1000 × $2 + 500 × $10 (100만 토큰당) = $0.007 → 7000 마이크로달러
+      expect(mockPipeline.hincrby).toHaveBeenCalledWith(
+        expect.stringContaining(':family:fam-1'),
+        'costMicros',
+        7000,
+      );
+    });
+
+    it('uses the logged-in user family when not given, and skips batch calls', async () => {
+      await requestContext.run({ resolveFamilyId: async () => 'fam-2' }, () =>
+        service.trackCall(call),
+      );
+      expect(mockPipeline.hincrby).toHaveBeenCalledWith(
+        expect.stringContaining(':family:fam-2'),
+        'calls',
+        1,
+      );
+
+      mockPipeline.hincrby.mockClear();
+      await service.trackCall(call);
+      expect(mockPipeline.hincrby).not.toHaveBeenCalledWith(
+        expect.stringContaining(':family:'),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('sums each family over the period, most expensive first', async () => {
+      mockRedis.scan.mockImplementation(async (_c: string, _m: string, pattern: string) =>
+        pattern.includes(':family:*')
+          ? ['0', [pattern.replace('*', 'fam-1'), pattern.replace('*', 'fam-2')]]
+          : ['0', []],
+      );
+      mockRedis.hgetall.mockImplementation(async (key: string) =>
+        key.endsWith('fam-1')
+          ? { calls: '2', inputTokens: '10', outputTokens: '5', costMicros: '1000' }
+          : { calls: '1', inputTokens: '10', outputTokens: '5', costMicros: '3000' },
+      );
+
+      const usage = await service.getFamilyUsage(2);
+
+      expect(usage.map((u) => [u.familyId, u.calls, u.activeDays, u.estimatedCostUsd])).toEqual([
+        ['fam-2', 2, 2, 0.006],
+        ['fam-1', 4, 2, 0.002],
+      ]);
     });
   });
 

@@ -42,6 +42,7 @@ import { MedicationsModule } from '../medications/medications.module.js';
 import { CacheModule } from '../common/cache/cache.module.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
+import { RequestContextInterceptor } from '../common/interceptors/request-context.interceptor.js';
 
 @Module({
   imports: [
@@ -96,6 +97,10 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
     {
       provide: APP_FILTER,
       useClass: ApiExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestContextInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

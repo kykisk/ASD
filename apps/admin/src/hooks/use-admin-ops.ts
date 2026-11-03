@@ -78,6 +78,38 @@ export function useDailyRecordQuality(days = 7) {
   });
 }
 
+export interface FamilyUsageRow {
+  familyId: string;
+  name: string;
+  aiTier: string;
+  childCount: number;
+  memberCount: number;
+  calls: number;
+  activeDays: number;
+  periodDays: number;
+  estimatedCostUsd: number;
+  projectedMonthlyUsd: number;
+}
+
+export interface FamilyUsage {
+  days: number;
+  families: FamilyUsageRow[];
+  summary: {
+    activeFamilies: number;
+    totalCostUsd: number;
+    deletedFamiliesCostUsd: number;
+    avgMonthlyPerActiveFamilyUsd: number | null;
+  };
+}
+
+export function useFamilyUsage(days = 30) {
+  return useQuery({
+    queryKey: ['admin-family-usage', days],
+    queryFn: () => get<FamilyUsage>('/admin/ai/family-usage', { days }),
+    refetchInterval: 5 * 60_000,
+  });
+}
+
 // ─── 자동 작업 ─────────────────────────────────────────
 
 export interface JobInfo {

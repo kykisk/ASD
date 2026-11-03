@@ -262,4 +262,76 @@ export class AdminService {
       failed: freeform.filter((e) => e.status === 'FAILED' || e.status === 'RECOVERED').length,
     };
   }
+
+  /**
+   * 가족별 AI 사용량 · 추정 비용 (최근 days 일). 요금 · 무료 범위를 정할 근거.
+   * 한 달 예상 = 기간 비용을 30일로 환산 (기간 중 가족이 생겼으면 그날부터 계산)
+   */
+  async familyUsage(
+    usages: Array<{
+      familyId: string;
+      calls: number;
+      estimatedCostUsd: number;
+      activeDays: number;
+    }>,
+    days: number,
+  ) {
+    const families = await this.prisma.family.findMany({
+      select: {
+        id: true,
+        name: true,
+        aiTier: true,
+        createdAt: true,
+        _count: { select: { children: true, members: true } },
+      },
+    });
+    const byId = new Map(usages.map((u) => [u.familyId, u]));
+    const now = Date.now();
+    const rows = families
+      .map((f) => {
+        const u = byId.get(f.id);
+        const ageDays = Math.max(
+          1,
+          Math.ceil((now - f.createdAt.getTime()) / (24 * 60 * 60 * 1000)),
+        );
+        const periodDays = Math.min(days, ageDays);
+        const cost = u?.estimatedCostUsd ?? 0;
+        return {
+          familyId: f.id,
+          name: f.name,
+          aiTier: f.aiTier,
+          // 'children' 이름은 표(antd Table)가 하위 행으로 읽어서 피함
+          childCount: f._count.children,
+          memberCount: f._count.members,
+          calls: u?.calls ?? 0,
+          activeDays: u?.activeDays ?? 0,
+          periodDays,
+          estimatedCostUsd: Math.round(cost * 10000) / 10000,
+          projectedMonthlyUsd: Math.round((cost / periodDays) * 30 * 100) / 100,
+        };
+      })
+      .sort((a, b) => b.estimatedCostUsd - a.estimatedCostUsd);
+
+    const active = rows.filter((r) => r.calls > 0);
+    const totalCost = rows.reduce((n, r) => n + r.estimatedCostUsd, 0);
+    // 지운 가족 · 테스트 가족처럼 지금 목록에 없는 사용량
+    const known = new Set(families.map((f) => f.id));
+    const unknownCost = usages
+      .filter((u) => !known.has(u.familyId))
+      .reduce((n, u) => n + u.estimatedCostUsd, 0);
+    return {
+      days,
+      families: rows,
+      summary: {
+        activeFamilies: active.length,
+        totalCostUsd: Math.round(totalCost * 100) / 100,
+        deletedFamiliesCostUsd: Math.round(unknownCost * 100) / 100,
+        avgMonthlyPerActiveFamilyUsd: active.length
+          ? Math.round(
+              (active.reduce((n, r) => n + r.projectedMonthlyUsd, 0) / active.length) * 100,
+            ) / 100
+          : null,
+      },
+    };
+  }
 }

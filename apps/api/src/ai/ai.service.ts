@@ -14,6 +14,11 @@ import type { DecryptedAiConfig } from '@auticare/dto';
 
 const MAX_STRUCTURED_RETRIES = 3;
 
+/** AI 사용량 주인 (가족별 비용 집계) */
+export interface UsageOwner {
+  familyId?: string;
+  childId?: string;
+}
 /** 가족 AI 사용 범위(티어)별 하루 호출 수 */
 const FAMILY_DAILY_LIMITS: Record<string, number> = {
   BASIC: 5,
@@ -83,10 +88,13 @@ export class AIService {
     preferredProvider?: string,
     familyId?: string,
     feature?: string,
+    /** 사용량을 어느 가족에 기록할지 (familyId 와 달리 사용 범위는 확인하지 않음). 배치 작업용 */
+    usage?: UsageOwner,
   ): Promise<AIResponse> {
     if (familyId) {
       await this.checkAiAccess(familyId);
     }
+    const usageFamilyId = familyId ?? (await this.resolveUsageFamily(usage));
 
     if (feature) {
       const configId = await this.aiFeatureConfigService.getConfigIdForFeature(feature);
@@ -120,6 +128,7 @@ export class AIService {
               latencyMs: response.latencyMs,
               operation: 'generate',
               feature,
+              familyId: usageFamilyId,
             });
 
             return response;
@@ -179,6 +188,7 @@ export class AIService {
           latencyMs: response.latencyMs,
           operation: 'generate',
           feature,
+          familyId: usageFamilyId,
         });
 
         return response;
@@ -202,6 +212,7 @@ export class AIService {
     preferredProvider?: string,
     familyId?: string,
     feature?: string,
+    usage?: UsageOwner,
   ): Promise<T> {
     if (familyId) {
       await this.checkAiAccess(familyId);
@@ -219,11 +230,13 @@ export class AIService {
         });
       }
 
+      // 사용 범위는 위에서 한 번만 확인하고, 사용량은 그 가족에 기록
       const response = await this.generate(
         { ...options, messages },
         preferredProvider,
         undefined,
         feature,
+        familyId ? { familyId } : usage,
       );
       const jsonStr = this.extractJson(response.content);
 
@@ -283,6 +296,16 @@ export class AIService {
       }
     }
     return { available: false, reason: '오늘 쓸 수 있는 AI 횟수를 다 썼어요' };
+  }
+
+  /** 사용량 기록용 가족: 직접 주거나, 아이로 찾음. 없으면 비움(요청 중이면 로그인 사용자 가족으로 기록됨) */
+  private async resolveUsageFamily(usage?: UsageOwner): Promise<string | undefined> {
+    if (usage?.familyId) return usage.familyId;
+    if (!usage?.childId) return undefined;
+    const child = await this.prisma.child
+      .findUnique({ where: { id: usage.childId }, select: { familyId: true } })
+      .catch(() => null);
+    return child?.familyId ?? undefined;
   }
 
   private async checkAiAccess(familyId: string): Promise<void> {

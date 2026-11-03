@@ -373,6 +373,7 @@ ${articlesContext}
         undefined,
         undefined,
         'RESEARCH_DIGEST',
+        { familyId },
       );
 
       const text = (aiResponse.content ?? '').trim();

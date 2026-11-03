@@ -95,6 +95,7 @@ JSON으로만 응답하세요 (코드블록 없이):
       undefined,
       undefined,
       'FEEDBACK_DOMAIN_EXTRACTION',
+      { familyId: feedback.familyId },
     );
 
     // null 아닌 점수만 추출

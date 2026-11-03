@@ -34,6 +34,13 @@ export class AdminController {
     return this.costTracker.getUsageSummary(Math.min(parseInt(days ?? '7') || 7, 30));
   }
 
+  /** 가족별 AI 사용량 · 추정 비용 · 한 달 예상 */
+  @Get('ai/family-usage')
+  async familyUsage(@Query('days') days?: string) {
+    const d = Math.min(parseInt(days ?? '30') || 30, 38);
+    return this.adminService.familyUsage(await this.costTracker.getFamilyUsage(d), d);
+  }
+
   /** 오늘 하루 기록 · 쭉 적기 품질 (건수와 비율만) */
   @Get('ai/daily-record-quality')
   async dailyRecordQuality(@Query('days') days?: string) {

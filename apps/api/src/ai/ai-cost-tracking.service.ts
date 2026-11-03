@@ -1,6 +1,7 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { requestContext } from '../common/context/request-context.js';
 
 export interface TrackCallParams {
   provider: string;
@@ -12,6 +13,18 @@ export interface TrackCallParams {
   operation: string;
   /** AiFeatureConfig 기능 키. 없으면 GENERAL */
   feature?: string;
+  /** 어느 가족의 호출인지. 없으면 로그인한 사용자의 가족 (요청 밖 배치는 기록 안 함) */
+  familyId?: string | null;
+}
+
+export interface FamilyUsage {
+  familyId: string;
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+  /** 하루라도 AI 를 쓴 날 수 */
+  activeDays: number;
 }
 
 export interface FeatureUsage {
@@ -37,6 +50,12 @@ const MODEL_PRICES: Array<{ prefix: string; input: number; output: number }> = [
   { prefix: 'claude-haiku-4-5', input: 1, output: 5 },
   { prefix: 'claude-sonnet-4', input: 3, output: 15 },
 ];
+
+/** 공시 단가로 계산한 추정 비용 (USD) */
+export function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const price = MODEL_PRICES.find((p) => model.startsWith(p.prefix));
+  return price ? (inputTokens * price.input + outputTokens * price.output) / 1_000_000 : 0;
+}
 
 const KST_DATE = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Seoul',
@@ -108,7 +127,53 @@ export class AICostTrackingService implements OnModuleDestroy {
     pipeline.hincrby(featureKey, 'totalMs', params.latencyMs);
     pipeline.expire(featureKey, this.TTL_SECONDS);
 
+    // 가족별: 모델마다 단가가 달라 비용을 호출할 때 계산해 둠 (100만분의 1 달러 단위)
+    const familyId =
+      params.familyId ?? (await requestContext.getStore()?.resolveFamilyId?.()) ?? null;
+    if (familyId) {
+      const familyKey = `${this.prefix}${date}:family:${familyId}`;
+      pipeline.hincrby(familyKey, 'calls', 1);
+      pipeline.hincrby(familyKey, 'inputTokens', params.inputTokens);
+      pipeline.hincrby(familyKey, 'outputTokens', params.outputTokens);
+      pipeline.hincrby(
+        familyKey,
+        'costMicros',
+        Math.round(estimateCostUsd(params.model, params.inputTokens, params.outputTokens) * 1e6),
+      );
+      pipeline.expire(familyKey, this.TTL_SECONDS);
+    }
+
     await pipeline.exec();
+  }
+
+  /** 가족별 최근 days 일 사용량 (비용 큰 순) */
+  async getFamilyUsage(days = 30): Promise<FamilyUsage[]> {
+    const byFamily = new Map<string, FamilyUsage>();
+    for (let i = 0; i < days; i++) {
+      const date = kstDate(new Date(Date.now() - i * 24 * 60 * 60 * 1000));
+      const keys = await this.scanKeys(`${this.prefix}${date}:family:*`);
+      for (const key of keys) {
+        const familyId = key.slice(`${this.prefix}${date}:family:`.length);
+        const data = await this.redis.hgetall(key);
+        const u = byFamily.get(familyId) ?? {
+          familyId,
+          calls: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          estimatedCostUsd: 0,
+          activeDays: 0,
+        };
+        u.calls += parseInt(data['calls'] || '0', 10);
+        u.inputTokens += parseInt(data['inputTokens'] || '0', 10);
+        u.outputTokens += parseInt(data['outputTokens'] || '0', 10);
+        u.estimatedCostUsd += parseInt(data['costMicros'] || '0', 10) / 1e6;
+        u.activeDays += 1;
+        byFamily.set(familyId, u);
+      }
+    }
+    return [...byFamily.values()]
+      .map((u) => ({ ...u, estimatedCostUsd: Math.round(u.estimatedCostUsd * 10000) / 10000 }))
+      .sort((a, b) => b.estimatedCostUsd - a.estimatedCostUsd);
   }
 
   /** 모든 프로바이더가 실패해 기능 호출이 실패한 경우 */

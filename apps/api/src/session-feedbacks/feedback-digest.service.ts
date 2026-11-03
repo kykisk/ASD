@@ -168,6 +168,7 @@ ${behaviorText ? `\n이번 주 문제행동 기록:\n${behaviorText}` : ''}
       undefined,
       undefined,
       'FEEDBACK_DIGEST',
+      { childId },
     );
 
     // bySessionType에 실제 count/avgRating 덮어쓰기 (AI 가 잘못 계산할 수 있으므로)
