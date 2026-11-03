@@ -20,7 +20,8 @@
 - 개발 서버: 새 EC2 (RHEL 10.2, 8 vCPU / 61GB, Elastic IP `3.34.223.12`), `~/workspace/ASD` = 리포 루트
 - DB: **빈 DB로 새 시작** (2026-10-19, admin 계정만 seed). 예전 서버 데이터는 복원하지 않음
 - 접속: **SSH 터널** (보안 그룹은 22번만 사용). PC 의 `~/.ssh/config` 에 `Host auticare` + LocalForward 4200/4300/3100/8081 설정 후 `ssh -N auticare`
-  - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com, 비밀번호는 2026-10-21 변경 — 비밀번호 관리자 보관) · 모바일 http://localhost:8081
+  - 웹 http://localhost:4200 · Admin http://localhost:4300 (admin@auticare.com, 비밀번호는 비밀번호 관리자 보관) · 모바일 http://localhost:8081
+  - **관리자 비밀번호를 잊으면**: 서버에서 `./scripts/reset-admin-password.sh` (화면에 안 보이게 두 번 입력, 로그인된 기기 로그아웃). 비밀번호를 파일로 주고받지 않음
 - Claude Code: 이 서버의 `~/workspace/ASD` 에서 시작 + Remote Control (CLAUDE.md → AGENTS.md 자동 로드)
 
 ## 사용 가이드 (앱 안 매뉴얼)

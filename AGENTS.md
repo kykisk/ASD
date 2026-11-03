@@ -339,6 +339,7 @@ export PATH="$HOME/.local/node_modules/.bin:$PATH"
 ./scripts/status.sh        # 전체 상태 확인 (mobile 포함)
 ./scripts/stop-servers.sh  # 전체 종료 (mobile 포함)
 ./scripts/backup-db.sh     # DB 백업 → backups/ (cron 매일 03:00 자동)
+./scripts/reset-admin-password.sh # 관리자 비밀번호 비상 재설정 (서버에서만, 입력은 화면에 안 보임)
 ./scripts/setup-server.sh  # 새 서버 재구축 (SERVER_MIGRATION_GUIDE.md 참고)
 ./scripts/start-claude.sh  # Claude Code Remote Control 시작 (systemd --user claude-rc-ASD, 기본 권한모드 auto)
 ./scripts/stop-claude.sh   # Remote Control 종료
