@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Alert, Typography } from 'antd';
+import { Form, Input, Button, Alert, Typography, Collapse } from 'antd';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { adminApi } from '../services/api';
 import { useAdminAuthStore } from '../stores/auth.store';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 interface LoginFormValues {
   email: string;
@@ -189,6 +189,36 @@ export function LoginPage() {
             </Button>
           </Form.Item>
         </Form>
+
+        {/* 비상 재설정은 서버(SSH) 접속이 있어야만 가능 — 서버 주소 · 관리자 이메일은 여기 적지 않음 */}
+        <Collapse
+          ghost
+          size="small"
+          style={{ marginTop: '16px' }}
+          items={[
+            {
+              key: 'forgot',
+              label: <Text type="secondary">비밀번호를 잊으셨나요?</Text>,
+              children: (
+                <div style={{ fontSize: '13px', color: '#475569' }}>
+                  <Paragraph style={{ fontSize: '13px', marginBottom: '8px' }}>
+                    관리자 비밀번호는 메일로 찾지 않고, 서버에서만 다시 정할 수 있어요.
+                  </Paragraph>
+                  <ol style={{ paddingLeft: '18px', margin: 0, lineHeight: 1.8 }}>
+                    <li>서버에 SSH로 접속해요</li>
+                    <li>
+                      아래 명령을 실행하고 새 비밀번호를 두 번 입력해요 (화면에는 안 보여요)
+                      <Paragraph copyable code style={{ fontSize: '12px', margin: '4px 0' }}>
+                        cd ~/workspace/ASD && ./scripts/reset-admin-password.sh
+                      </Paragraph>
+                    </li>
+                    <li>새 비밀번호로 로그인하고 브라우저 · 비밀번호 관리자에 저장해요</li>
+                  </ol>
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
     </div>
   );
